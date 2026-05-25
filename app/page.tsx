@@ -175,12 +175,27 @@ export default function Page() {
             onChange={(e) => setReference(e.target.value)}
           />
 
-          <input
-            type="date"
-            className="input"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-          />
+          <div className="space-y-1">
+  
+  {/* Label */}
+  <label className="text-sm font-bold text-gray-700">
+    ⏰ Deadline
+  </label>
+
+  {/* Input */}
+  <input
+    type="date"
+    className="input"
+    value={deadline}
+    onChange={(e) => setDeadline(e.target.value)}
+  />
+
+  {/* Hint text */}
+  <p className="text-xs text-gray-500">
+    ⚠️ นี่คือวันครบกำหนดระยะเวลาในการส่งงาน
+  </p>
+
+</div>
 
           <textarea
             placeholder="📄 Detail"
