@@ -52,7 +52,7 @@ export default function Page() {
   // ================= TOAST =================
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 8000);
+    setTimeout(() => setToast(null), 15000);
   };
 
   // ================= RESET =================
