@@ -302,19 +302,31 @@ export default function Page() {
           <div className={card + " space-y-4"}>
             <h2 className="text-xl font-semibold">🎨 Design Workflow</h2>
 
-            <select className={input}>
-              <option>Logo</option>
-              <option>Poster</option>
-              <option>Banner</option>
-              <option>Infographic</option>
-              <option>PDF</option>
-              <option>Profile</option>
-              <option>อื่นๆ</option>
-            </select>
+            <select
+  className={input}
+  value={designType}
+  onChange={(e) => setDesignType(e.target.value)}
+>
+  <option value="">เลือกประเภท Design</option>
+  <option>Logo</option>
+  <option>Poster</option>
+  <option>Banner</option>
+  <option>Infographic</option>
+  <option>PDF</option>
+  <option>Profile</option>
+</select>
 
-            <button className={button} onClick={() => submitTask("Design", detail)}>
+            <button
+              className={button}
+                onClick={() =>
+                  submitTask(
+                  "Design",
+               `Type:${designType || "-"} | Detail:${detail || "-"}`
+    )
+  }
+>
               🚀 Create Task
-            </button>
+</button>
           </div>
         )}
 
@@ -323,15 +335,28 @@ export default function Page() {
           <div className={card + " space-y-4"}>
             <h2 className="text-xl font-semibold">📢 Ads Workflow</h2>
 
-            <select className={input}>
-              <option>Facebook Ads</option>
-              <option>Google Ads</option>
-              <option>TikTok Ads</option>
-            </select>
+            <select
+  className={input}
+  value={adsType}
+  onChange={(e) => setAdsType(e.target.value)}
+>
+  <option value="">เลือกประเภท Ads</option>
+  <option>Facebook Ads</option>
+  <option>Google Ads</option>
+  <option>TikTok Ads</option>
+</select>
 
-            <button className={button} onClick={() => submitTask("Ads", detail)}>
-              🚀 Create Task
-            </button>
+            <button
+  className={button}
+  onClick={() =>
+    submitTask(
+      "Ads",
+      `AdsType:${adsType || "-"} | Detail:${detail || "-"}`
+    )
+  }
+>
+  🚀 Create Task
+</button>
           </div>
         )}
 
