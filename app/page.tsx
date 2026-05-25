@@ -137,14 +137,20 @@ export default function Page() {
 
         {/* ================= CUSTOMER ================= */}
         <div className={card + " space-y-3"}>
-
+            <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              👤 ลูกค้า
+              <span className="text-xs text-gray-400">(กรุณาใส่ชื่อ)</span>
+            </label>
           <input
             className={input}
             placeholder="Customer Name"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
           />
-
+            <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              🧑‍💼 เซลล์
+              <span className="text-xs text-gray-400">(ผู้ดูแล)</span>
+            </label>
           <input
             className={input}
             placeholder="Agent Name"
@@ -221,8 +227,12 @@ export default function Page() {
                 <select className={input} value={goal} onChange={(e) => setGoal(e.target.value)}>
                   <option>Goal</option>
                   <option>Branding</option>
+                  <option>Client Story</option>
+                  <option>Motivation</option>
+                  <option>Event Promotion</option>
                   <option>Lead Generation</option>
                   <option>Education</option>
+                  <option>Lifestyle&Vlog</option>
                 </select>
                 <button className={button} onClick={() => setStep(2)}>Next</button>
               </>
@@ -235,6 +245,11 @@ export default function Page() {
                   <option>Cinematic</option>
                   <option>Luxury</option>
                   <option>Vlog</option>
+                  <option>Fast Cut</option>
+                  <option>Documentary</option>
+                  <option>Inspirational</option>
+                  <option>Professional</option>
+                  <option>Casual</option>
                 </select>
                 <button className={button} onClick={() => setStep(3)}>Next</button>
               </>
@@ -246,6 +261,11 @@ export default function Page() {
                   <option>Music</option>
                   <option>Epic</option>
                   <option>Lo-fi</option>
+                  <option>Motivational</option>
+                  <option>Cinematic</option>
+                  <option>ไม่มีเพลง</option>
+                  <option>แล้วแต่ตัดต่อ</option>
+                  
                 </select>
                 <button className={button} onClick={() => setStep(4)}>Next</button>
               </>
@@ -257,6 +277,8 @@ export default function Page() {
                   <option>Voice</option>
                   <option>AI Voice</option>
                   <option>Real Voice</option>
+                  <option>ไม่มี</option>
+                  <option>พากย์เสียงใหม่</option>          
                 </select>
 
                 <button
@@ -287,6 +309,7 @@ export default function Page() {
               <option>Infographic</option>
               <option>PDF</option>
               <option>Profile</option>
+              <option>อื่นๆ</option>
             </select>
 
             <button className={button} onClick={() => submitTask("Design", detail)}>
