@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
 
@@ -11,38 +11,7 @@ export default function Home() {
   const [detail, setDetail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const tasks = [
-    {
-      title: "Graphic Banner Campaign",
-      id: "STB-001",
-      status: "In Progress",
-      progress: "70%",
-      color: "from-yellow-400 to-orange-400",
-      bg: "bg-yellow-100",
-      text: "text-yellow-600",
-      width: "w-[70%]",
-    },
-    {
-      title: "TikTok Video Ads",
-      id: "STB-002",
-      status: "Review",
-      progress: "90%",
-      color: "from-blue-400 to-cyan-400",
-      bg: "bg-blue-100",
-      text: "text-blue-600",
-      width: "w-[90%]",
-    },
-    {
-      title: "Outdoor Shooting",
-      id: "STB-003",
-      status: "Completed",
-      progress: "100%",
-      color: "from-green-400 to-emerald-400",
-      bg: "bg-green-100",
-      text: "text-green-600",
-      width: "w-full",
-    },
-  ];
+  const [tasks, setTasks] = useState<any[]>([]);
 
   const cards = [
     {
@@ -76,6 +45,20 @@ export default function Home() {
       icon: "💻",
     },
   ];
+
+  useEffect(() => {
+
+    fetch(
+      "https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec"
+    )
+      .then((res) => res.json())
+      .then((data) => {
+
+        setTasks(data.reverse());
+
+      });
+
+  }, []);
 
   const submitTask = async () => {
 
@@ -111,6 +94,14 @@ export default function Home() {
       setDeadline("");
       setReference("");
       setDetail("");
+
+      const refresh = await fetch(
+        "https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec"
+      );
+
+      const refreshData = await refresh.json();
+
+      setTasks(refreshData.reverse());
 
     } catch (error) {
 
@@ -161,7 +152,7 @@ export default function Home() {
 
         </div>
 
-        {/* CARDS */}
+        {/* SERVICE CARDS */}
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mt-14">
 
           {cards.map((card, index) => (
@@ -204,12 +195,13 @@ export default function Home() {
 
         </div>
 
-        {/* CREATE TASK */}
+        {/* FORM */}
         <div className="bg-white rounded-3xl p-10 shadow-sm border border-gray-100 mt-16">
 
           <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
 
             <div>
+
               <h2 className="text-4xl font-bold">
                 Create New Task
               </h2>
@@ -223,6 +215,7 @@ export default function Home() {
               <p className="text-gray-400 mt-4">
                 กรุณากรอกรายละเอียดงานให้ครบถ้วน
               </p>
+
             </div>
 
             <div className="bg-purple-50 text-purple-500 px-5 py-3 rounded-2xl">
@@ -302,6 +295,7 @@ export default function Home() {
           <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
 
             <div>
+
               <h2 className="text-4xl font-bold">
                 Task Tracking
               </h2>
@@ -309,6 +303,7 @@ export default function Home() {
               <p className="text-gray-400 mt-2">
                 ติดตามสถานะงานทั้งหมด
               </p>
+
             </div>
 
             <div className="bg-green-50 text-green-500 px-5 py-3 rounded-2xl">
@@ -320,43 +315,38 @@ export default function Home() {
           <div className="space-y-6">
 
             {tasks.map((task, index) => (
+
               <div
                 key={index}
-                className="border border-gray-100 rounded-3xl p-6 hover:shadow-md transition"
+                className="border border-gray-100 rounded-3xl p-6 hover:shadow-md transition bg-gray-50"
               >
 
                 <div className="flex items-center justify-between flex-wrap gap-4">
 
                   <div>
+
                     <h3 className="text-2xl font-bold">
-                      {task.title}
+                      {task.name}
                     </h3>
 
                     <p className="text-gray-400 mt-2">
-                      Job ID: {task.id}
+                      {task.jobId}
                     </p>
+
                   </div>
 
-                  <div className={`${task.bg} ${task.text} px-5 py-2 rounded-2xl font-semibold`}>
+                  <div className="bg-purple-100 text-purple-600 px-5 py-2 rounded-2xl font-semibold">
                     {task.status}
                   </div>
 
                 </div>
 
-                <div className="w-full bg-gray-100 h-4 rounded-full mt-6 overflow-hidden">
-
-                  <div
-                    className={`bg-gradient-to-r ${task.color} h-full rounded-full ${task.width}`}
-                  ></div>
-
-                </div>
-
-                <div className="flex justify-between mt-3 text-sm text-gray-400">
-                  <span>Started</span>
-                  <span>{task.progress}</span>
+                <div className="mt-4 text-gray-500">
+                  {task.taskType}
                 </div>
 
               </div>
+
             ))}
 
           </div>
