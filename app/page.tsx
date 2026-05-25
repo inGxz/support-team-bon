@@ -1,273 +1,353 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec";
+const SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
 
-const LINE_LOGIN_URL =
-  "https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=2010190087&redirect_uri=https://support-team-bon.vercel.app/auth/callback&state=12345&scope=profile%20openid%20email";
+export default function Page() {
+  const formRef = useRef<HTMLDivElement>(null);
 
-export default function Home() {
-
-  const [user, setUser] = useState<any>(null);
-
+  const [taskName, setTaskName] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [taskType, setTaskType] = useState("");
-  const [name, setName] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [agent, setAgent] = useState("");
   const [reference, setReference] = useState("");
   const [detail, setDetail] = useState("");
+  const [deadline, setDeadline] = useState("");
 
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [searchId, setSearchId] = useState("");
-  const [searchResult, setSearchResult] = useState<any>(null);
+  const [tracking, setTracking] = useState("");
+  const [result, setResult] = useState<any>(null);
 
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState("");
 
-  // LOAD USER
-  useEffect(() => {
-    const u = localStorage.getItem("user");
-    if (u) setUser(JSON.parse(u));
-  }, []);
+  const categories = [
+    "🎨 Design",
+    "🎬 Video",
+    "📢 Ads",
+    "✍️ Content",
+    "📷 Shoot",
+    "⚙️ Other",
+  ];
 
-  // LOAD TASKS
-  const loadTasks = async () => {
-    try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      setTasks(Array.isArray(data) ? data.reverse() : []);
-    } catch (err) {
-      console.log("Load error:", err);
-    }
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
   };
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
+  const scrollToForm = (task: string) => {
+    setTaskName(task);
+    formRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-  // CREATE TASK
   const submitTask = async () => {
-
-    if (!name || !deadline || !detail) {
-      alert("กรอกข้อมูลให้ครบ");
+    if (!customerName || !agent || !taskName) {
+      showToast("⚠️ กรุณากรอกข้อมูลให้ครบ");
       return;
     }
 
     setLoading(true);
 
     try {
-
-      const res = await fetch(API_URL, {
+      const res = await fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify({
-          customerName: user?.name || customerName,
-          taskType,
-          name,
-          deadline,
+          customerName,
+          agent,
+          task: taskName,
           reference,
           detail,
+          deadline,
         }),
       });
 
       const data = await res.json();
 
-      alert("สร้างงานสำเร็จ 🎉 Job ID: " + data.jobId);
+      showToast("🚀 Created: " + data.jobId);
 
-      setName("");
-      setDeadline("");
+      setTaskName("");
+      setCustomerName("");
+      setAgent("");
       setReference("");
       setDetail("");
-
-      loadTasks();
-
-    } catch (err) {
-      alert("เกิดข้อผิดพลาด");
+      setDeadline("");
+    } catch {
+      showToast("❌ Submit Failed");
     }
 
     setLoading(false);
   };
 
-  // SEARCH
-  const searchTask = () => {
+  const searchJob = async () => {
+    if (!tracking) return;
 
-    const found = tasks.find(
-      (t) =>
-        (t.jobId || "").toString().trim().toLowerCase() ===
-        searchId.toString().trim().toLowerCase()
-    );
+    setLoading(true);
 
-    if (!found) {
-      alert("ไม่พบ Job ID");
-      setSearchResult(null);
-      return;
-    }
+    const res = await fetch(`${SCRIPT_URL}?jobId=${tracking}`);
+    const data = await res.json();
 
-    setSearchResult(found);
+    setResult(data);
+    setLoading(false);
+  };
+
+  const statusBadge = (status: string) => {
+    if (status === "Pending") return "badge-yellow";
+    if (status === "In Progress") return "badge-blue";
+    if (status === "Completed") return "badge-green";
+    return "badge-gray";
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] p-8 text-gray-800">
+    <main className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200 text-black p-4 md:p-6">
 
-      <div className="max-w-6xl mx-auto">
+      {/* TOAST */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-black text-white px-5 py-3 rounded-full shadow-lg z-50 text-sm">
+          {toast}
+        </div>
+      )}
+
+      <div className="max-w-6xl mx-auto space-y-8">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-10">
-
-          <div>
-            <h1 className="text-4xl font-bold">
-              Support Team Bon
-            </h1>
-
-            {user && (
-              <p className="text-green-600 mt-2">
-                👤 {user.name}
-              </p>
-            )}
-          </div>
-
-          {/* LINE LOGIN BUTTON */}
-          <button
-            onClick={() => (window.location.href = LINE_LOGIN_URL)}
-            className="border-2 border-[#06C755] text-[#06C755] px-6 py-2 rounded-full font-bold hover:bg-[#06C755] hover:text-white transition"
-          >
-            LINE Login
-          </button>
-
+        <div className="card p-6 md:p-10">
+          <h1 className="text-3xl md:text-5xl font-black">
+            🚀 Support Team Bon
+          </h1>
+          <p className="text-gray-600 mt-2">
+            สะดวก • ติดตามผล • ใช้งานง่าย • ระบบสั่งงานการตลาดออนไลน์
+          </p>
         </div>
 
-        {/* TASK TYPE */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        {/* CATEGORY */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-          {["Graphic", "Video", "Ads", "Content", "Shoot"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTaskType(t)}
-              className={`p-3 rounded-xl border ${
-                taskType === t ? "bg-purple-500 text-white" : "bg-white"
-              }`}
-            >
-              {t}
-            </button>
+          {categories.map((t, i) => (
+            <div key={i} className="card p-5">
+              <h2 className="font-bold">{t}</h2>
+
+              <button
+                onClick={() => scrollToForm(t)}
+                className="btn-primary mt-4 w-full"
+              >
+                ➕ Create Task
+              </button>
+            </div>
           ))}
-
         </div>
 
         {/* FORM */}
-        <div className="bg-white p-6 rounded-xl shadow">
+        <div ref={formRef} className="card p-6 md:p-10 space-y-4">
 
+          <h2 className="text-2xl md:text-3xl font-black">
+            🧾 Create Task
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <input
+              placeholder="👤 Customer Name"
+              className="input"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
+
+            <input
+              placeholder="🧑‍💼 Agent"
+              className="input"
+              value={agent}
+              onChange={(e) => setAgent(e.target.value)}
+            />
+          </div>
+
+          {/* IMPORTANT FIELD (BLACK FOCUS) */}
           <input
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="w-full border p-3 mb-3 rounded"
-            placeholder="ชื่อผู้สั่ง (ถ้าไม่ได้ Login)"
+            placeholder="📌 TASK NAME"
+            className="input-black"
+            value={taskName}
+            onChange={(e) => setTaskName(e.target.value)}
           />
 
           <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border p-3 mb-3 rounded"
-            placeholder="ชื่องาน"
-          />
-
-          <input
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-            className="w-full border p-3 mb-3 rounded"
-            placeholder="Deadline"
-          />
-
-          <input
+            placeholder="🔗 Reference"
+            className="input"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
-            className="w-full border p-3 mb-3 rounded"
-            placeholder="Reference"
+          />
+
+          <input
+            type="date"
+            className="input"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
           />
 
           <textarea
+            placeholder="📄 Detail"
+            rows={5}
+            className="input"
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
-            className="w-full border p-3 mb-3 rounded"
-            placeholder="รายละเอียดงาน"
           />
 
           <button
             onClick={submitTask}
-            className="bg-purple-600 text-white px-6 py-3 rounded-xl w-full"
+            disabled={loading}
+            className="btn-primary w-full py-4"
           >
-            {loading ? "Loading..." : "Submit Task"}
+            {loading ? "⏳ Processing..." : "🚀 Submit Task"}
           </button>
-
         </div>
 
-        {/* SEARCH */}
-        <div className="bg-white p-6 mt-10 rounded-xl shadow">
+        {/* TRACKING */}
+        <div className="card p-6 md:p-10">
 
-          <h2 className="text-xl font-bold mb-3">
-            Search Job ID
+          <h2 className="text-2xl md:text-3xl font-black mb-4">
+            🔍 Tracking Job
           </h2>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
 
             <input
-              value={searchId}
-              onChange={(e) => setSearchId(e.target.value)}
-              className="border p-3 w-full rounded"
-              placeholder="STB-001"
+              placeholder="Enter Job ID (STM-001)"
+              className="input flex-1"
+              value={tracking}
+              onChange={(e) => setTracking(e.target.value)}
             />
 
             <button
-              onClick={searchTask}
-              className="bg-black text-white px-4 rounded"
+              onClick={searchJob}
+              className="btn-black"
             >
               Search
             </button>
-
           </div>
 
-          {searchResult && (
-            <div className="mt-4 p-4 bg-gray-50 rounded">
+          {result && !result.error && (
+            <div className="mt-6 p-5 bg-white border rounded-2xl">
 
-              <div className="font-bold">{searchResult.name}</div>
-              <div>{searchResult.jobId}</div>
-              <div>{searchResult.customerName}</div>
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl md:text-2xl font-black">
+                  📦 {result.jobId}
+                </h3>
 
-              <div className="text-purple-600 font-bold">
-                {searchResult.status}
+                <span className={`badge ${statusBadge(result.status)}`}>
+                  {result.status}
+                </span>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 font-medium">
+                <p>👤 {result.customerName}</p>
+                <p>🧑‍💼 {result.agent}</p>
+                <p>📌 {result.task}</p>
+                <p>⏰ {result.deadline}</p>
+              </div>
+
+              <p className="mt-3 text-gray-700">
+                📄 {result.detail}
+              </p>
 
             </div>
           )}
 
         </div>
-
-        {/* TRACKING */}
-        <div className="bg-white p-6 mt-10 rounded-xl shadow">
-
-          <h2 className="text-xl font-bold mb-5">
-            Task Tracking
-          </h2>
-
-          {tasks.map((t, i) => (
-            <div key={i} className="border p-4 mb-3 rounded-xl">
-
-              <div className="font-bold">{t.name}</div>
-              <div>{t.jobId}</div>
-              <div className="text-gray-500">{t.customerName}</div>
-
-              <div>{t.taskType}</div>
-
-              <div className="text-purple-600 font-bold">
-                {t.status}
-              </div>
-
-            </div>
-          ))}
-
-        </div>
-
       </div>
 
+      {/* STYLE SYSTEM */}
+      <style jsx>{`
+
+        .card {
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 18px;
+          box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+        }
+
+        .input {
+          width: 100%;
+          padding: 14px;
+          border-radius: 12px;
+          border: 1.5px solid #e5e7eb;
+          background: white;
+          color: black;
+          font-weight: 600;
+          font-size: 16px;
+          outline: none;
+        }
+
+        .input:focus {
+          border-color: #a78bfa;
+          box-shadow: 0 0 0 4px rgba(167,139,250,0.25);
+        }
+
+        .input-black {
+          width: 100%;
+          padding: 16px;
+          border-radius: 12px;
+          border: 2px solid #000;
+          background: #000;
+          color: #fff;
+          font-weight: 900;
+          font-size: 16px;
+        }
+
+        .input-black::placeholder {
+          color: #aaa;
+        }
+
+        .input-black:focus {
+          box-shadow: 0 0 0 5px rgba(167,139,250,0.35);
+        }
+
+        .btn-primary {
+          background: #a78bfa;
+          color: white;
+          font-weight: 800;
+          border-radius: 12px;
+          padding: 12px 16px;
+        }
+
+        .btn-primary:hover {
+          background: #8b5cf6;
+        }
+
+        .btn-black {
+          background: #000;
+          color: white;
+          font-weight: 800;
+          border-radius: 12px;
+          padding: 12px 16px;
+        }
+
+        .badge-yellow {
+          background: #fef3c7;
+          color: #92400e;
+          padding: 4px 10px;
+          border-radius: 999px;
+        }
+
+        .badge-blue {
+          background: #e0e7ff;
+          color: #3730a3;
+          padding: 4px 10px;
+          border-radius: 999px;
+        }
+
+        .badge-green {
+          background: #dcfce7;
+          color: #166534;
+          padding: 4px 10px;
+          border-radius: 999px;
+        }
+
+        .badge-gray {
+          background: #f3f4f6;
+          color: #374151;
+          padding: 4px 10px;
+          border-radius: 999px;
+        }
+
+      `}</style>
     </main>
   );
 }
