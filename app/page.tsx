@@ -4,6 +4,7 @@ import { useState } from "react";
 
 export default function Home() {
 
+  const [taskType, setTaskType] = useState("");
   const [name, setName] = useState("");
   const [deadline, setDeadline] = useState("");
   const [reference, setReference] = useState("");
@@ -92,6 +93,7 @@ export default function Home() {
         {
           method: "POST",
           body: JSON.stringify({
+            taskType,
             name,
             deadline,
             reference,
@@ -104,6 +106,7 @@ export default function Home() {
 
       alert("ส่งงานสำเร็จ 🎉 Job ID: " + data.jobId);
 
+      setTaskType("");
       setName("");
       setDeadline("");
       setReference("");
@@ -179,7 +182,20 @@ export default function Home() {
                 {card.desc}
               </p>
 
-              <button className="mt-8 border border-gray-200 w-full py-3 rounded-2xl font-semibold hover:bg-gray-50 transition">
+              <button
+                onClick={() => {
+
+                  setTaskType(card.title);
+                  setName(card.title);
+
+                  window.scrollTo({
+                    top: 1000,
+                    behavior: "smooth",
+                  });
+
+                }}
+                className="mt-8 border border-gray-200 w-full py-3 rounded-2xl font-semibold hover:bg-gray-50 transition"
+              >
                 Create Task →
               </button>
 
@@ -198,7 +214,13 @@ export default function Home() {
                 Create New Task
               </h2>
 
-              <p className="text-gray-400 mt-2">
+              {taskType && (
+                <div className="mt-4 inline-block bg-purple-100 text-purple-600 px-5 py-2 rounded-2xl font-semibold">
+                  {taskType}
+                </div>
+              )}
+
+              <p className="text-gray-400 mt-4">
                 กรุณากรอกรายละเอียดงานให้ครบถ้วน
               </p>
             </div>
