@@ -1,4 +1,14 @@
+"use client";
+
+import { useState } from "react";
+
 export default function Home() {
+
+  const [name, setName] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [reference, setReference] = useState("");
+  const [detail, setDetail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const tasks = [
     {
@@ -66,6 +76,51 @@ export default function Home() {
     },
   ];
 
+  const submitTask = async () => {
+
+    if (!name || !deadline || !detail) {
+      alert("กรุณากรอกข้อมูลให้ครบ");
+      return;
+    }
+
+    try {
+
+      setLoading(true);
+
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            deadline,
+            reference,
+            detail,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      alert("ส่งงานสำเร็จ 🎉 Job ID: " + data.jobId);
+
+      setName("");
+      setDeadline("");
+      setReference("");
+      setDetail("");
+
+    } catch (error) {
+
+      alert("เกิดข้อผิดพลาด");
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
   return (
     <main className="min-h-screen bg-[#f5f7fb] text-gray-800 p-8">
 
@@ -91,15 +146,15 @@ export default function Home() {
             </p>
           </div>
 
-         <button className="border-2 border-[#06C755] text-[#06C755] px-8 py-3 rounded-full font-bold flex items-center gap-3 hover:bg-[#06C755] hover:text-white transition-all duration-300">
-  
-  <div className="bg-[#06C755] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">
-    LINE
-  </div>
+          <button className="border-2 border-[#06C755] text-[#06C755] px-8 py-3 rounded-full font-bold flex items-center gap-3 hover:bg-[#06C755] hover:text-white transition-all duration-300">
 
-  Login LINE
+            <div className="bg-[#06C755] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">
+              LINE
+            </div>
 
-</button>
+            Login LINE
+
+          </button>
 
         </div>
 
@@ -162,6 +217,8 @@ export default function Home() {
               </label>
 
               <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="w-full border border-gray-200 rounded-2xl p-4 outline-none focus:border-purple-400"
                 placeholder="ระบุชื่องาน"
               />
@@ -173,6 +230,8 @@ export default function Home() {
               </label>
 
               <input
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
                 className="w-full border border-gray-200 rounded-2xl p-4 outline-none focus:border-purple-400"
                 placeholder="วว/ดด/ปป"
               />
@@ -184,6 +243,8 @@ export default function Home() {
               </label>
 
               <input
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
                 className="w-full border border-gray-200 rounded-2xl p-4 outline-none focus:border-purple-400"
                 placeholder="แนบ Google Drive หรือ URL"
               />
@@ -195,30 +256,20 @@ export default function Home() {
               </label>
 
               <textarea
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
                 className="w-full border border-gray-200 rounded-2xl p-4 outline-none min-h-[180px] focus:border-purple-400"
                 placeholder="อธิบายรายละเอียดงาน"
               />
             </div>
 
-            <div className="md:col-span-2">
-
-              <label className="block mb-3 font-medium">
-                แนบไฟล์
-              </label>
-
-              <div className="border-2 border-dashed border-gray-300 rounded-3xl p-12 text-center text-gray-400">
-                📁 คลิกเพื่ออัปโหลดไฟล์
-                <p className="text-sm mt-2">
-                  รองรับ PNG, JPG, MP4, PDF และ ZIP
-                </p>
-              </div>
-
-            </div>
-
           </div>
 
-          <button className="mt-10 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-lg hover:scale-105 transition">
-            🚀 Submit Task
+          <button
+            onClick={submitTask}
+            className="mt-10 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-lg hover:scale-105 transition"
+          >
+            {loading ? "Loading..." : "🚀 Submit Task"}
           </button>
 
         </div>
