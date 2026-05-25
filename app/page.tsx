@@ -32,7 +32,7 @@ export default function Page() {
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(""), 2500);
+    setTimeout(() => setToast(""), 5500);
   };
 
   const scrollToForm = (task: string) => {
