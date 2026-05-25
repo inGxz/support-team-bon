@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+// ❗ สำคัญ: กัน Next.js prerender พัง
+export const dynamic = "force-dynamic";
+
 export default function CallbackPage() {
 
   const router = useRouter();
@@ -14,7 +17,7 @@ export default function CallbackPage() {
     const code = searchParams.get("code");
 
     if (!code) {
-      router.push("/");
+      router.replace("/");
       return;
     }
 
@@ -30,20 +33,26 @@ export default function CallbackPage() {
           body: JSON.stringify({ code }),
         });
 
-        if (!res.ok) {
-          throw new Error("API error");
-        }
-
         const data = await res.json();
+
+        console.log("LOGIN RESPONSE:", data);
+
+        if (!res.ok || data?.error) {
+          throw new Error("LOGIN FAILED");
+        }
 
         localStorage.setItem("user", JSON.stringify(data));
 
-        router.push("/");
+        router.replace("/");
 
       } catch (err) {
-        console.log(err);
-        alert("Login failed");
-        router.push("/");
+
+        console.log("LOGIN ERROR:", err);
+
+        router.replace("/");
+
+      } finally {
+        setLoading(false);
       }
 
     };
@@ -53,10 +62,20 @@ export default function CallbackPage() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-xl font-bold">
-        {loading ? "Logging in with LINE..." : "Redirecting..."}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+
+      <div className="text-center">
+
+        <div className="text-xl font-bold mb-2">
+          Support Team Bon
+        </div>
+
+        <div className="text-gray-600">
+          {loading ? "Logging in with LINE..." : "Redirecting..."}
+        </div>
+
       </div>
+
     </div>
   );
 }
