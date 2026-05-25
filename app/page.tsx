@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 export default function Home() {
 
+  // FORM STATE
   const [taskType, setTaskType] = useState("");
   const [name, setName] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -11,55 +12,32 @@ export default function Home() {
   const [detail, setDetail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // TRACKING DATA
   const [tasks, setTasks] = useState<any[]>([]);
 
+  // SEARCH
+  const [searchId, setSearchId] = useState("");
+  const [searchResult, setSearchResult] = useState<any>(null);
+
+  // SERVICE CARDS
   const cards = [
-    {
-      title: "Graphic Design",
-      desc: "ส่งบรีฟงานออกแบบกราฟิก",
-      icon: "🎨",
-    },
-    {
-      title: "Video Editing",
-      desc: "ส่งงานตัดต่อวิดีโอ",
-      icon: "🎬",
-    },
-    {
-      title: "Ads Management",
-      desc: "ส่งบรีฟยิงแอด",
-      icon: "📢",
-    },
-    {
-      title: "Content Writing",
-      desc: "ส่งบรีฟงานเขียนคอนเทนต์",
-      icon: "✍️",
-    },
-    {
-      title: "Outdoor Shooting",
-      desc: "ส่งงานถ่ายนอกสถานที่",
-      icon: "📸",
-    },
-    {
-      title: "Others",
-      desc: "งานอื่นๆเพิ่มเติม",
-      icon: "💻",
-    },
+    { title: "Graphic Design", icon: "🎨", desc: "งานกราฟิก" },
+    { title: "Video Editing", icon: "🎬", desc: "ตัดต่อวิดีโอ" },
+    { title: "Ads Management", icon: "📢", desc: "ยิงแอด" },
+    { title: "Content Writing", icon: "✍️", desc: "เขียนคอนเทนต์" },
+    { title: "Outdoor Shooting", icon: "📸", desc: "ถ่ายนอกสถานที่" },
   ];
 
+  // LOAD TASKS FROM SHEET
   useEffect(() => {
 
-    fetch(
-      "https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec"
-    )
-      .then((res) => res.json())
-      .then((data) => {
-
-        setTasks(data.reverse());
-
-      });
+    fetch("https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec")
+      .then(res => res.json())
+      .then(data => setTasks(data.reverse()));
 
   }, []);
 
+  // SUBMIT TASK
   const submitTask = async () => {
 
     if (!name || !deadline || !detail) {
@@ -67,11 +45,11 @@ export default function Home() {
       return;
     }
 
+    setLoading(true);
+
     try {
 
-      setLoading(true);
-
-      const response = await fetch(
+      const res = await fetch(
         "https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec",
         {
           method: "POST",
@@ -80,12 +58,12 @@ export default function Home() {
             name,
             deadline,
             reference,
-            detail,
+            detail
           }),
         }
       );
 
-      const data = await response.json();
+      const data = await res.json();
 
       alert("ส่งงานสำเร็จ 🎉 Job ID: " + data.jobId);
 
@@ -95,268 +73,175 @@ export default function Home() {
       setReference("");
       setDetail("");
 
+      // refresh tasks
       const refresh = await fetch(
         "https://script.google.com/macros/s/AKfycbySBkcCoZjh6p4ac-iw7Hblz9qFk8GwG6Kb1NljIaPTBuLyTl7OKM11IxlCaxPkdXdpzg/exec"
       );
 
-      const refreshData = await refresh.json();
+      const newData = await refresh.json();
+      setTasks(newData.reverse());
 
-      setTasks(refreshData.reverse());
-
-    } catch (error) {
-
+    } catch (err) {
       alert("เกิดข้อผิดพลาด");
-
-    } finally {
-
-      setLoading(false);
-
     }
+
+    setLoading(false);
+  };
+
+  // SEARCH JOB
+  const searchTask = () => {
+
+    const found = tasks.find((t) => t.jobId === searchId);
+
+    if (!found) {
+      alert("ไม่พบ Job ID นี้");
+      setSearchResult(null);
+      return;
+    }
+
+    setSearchResult(found);
 
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-gray-800 p-8">
+    <main className="min-h-screen bg-gray-100 p-10 text-gray-800">
 
-      <div className="max-w-7xl mx-auto">
+      <h1 className="text-4xl font-bold mb-10">
+        Support Team Bon
+      </h1>
 
-        {/* HEADER */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      {/* SERVICE CARDS */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
 
-          <div>
-            <h1 className="text-5xl font-bold">
-              Support Team{" "}
-              <span className="text-purple-500">
-                Bon
-              </span>
-            </h1>
+        {cards.map((c, i) => (
+          <div key={i} className="bg-white p-5 rounded-xl shadow">
 
-            <p className="text-gray-500 text-xl mt-4">
-              ระบบส่งงาน Marketing และ Production
-            </p>
+            <div className="text-3xl">{c.icon}</div>
 
-            <p className="text-gray-400 mt-2">
-              จัดการงานทั้งหมดได้ในที่เดียว
-            </p>
-          </div>
+            <h2 className="font-bold mt-2">{c.title}</h2>
 
-          <button className="border-2 border-[#06C755] text-[#06C755] px-8 py-3 rounded-full font-bold flex items-center gap-3 hover:bg-[#06C755] hover:text-white transition-all duration-300">
+            <p className="text-sm text-gray-500">{c.desc}</p>
 
-            <div className="bg-[#06C755] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">
-              LINE
-            </div>
-
-            Login LINE
-
-          </button>
-
-        </div>
-
-        {/* SERVICE CARDS */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mt-14">
-
-          {cards.map((card, index) => (
-            <div
-              key={index}
-              className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl transition"
+            <button
+              onClick={() => {
+                setTaskType(c.title);
+                window.scrollTo({ top: 800, behavior: "smooth" });
+              }}
+              className="mt-3 text-blue-500"
             >
-
-              <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center text-4xl">
-                {card.icon}
-              </div>
-
-              <h2 className="text-3xl font-bold mt-6">
-                {card.title}
-              </h2>
-
-              <p className="text-gray-500 mt-3 text-lg">
-                {card.desc}
-              </p>
-
-              <button
-                onClick={() => {
-
-                  setTaskType(card.title);
-                  setName(card.title);
-
-                  window.scrollTo({
-                    top: 1000,
-                    behavior: "smooth",
-                  });
-
-                }}
-                className="mt-8 border border-gray-200 w-full py-3 rounded-2xl font-semibold hover:bg-gray-50 transition"
-              >
-                Create Task →
-              </button>
-
-            </div>
-          ))}
-
-        </div>
-
-        {/* FORM */}
-        <div className="bg-white rounded-3xl p-10 shadow-sm border border-gray-100 mt-16">
-
-          <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
-
-            <div>
-
-              <h2 className="text-4xl font-bold">
-                Create New Task
-              </h2>
-
-              {taskType && (
-                <div className="mt-4 inline-block bg-purple-100 text-purple-600 px-5 py-2 rounded-2xl font-semibold">
-                  {taskType}
-                </div>
-              )}
-
-              <p className="text-gray-400 mt-4">
-                กรุณากรอกรายละเอียดงานให้ครบถ้วน
-              </p>
-
-            </div>
-
-            <div className="bg-purple-50 text-purple-500 px-5 py-3 rounded-2xl">
-              ℹ️ New Request
-            </div>
+              Create Task →
+            </button>
 
           </div>
+        ))}
 
-          <div className="grid md:grid-cols-2 gap-6">
+      </div>
 
-            <div>
-              <label className="block mb-2 font-medium">
-                ชื่องาน
-              </label>
+      {/* FORM */}
+      <div className="bg-white p-8 mt-10 rounded-xl">
 
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border border-gray-200 rounded-2xl p-4 outline-none focus:border-purple-400"
-                placeholder="ระบุชื่องาน"
-              />
-            </div>
+        <h2 className="text-2xl font-bold mb-5">
+          Create Task {taskType && `(${taskType})`}
+        </h2>
 
-            <div>
-              <label className="block mb-2 font-medium">
-                Deadline
-              </label>
+        <input
+          className="border p-3 w-full mb-3"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
-              <input
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="w-full border border-gray-200 rounded-2xl p-4 outline-none focus:border-purple-400"
-                placeholder="วว/ดด/ปป"
-              />
-            </div>
+        <input
+          className="border p-3 w-full mb-3"
+          placeholder="Deadline"
+          value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+        />
 
-            <div className="md:col-span-2">
-              <label className="block mb-2 font-medium">
-                Reference Link
-              </label>
+        <input
+          className="border p-3 w-full mb-3"
+          placeholder="Reference"
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+        />
 
-              <input
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                className="w-full border border-gray-200 rounded-2xl p-4 outline-none focus:border-purple-400"
-                placeholder="แนบ Google Drive หรือ URL"
-              />
-            </div>
+        <textarea
+          className="border p-3 w-full mb-3"
+          placeholder="Detail"
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+        />
 
-            <div className="md:col-span-2">
-              <label className="block mb-2 font-medium">
-                รายละเอียดงาน
-              </label>
+        <button
+          onClick={submitTask}
+          className="bg-purple-600 text-white px-6 py-3 rounded"
+        >
+          {loading ? "Loading..." : "Submit Task"}
+        </button>
 
-              <textarea
-                value={detail}
-                onChange={(e) => setDetail(e.target.value)}
-                className="w-full border border-gray-200 rounded-2xl p-4 outline-none min-h-[180px] focus:border-purple-400"
-                placeholder="อธิบายรายละเอียดงาน"
-              />
-            </div>
+      </div>
 
-          </div>
+      {/* SEARCH */}
+      <div className="bg-white p-8 mt-10 rounded-xl">
+
+        <h2 className="text-2xl font-bold mb-3">
+          Search Job ID
+        </h2>
+
+        <div className="flex gap-3">
+
+          <input
+            className="border p-3 w-full"
+            placeholder="STB-xxxxx"
+            value={searchId}
+            onChange={(e) => setSearchId(e.target.value)}
+          />
 
           <button
-            onClick={submitTask}
-            className="mt-10 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-lg hover:scale-105 transition"
+            onClick={searchTask}
+            className="bg-black text-white px-5"
           >
-            {loading ? "Loading..." : "🚀 Submit Task"}
+            Search
           </button>
 
         </div>
 
-        {/* TRACKING */}
-        <div className="bg-white rounded-3xl p-10 shadow-sm border border-gray-100 mt-16">
+        {searchResult && (
+          <div className="mt-5 p-4 bg-gray-50 rounded">
 
-          <div className="flex items-center justify-between flex-wrap gap-4 mb-10">
+            <p><b>{searchResult.name}</b></p>
+            <p>{searchResult.jobId}</p>
+            <p>{searchResult.taskType}</p>
 
-            <div>
-
-              <h2 className="text-4xl font-bold">
-                Task Tracking
-              </h2>
-
-              <p className="text-gray-400 mt-2">
-                ติดตามสถานะงานทั้งหมด
-              </p>
-
-            </div>
-
-            <div className="bg-green-50 text-green-500 px-5 py-3 rounded-2xl">
-              ● Live Status
-            </div>
+            <span className="bg-purple-200 px-3 py-1 rounded">
+              {searchResult.status}
+            </span>
 
           </div>
+        )}
 
-          <div className="space-y-6">
+      </div>
 
-            {tasks.map((task, index) => (
+      {/* TRACKING */}
+      <div className="bg-white p-8 mt-10 rounded-xl">
 
-              <div
-                key={index}
-                className="border border-gray-100 rounded-3xl p-6 hover:shadow-md transition bg-gray-50"
-              >
+        <h2 className="text-2xl font-bold mb-5">
+          Task Tracking
+        </h2>
 
-                <div className="flex items-center justify-between flex-wrap gap-4">
+        {tasks.map((t, i) => (
+          <div key={i} className="border p-4 mb-3 rounded">
 
-                  <div>
+            <b>{t.name}</b>
+            <p>{t.jobId}</p>
+            <p>{t.taskType}</p>
 
-                    <h3 className="text-2xl font-bold">
-                      {task.name}
-                    </h3>
-
-                    <p className="text-gray-400 mt-2">
-                      {task.jobId}
-                    </p>
-
-                  </div>
-
-                  <div className="bg-purple-100 text-purple-600 px-5 py-2 rounded-2xl font-semibold">
-                    {task.status}
-                  </div>
-
-                </div>
-
-                <div className="mt-4 text-gray-500">
-                  {task.taskType}
-                </div>
-
-              </div>
-
-            ))}
+            <span className="text-purple-600">
+              {t.status}
+            </span>
 
           </div>
-
-        </div>
-
-        {/* FOOTER */}
-        <div className="text-center text-gray-400 mt-10">
-          💜 Support Team Bon — Marketing Workflow System
-        </div>
+        ))}
 
       </div>
 
