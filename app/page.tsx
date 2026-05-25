@@ -63,7 +63,7 @@ export default function Page() {
 
       const data = await res.json();
 
-      showToast("🚀 Created: " + data.jobId);
+      showToast("🚀 หมายเลขงานของคุณคือ: " + data.jobId);
 
       setTaskName("");
       setCustomerName("");
@@ -102,8 +102,8 @@ export default function Page() {
 
       {/* TOAST */}
       {toast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-black text-white px-5 py-3 rounded-full shadow-lg z-50 text-sm">
-          {toast}
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-green-100 text-green-800 px-5 py-3 rounded-full shadow-lg z-50 text-sm font-semibold border border-green-200">
+        {toast}
         </div>
       )}
 
