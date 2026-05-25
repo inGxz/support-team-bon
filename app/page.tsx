@@ -28,31 +28,31 @@ export default function Page() {
   // ================= ADS =================
   const [adsType, setAdsType] = useState("");
 
-  // ================= TRACKING =================
+  // ================= TRACK =================
   const [trackingId, setTrackingId] = useState("");
   const [trackResult, setTrackResult] = useState<any>(null);
 
   // ================= UI =================
-  const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // ================= STYLE SYSTEM =================
+  // ================= STYLE =================
   const card =
-    "bg-white/80 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-sm p-6";
+    "bg-white border border-gray-100 rounded-2xl shadow-sm p-6";
 
   const input =
     "w-full p-3 rounded-xl border border-gray-200 text-gray-900 focus:ring-2 focus:ring-purple-300 outline-none";
 
   const button =
-    "w-full p-3 rounded-xl bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 text-white font-semibold shadow-md hover:scale-[1.02] transition";
+    "w-full p-3 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 text-white font-semibold shadow-md hover:scale-[1.02] transition flex items-center justify-center gap-2";
 
   const smallBtn =
-    "px-4 py-2 rounded-xl bg-gradient-to-r from-purple-400 to-indigo-400 text-white";
+    "px-4 py-2 rounded-xl bg-purple-500 text-white";
 
   // ================= TOAST =================
-  const showToast = (jobId: string) => {
-    setToast(jobId);
-    setTimeout(() => setToast(null), 6000);
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 8000);
   };
 
   // ================= RESET =================
@@ -75,6 +75,7 @@ export default function Page() {
     if (!customerName || !agent) return;
 
     setLoading(true);
+    showToast("⏳ กำลังส่งงาน...");
 
     const res = await fetch(SCRIPT_URL, {
       method: "POST",
@@ -84,17 +85,17 @@ export default function Page() {
         agent,
         taskType,
         task,
-        detail: `${extra} | Detail:${detail} | Deadline:${deadline}`,
+        detail: `${extra} | ${detail} | Deadline: ${deadline}`,
         deadline,
       }),
     });
 
     const data = await res.json();
 
-    showToast(data.jobId);
+    setLoading(false);
+    showToast(`✅ งานของคุณคือ Job ID: ${data.jobId}`);
 
     resetAll();
-    setLoading(false);
   };
 
   // ================= TRACK =================
@@ -104,16 +105,24 @@ export default function Page() {
     setTrackResult(data);
   };
 
-  // ================= UI =================
   return (
-    <main className="min-h-screen bg-[#f6f7fb] p-4 text-gray-900">
+    <main className="min-h-screen bg-gray-100 p-4 text-gray-900">
 
-      {/* ✅ SUCCESS TOAST (GREEN) */}
+      {/* 🔵 LOADING OVERLAY */}
+      {loading && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white px-6 py-4 rounded-2xl shadow-lg flex items-center gap-3">
+            <span className="animate-spin">⏳</span>
+            <p className="font-semibold">กำลังส่งงาน... กรุณารอสถานะ Job ID</p>
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 TOAST */}
       {toast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50">
-          <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-2xl shadow-lg">
-            <p className="font-bold">✅ สถานะงานของคุณคือ</p>
-            <p className="text-sm">Job ID: {toast}</p>
+          <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-3 rounded-2xl shadow-md">
+            {toast}
           </div>
         </div>
       )}
@@ -122,8 +131,8 @@ export default function Page() {
 
         {/* HEADER */}
         <div className={card}>
-          <h1 className="text-3xl font-bold">🚀 SUPPORT TEAMBON WORKFLOW</h1>
-          <p className="text-gray-500">Premium Workflow Management</p>
+          <h1 className="text-3xl font-bold">🚀 SUPPORT TEAMBON VT MARKET</h1>
+          <p className="text-gray-500">Premium Workflow System</p>
         </div>
 
         {/* ================= CUSTOMER ================= */}
@@ -143,20 +152,25 @@ export default function Page() {
             onChange={(e) => setAgent(e.target.value)}
           />
 
-          {/* DEADLINE */}
+          {/* 📅 DEADLINE FIXED */}
           <div>
-            <label className="text-sm font-semibold">
-              📅 Deadline <span className="text-gray-400">(วันครบกำหนดส่งงาน)</span>
+            <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              📅 Deadline
+              <span className="text-xs text-gray-400">(วันครบกำหนดส่งงาน)</span>
             </label>
+
             <input
               type="date"
               className={input}
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
             />
+
+            <p className="text-xs text-gray-400 mt-1">
+              ⚠️ กรุณาเลือกวันที่ต้องการให้ส่งงานเสร็จ
+            </p>
           </div>
 
-          {/* DETAIL */}
           <textarea
             className={input + " h-24"}
             placeholder="Detail / Notes..."
@@ -198,7 +212,6 @@ export default function Page() {
                   <option>YouTube Shorts</option>
                   <option>YouTube Long</option>
                 </select>
-
                 <button className={button} onClick={() => setStep(1)}>Next</button>
               </>
             )}
@@ -209,10 +222,8 @@ export default function Page() {
                   <option>Goal</option>
                   <option>Branding</option>
                   <option>Lead Generation</option>
-                  <option>Event Promotion</option>
                   <option>Education</option>
                 </select>
-
                 <button className={button} onClick={() => setStep(2)}>Next</button>
               </>
             )}
@@ -224,9 +235,7 @@ export default function Page() {
                   <option>Cinematic</option>
                   <option>Luxury</option>
                   <option>Vlog</option>
-                  <option>Professional</option>
                 </select>
-
                 <button className={button} onClick={() => setStep(3)}>Next</button>
               </>
             )}
@@ -237,9 +246,7 @@ export default function Page() {
                   <option>Music</option>
                   <option>Epic</option>
                   <option>Lo-fi</option>
-                  <option>ไม่มีเพลง</option>
                 </select>
-
                 <button className={button} onClick={() => setStep(4)}>Next</button>
               </>
             )}
@@ -249,20 +256,19 @@ export default function Page() {
                 <select className={input} value={voice} onChange={(e) => setVoice(e.target.value)}>
                   <option>Voice</option>
                   <option>AI Voice</option>
-                  <option>เสียงจริง</option>
-                  <option>ไม่มี</option>
+                  <option>Real Voice</option>
                 </select>
 
                 <button
                   className={button}
                   onClick={() =>
                     submitTask(
-                      "Video Production",
+                      "Video",
                       `Platform:${platform}, Goal:${goal}, Mood:${mood}, Music:${music}, Voice:${voice}`
                     )
                   }
                 >
-                  🚀 Create Video Task
+                  🚀 Create Task
                 </button>
               </>
             )}
@@ -283,8 +289,8 @@ export default function Page() {
               <option>Profile</option>
             </select>
 
-            <button className={button} onClick={() => submitTask("Design Work", detail)}>
-              🚀 Create Design Task
+            <button className={button} onClick={() => submitTask("Design", detail)}>
+              🚀 Create Task
             </button>
           </div>
         )}
@@ -298,16 +304,15 @@ export default function Page() {
               <option>Facebook Ads</option>
               <option>Google Ads</option>
               <option>TikTok Ads</option>
-              <option>Campaign Setup</option>
             </select>
 
-            <button className={button} onClick={() => submitTask("Ads Campaign", detail)}>
-              🚀 Create Ads Task
+            <button className={button} onClick={() => submitTask("Ads", detail)}>
+              🚀 Create Task
             </button>
           </div>
         )}
 
-        {/* ================= TRACKING ================= */}
+        {/* ================= TRACK ================= */}
         <div className={card + " space-y-3"}>
           <h2 className="text-xl font-semibold">🔍 Track Job ID</h2>
 
@@ -318,14 +323,13 @@ export default function Page() {
               value={trackingId}
               onChange={(e) => setTrackingId(e.target.value)}
             />
-
             <button className={smallBtn} onClick={trackJob}>
               Search
             </button>
           </div>
 
           {trackResult && (
-            <div className="p-4 border rounded-xl bg-white">
+            <div className="p-4 bg-white border rounded-xl">
               <p><b>Status:</b> {trackResult.status}</p>
               <p><b>Task:</b> {trackResult.task}</p>
               <p><b>Detail:</b> {trackResult.detail}</p>
