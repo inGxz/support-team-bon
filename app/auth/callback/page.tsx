@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+export const runtime = "edge"; // กัน SSR build crash บน Vercel
 
 export default function CallbackPage() {
 
@@ -12,9 +13,8 @@ export default function CallbackPage() {
 
   useEffect(() => {
 
-    // ดึง code แบบ safe (กัน build crash)
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
+    // ❗ สำคัญ: ใช้ client-only safe method
+    const code = new URLSearchParams(window.location.search).get("code");
 
     if (!code) {
       router.replace("/");
@@ -34,8 +34,6 @@ export default function CallbackPage() {
         });
 
         const data = await res.json();
-
-        console.log("LOGIN RESPONSE:", data);
 
         if (!res.ok || data?.error) {
           throw new Error("LOGIN FAILED");
@@ -62,13 +60,13 @@ export default function CallbackPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="text-xl font-bold">
           Support Team Bon
         </div>
         <div className="text-gray-600 mt-2">
-          {loading ? "Logging in with LINE..." : "Redirecting..."}
+          {loading ? "Logging in..." : "Redirecting..."}
         </div>
       </div>
     </div>
