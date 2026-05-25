@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-// ❗ สำคัญ: กัน Next.js prerender พัง
 export const dynamic = "force-dynamic";
 
 export default function CallbackPage() {
 
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
 
-    const code = searchParams.get("code");
+    // ดึง code แบบ safe (กัน build crash)
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
 
     if (!code) {
       router.replace("/");
@@ -59,23 +59,18 @@ export default function CallbackPage() {
 
     login();
 
-  }, [searchParams, router]);
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-
       <div className="text-center">
-
-        <div className="text-xl font-bold mb-2">
+        <div className="text-xl font-bold">
           Support Team Bon
         </div>
-
-        <div className="text-gray-600">
+        <div className="text-gray-600 mt-2">
           {loading ? "Logging in with LINE..." : "Redirecting..."}
         </div>
-
       </div>
-
     </div>
   );
 }
