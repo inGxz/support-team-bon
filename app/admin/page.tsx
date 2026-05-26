@@ -85,6 +85,8 @@ export default function AdminPage() {
 
   const [filter, setFilter] = useState("ทั้งหมด");
   const [search, setSearch] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState(30);
 
   // Check session on mount
   useEffect(() => {
@@ -94,9 +96,9 @@ export default function AdminPage() {
     }
   }, []);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (silent = false) => {
     const token = sessionStorage.getItem("adminAuth") || "";
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await fetch("/api/admin/jobs", {
         headers: { Authorization: `Bearer ${token}` },
@@ -104,18 +106,31 @@ export default function AdminPage() {
       const data = await res.json();
       if (data.jobs) {
         setJobs(data.jobs);
-        const init: Record<string, EditState> = {};
-        data.jobs.forEach((j: Job) => {
-          init[j.jobId] = { status: j.status || "Pending", deliveryLink: j.deliveryLink || "" };
+        setEditState((prev) => {
+          const next: Record<string, EditState> = {};
+          data.jobs.forEach((j: Job) => {
+            // ถ้ากำลัง edit อยู่ → ไม่ override
+            next[j.jobId] = prev[j.jobId] ?? { status: j.status || "Pending", deliveryLink: j.deliveryLink || "" };
+          });
+          return next;
         });
-        setEditState(init);
+        setLastUpdated(new Date());
+        setCountdown(30);
       }
     } catch {}
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, []);
 
   useEffect(() => {
     if (isLoggedIn) fetchJobs();
+  }, [isLoggedIn, fetchJobs]);
+
+  // Auto-refresh ทุก 30 วินาที
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const interval = setInterval(() => fetchJobs(true), 30000);
+    const tick = setInterval(() => setCountdown((c) => (c <= 1 ? 30 : c - 1)), 1000);
+    return () => { clearInterval(interval); clearInterval(tick); };
   }, [isLoggedIn, fetchJobs]);
 
   const handleLogin = async () => {
@@ -261,12 +276,18 @@ export default function AdminPage() {
           <h1 className="text-white font-black text-lg tracking-widest">🛠️ ADMIN PANEL</h1>
           <p className="text-purple-200 text-xs">SUPPORT TEAMBON VT MARKET</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {lastUpdated && (
+            <div className="text-right hidden sm:block">
+              <p className="text-purple-200 text-xs">อัปเดตล่าสุด {lastUpdated.toLocaleTimeString("th-TH")}</p>
+              <p className="text-purple-300 text-xs">รีเฟรชใน {countdown} วิ</p>
+            </div>
+          )}
           <button
-            onClick={fetchJobs}
-            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+            onClick={() => fetchJobs()}
+            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
           >
-            🔄 Refresh
+            <span className={loading ? "animate-spin" : ""}>🔄</span> Refresh
           </button>
           <button
             onClick={() => {
