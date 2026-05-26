@@ -237,10 +237,16 @@ export default function Page() {
   };
 
   // ================= TRACK =================
+  const [tracking, setTracking] = useState(false);
+
   const trackJob = async () => {
+    if (!trackingId) return;
+    setTracking(true);
+    setTrackResult(null);
     const res = await fetch(`${SCRIPT_URL}?jobId=${trackingId}`);
     const data = await res.json();
     setTrackResult(data);
+    setTracking(false);
   };
 
   return (
@@ -519,26 +525,85 @@ export default function Page() {
         )}
 
         {/* ================= TRACK ================= */}
-        <div className={card + " space-y-3"}>
+        <div className={card + " space-y-4"}>
           <h2 className="text-xl font-semibold">🔍 Track Job ID</h2>
 
           <div className="flex gap-2">
             <input
               className={input}
-              placeholder="Enter Job ID"
+              placeholder="กรอก Job ID ที่ได้รับ"
               value={trackingId}
               onChange={(e) => setTrackingId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && trackJob()}
             />
-            <button className={smallBtn} onClick={trackJob}>
-              Search
+            <button
+              className={`px-5 py-2 rounded-xl font-semibold text-white transition min-w-[110px] flex items-center justify-center gap-2 ${
+                tracking
+                  ? "bg-indigo-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 hover:scale-[1.02]"
+              }`}
+              onClick={trackJob}
+              disabled={tracking}
+            >
+              {tracking ? (
+                <>
+                  <span className="animate-spin inline-block">⏳</span>
+                  <span>ค้นหา...</span>
+                </>
+              ) : (
+                <>🔍 Search</>
+              )}
             </button>
           </div>
 
-          {trackResult && (
-            <div className="p-4 bg-white border rounded-xl">
-              <p><b>Status:</b> {trackResult.status}</p>
-              <p><b>Task:</b> {trackResult.task}</p>
-              <p><b>Detail:</b> {trackResult.detail}</p>
+          {/* Skeleton loader */}
+          {tracking && (
+            <div className="rounded-xl border border-gray-100 p-4 space-y-3 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/3" />
+              <div className="h-4 bg-gray-200 rounded w-1/2" />
+              <div className="h-4 bg-gray-200 rounded w-2/3" />
+              <div className="h-4 bg-gray-200 rounded w-1/2" />
+            </div>
+          )}
+
+          {/* Result card */}
+          {!tracking && trackResult && (
+            <div className="rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+              {/* Status banner */}
+              <div className={`px-5 py-3 flex items-center gap-2 text-white font-semibold text-sm ${
+                trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว"
+                  ? "bg-green-500"
+                  : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ"
+                  ? "bg-blue-500"
+                  : "bg-amber-400"
+              }`}>
+                <span>
+                  {trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว"
+                    ? "✅"
+                    : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ"
+                    ? "🔄"
+                    : "⏳"}
+                </span>
+                <span>สถานะ: {trackResult.status}</span>
+              </div>
+
+              {/* Detail rows */}
+              <div className="bg-white divide-y divide-gray-50">
+                {[
+                  { label: "📦 ประเภทงาน", value: trackResult.task },
+                  { label: "📝 รายละเอียด", value: trackResult.detail },
+                  { label: "👤 ลูกค้า", value: trackResult.customerName },
+                  { label: "🧑‍💼 เซลล์", value: trackResult.agent },
+                  { label: "📅 Deadline", value: trackResult.deadline },
+                ]
+                  .filter((r) => r.value)
+                  .map((r) => (
+                    <div key={r.label} className="flex gap-3 px-5 py-3">
+                      <span className="text-gray-400 text-sm min-w-[130px]">{r.label}</span>
+                      <span className="text-gray-800 text-sm font-medium break-all">{r.value}</span>
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
         </div>
