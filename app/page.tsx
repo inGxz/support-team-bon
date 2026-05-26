@@ -685,7 +685,7 @@ export default function Page() {
             </label>
             <div className="relative">
               <input
-                className={inputCls(!!errors.customerName) + (lineProfile ? " bg-green-50 cursor-not-allowed text-gray-500" : "")}
+                className={inputCls(!!errors.customerName) + (lineProfile ? (dark ? " bg-gray-700 cursor-not-allowed text-white" : " bg-green-50 cursor-not-allowed text-gray-700") : "")}
                 placeholder="Customer Name"
                 value={customerName}
                 onChange={(e) => !lineProfile && handleCustomerInput(e.target.value)}
