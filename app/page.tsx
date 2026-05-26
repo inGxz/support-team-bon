@@ -259,7 +259,7 @@ function LiffLoadingScreen() {
 }
 
 // ================= LINE LOGIN SCREEN (fullscreen บังคับ) =================
-function LineLoginScreen({ onLogin, loading }: { onLogin: () => void; loading: boolean }) {
+function LineLoginScreen({ onLogin, loading, error }: { onLogin: () => void; loading: boolean; error?: string | null }) {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center z-50 p-6" style={{ background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)" }}>
       {/* Logo / Header */}
@@ -282,6 +282,12 @@ function LineLoginScreen({ onLogin, loading }: { onLogin: () => void; loading: b
               และแจ้งสถานะงานผ่าน LINE
             </p>
           </div>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-left">
+              <p className="text-red-500 text-xs font-bold mb-1">⚠️ LIFF Error:</p>
+              <p className="text-red-400 text-xs break-all">{error}</p>
+            </div>
+          )}
           <button
             onClick={onLogin}
             disabled={loading}
@@ -346,6 +352,7 @@ export default function Page() {
   const [lineProfile, setLineProfile] = useState<{ userId: string; displayName: string; pictureUrl: string } | null>(null);
   const [liffLoading, setLiffLoading] = useState(false);
   const [showLineLogin, setShowLineLogin] = useState(false);
+  const [liffError, setLiffError] = useState<string | null>(null);
 
   // MODALS
   const [showPreview, setShowPreview] = useState(false);
@@ -371,9 +378,12 @@ export default function Page() {
           setLineProfile(profile);
           setCustomerName((prev) => prev || profile.displayName);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("LIFF init error:", err);
-        if (!cancelled) setLiffReady(true);
+        if (!cancelled) {
+          setLiffError(String(err?.message || err));
+          setLiffReady(true);
+        }
       } finally {
         if (!cancelled) setLiffLoading(false);
       }
@@ -652,7 +662,7 @@ export default function Page() {
 
   // บังคับ login — แสดงหน้า loading / login ก่อนถ้ายังไม่ได้ login
   if (!liffReady) return <LiffLoadingScreen />;
-  if (!lineProfile) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} />;
+  if (!lineProfile) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} error={liffError} />;
 
   return (
     <main className={`min-h-screen ${bg} p-4 transition-colors duration-300`}>
