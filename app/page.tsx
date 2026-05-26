@@ -175,6 +175,7 @@ function JobIdModal({ jobId, onClose }: { jobId: string; onClose: () => void }) 
 
 // ================= JOB HISTORY PANEL =================
 type JobRecord = { jobId: string; task: string; customerName: string; deadline: string; submittedAt: string };
+type MyJobItem = { jobId: string; customerName: string; task: string; deadline: string; status: string; timestamp: string };
 
 function JobHistoryPanel({ jobs, dark, onClose, onTrack }: { jobs: JobRecord[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void }) {
   const card = dark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100";
@@ -225,6 +226,89 @@ function JobHistoryPanel({ jobs, dark, onClose, onTrack }: { jobs: JobRecord[]; 
                 </div>
               );
             })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= MY JOBS PANEL =================
+function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobItem[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void; loading: boolean }) {
+  const statusStyle = (s: string) => {
+    if (s === "Done" || s === "เสร็จแล้ว") return "bg-green-100 text-green-700 border-green-200";
+    if (s === "In Progress" || s === "กำลังทำ") return "bg-blue-100 text-blue-700 border-blue-200";
+    return "bg-amber-100 text-amber-700 border-amber-200";
+  };
+  const statusIcon = (s: string) => {
+    if (s === "Done" || s === "เสร็จแล้ว") return "✅";
+    if (s === "In Progress" || s === "กำลังทำ") return "🔄";
+    return "⏳";
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${dark ? "bg-gray-800" : "bg-white"}`}>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-teal-500 to-green-500 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-white text-lg font-bold">👤 งานของฉัน</h2>
+            <p className="text-teal-100 text-xs mt-0.5">
+              {loading ? "กำลังโหลด..." : `${jobs.length} รายการทั้งหมด`}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none transition">✕</button>
+        </div>
+
+        {/* List */}
+        <div className="max-h-[65vh] overflow-y-auto">
+          {loading ? (
+            <div className="p-6 space-y-4 animate-pulse">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-1/3" />
+                  <div className="h-4 bg-gray-200 rounded w-2/3" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <div className="text-4xl mb-3">📭</div>
+              <p className="text-gray-400 text-sm">ยังไม่มีงานที่สั่งไว้</p>
+            </div>
+          ) : (
+            <div className={`divide-y ${dark ? "divide-gray-700" : "divide-gray-100"}`}>
+              {jobs.map((j) => {
+                const daysLeft = Math.ceil((new Date(j.deadline).getTime() - Date.now()) / 86400000);
+                const isDone = j.status === "Done" || j.status === "เสร็จแล้ว";
+                const urgent = !isDone && daysLeft >= 0 && daysLeft <= 2;
+                return (
+                  <div key={j.jobId} className={`px-5 py-4 flex items-start justify-between gap-3 ${dark ? "hover:bg-gray-700" : "hover:bg-gray-50"} transition`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-bold text-purple-600 text-sm">{j.jobId}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${statusStyle(j.status)}`}>
+                          {statusIcon(j.status)} {j.status}
+                        </span>
+                        {urgent && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">🔥 ด่วน</span>}
+                      </div>
+                      <p className={`text-sm font-medium truncate ${dark ? "text-white" : "text-gray-800"}`}>{j.task}</p>
+                      <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                        📅 {j.deadline}
+                        {!isDone && (daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)")}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { onTrack(j.jobId); onClose(); }}
+                      className="shrink-0 px-3 py-1.5 bg-purple-50 border border-purple-200 text-purple-600 text-xs rounded-lg hover:bg-purple-100 transition font-semibold"
+                    >
+                      ดูรายละเอียด
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -341,6 +425,11 @@ export default function Page() {
   const [jobHistory, setJobHistory] = useState<JobRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  // MY JOBS
+  const [showMyJobs, setShowMyJobs] = useState(false);
+  const [myJobsList, setMyJobsList] = useState<MyJobItem[]>([]);
+  const [loadingMyJobs, setLoadingMyJobs] = useState(false);
+
   // LINE / LIFF
   const [liffReady, setLiffReady] = useState(false);
   const [lineProfile, setLineProfile] = useState<{ userId: string; displayName: string; pictureUrl: string } | null>(null);
@@ -448,6 +537,23 @@ export default function Page() {
       }
     } catch (err) {
       console.error("LINE logout error:", err);
+    }
+  };
+
+  const fetchMyJobs = async () => {
+    if (!lineProfile) return;
+    setShowMyJobs(true);
+    setLoadingMyJobs(true);
+    setMyJobsList([]);
+    try {
+      const url = `${SCRIPT_URL}?lineUserId=${encodeURIComponent(lineProfile.userId)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.jobs) setMyJobsList(data.jobs);
+    } catch {
+      // silent fail — panel still shows with empty state
+    } finally {
+      setLoadingMyJobs(false);
     }
   };
 
@@ -666,6 +772,7 @@ export default function Page() {
       {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
       {confirmBack && <ConfirmModal message="ข้อมูลที่กรอกไปจะหายทั้งหมด ต้องการกลับจริงไหม?" onConfirm={() => { confirmBack(); setConfirmBack(null); }} onCancel={() => setConfirmBack(null)} />}
       {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setTrackingId(id); trackJob(id); }} />}
+      {showMyJobs && <MyJobsPanel jobs={myJobsList} dark={dark} onClose={() => setShowMyJobs(false)} onTrack={(id) => { setTrackingId(id); trackJob(id); }} loading={loadingMyJobs} />}
 
       <div className="max-w-5xl mx-auto space-y-6">
 
@@ -896,6 +1003,12 @@ export default function Page() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#10b981 0%,#06b6d4 60%,#3b82f6 100%)">🔍 Track Job ID</GradText></h2>
             <div className="flex items-center gap-2">
+              <button
+                onClick={fetchMyJobs}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 text-xs font-semibold hover:bg-teal-100 transition"
+              >
+                👤 งานของฉัน
+              </button>
               <button
                 onClick={() => setShowHistory(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 text-xs font-semibold hover:bg-purple-100 transition"

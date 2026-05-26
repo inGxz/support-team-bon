@@ -51,6 +51,11 @@ function doGet(e) {
   const jobId      = e.parameter.jobId      || "";
   const lineUserId = e.parameter.lineUserId || "";
 
+  // ถ้าไม่มี jobId แต่มี lineUserId → ดึงงานทั้งหมดของ user นี้
+  if (!jobId && lineUserId) {
+    return getMyJobs(lineUserId);
+  }
+
   if (!jobId) {
     return jsonResponse({ error: "jobId is required" });
   }
@@ -83,6 +88,32 @@ function doGet(e) {
   }
 
   return jsonResponse({ error: "NOT_FOUND", message: "ไม่พบ Job ID นี้" });
+}
+
+// ─── getMyJobs: ดึงงานทั้งหมดของ lineUserId ──────────────────────────────────
+function getMyJobs(lineUserId) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data  = sheet.getDataRange().getValues();
+  const jobs  = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (String(row[COL.LINE_USER_ID - 1]) === lineUserId) {
+      jobs.push({
+        jobId:        row[COL.JOB_ID        - 1],
+        customerName: row[COL.CUSTOMER_NAME - 1],
+        task:         row[COL.TASK          - 1],
+        deadline:     row[COL.DEADLINE      - 1],
+        status:       row[COL.STATUS        - 1],
+        timestamp:    row[COL.TIMESTAMP     - 1],
+      });
+    }
+  }
+
+  // เรียงล่าสุดก่อน
+  jobs.reverse();
+
+  return jsonResponse({ jobs });
 }
 
 // ─── doPost: สร้าง Job ใหม่ ────────────────────────────────────────────────────
