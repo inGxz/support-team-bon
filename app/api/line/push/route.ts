@@ -16,23 +16,78 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let messageText = "";
+    let messages: object[];
 
     if (type === "created") {
-      messageText =
-        `🎉 ส่งงานสำเร็จแล้ว!\n\n` +
-        `📋 Job ID: ${jobId}\n` +
-        (customerName ? `👤 ลูกค้า: ${customerName}\n` : "") +
-        (taskLabel ? `📦 ประเภทงาน: ${taskLabel}\n` : "") +
-        `\nกรุณาเก็บ Job ID ไว้เพื่อติดตามสถานะงาน\nระบบ SUPPORT TEAMBON VT MARKET`;
-    } else if (type === "done") {
-      messageText =
-        `✅ งานของคุณเสร็จแล้ว!\n\n` +
-        `📋 Job ID: ${jobId}\n` +
-        (customerName ? `👤 ลูกค้า: ${customerName}\n` : "") +
-        `\nกรุณาติดต่อทีมงานเพื่อรับงาน\nระบบ SUPPORT TEAMBON VT MARKET`;
+      messages = [
+        {
+          type: "flex",
+          altText: `🎉 ส่งงานสำเร็จแล้ว! Job ID: ${jobId}`,
+          contents: {
+            type: "bubble",
+            header: {
+              type: "box",
+              layout: "vertical",
+              backgroundColor: "#6366f1",
+              contents: [
+                {
+                  type: "text",
+                  text: "🎉 ส่งงานสำเร็จแล้ว!",
+                  weight: "bold",
+                  size: "xl",
+                  color: "#ffffff",
+                },
+              ],
+            },
+            body: {
+              type: "box",
+              layout: "vertical",
+              spacing: "md",
+              contents: [
+                {
+                  type: "text",
+                  text: `📋 Job ID: ${jobId}`,
+                  size: "sm",
+                  color: "#333333",
+                  weight: "bold",
+                },
+                ...(customerName
+                  ? [{ type: "text", text: `👤 ลูกค้า: ${customerName}`, size: "sm", color: "#555555" }]
+                  : []),
+                ...(taskLabel
+                  ? [{ type: "text", text: `📦 ประเภทงาน: ${taskLabel}`, size: "sm", color: "#555555", wrap: true }]
+                  : []),
+                {
+                  type: "separator",
+                  margin: "md",
+                },
+                {
+                  type: "text",
+                  text: "กรุณาเก็บ Job ID ไว้เพื่อติดตามสถานะงาน",
+                  size: "xs",
+                  color: "#aaaaaa",
+                  margin: "md",
+                  wrap: true,
+                },
+                {
+                  type: "text",
+                  text: "ระบบ SUPPORT TEAMBON VT MARKET",
+                  size: "xs",
+                  color: "#aaaaaa",
+                  wrap: true,
+                },
+              ],
+            },
+          },
+        },
+      ];
     } else {
-      messageText = body.message || `📢 อัปเดตงาน Job ID: ${jobId}`;
+      messages = [
+        {
+          type: "text",
+          text: body.message || `📢 อัปเดตงาน Job ID: ${jobId}`,
+        },
+      ];
     }
 
     const lineRes = await fetch("https://api.line.me/v2/bot/message/push", {
@@ -41,10 +96,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
       },
-      body: JSON.stringify({
-        to: userId,
-        messages: [{ type: "text", text: messageText }],
-      }),
+      body: JSON.stringify({ to: userId, messages }),
     });
 
     if (!lineRes.ok) {
