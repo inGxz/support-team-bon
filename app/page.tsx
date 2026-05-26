@@ -356,29 +356,11 @@ export default function Page() {
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [confirmBack, setConfirmBack] = useState<(() => void) | null>(null);
 
-  // LIFF initialization — poll until window.liff is ready
+  // LIFF initialization — โหลด SDK แบบ dynamic แล้วรอ onload
   useEffect(() => {
     let cancelled = false;
-    let attempts = 0;
-    const MAX_ATTEMPTS = 30; // รอสูงสุด 15 วินาที (30 × 500ms)
 
-    const tryInit = async () => {
-      if (cancelled) return;
-      if (typeof window === "undefined") return;
-
-      // รอ LIFF SDK โหลดเสร็จก่อน
-      if (!window.liff) {
-        attempts++;
-        if (attempts < MAX_ATTEMPTS) {
-          setTimeout(tryInit, 500);
-        } else {
-          // SDK โหลดไม่ได้ — แสดงหน้า login พร้อม fallback redirect
-          if (!cancelled) setLiffReady(true);
-        }
-        return;
-      }
-
-      setLiffLoading(true);
+    const initLiff = async () => {
       try {
         await window.liff.init({ liffId: LIFF_ID });
         if (cancelled) return;
@@ -388,8 +370,6 @@ export default function Page() {
           if (cancelled) return;
           setLineProfile(profile);
           setCustomerName((prev) => prev || profile.displayName);
-        } else {
-          setShowLineLogin(true);
         }
       } catch (err) {
         console.error("LIFF init error:", err);
@@ -399,8 +379,32 @@ export default function Page() {
       }
     };
 
-    setTimeout(tryInit, 500);
-    return () => { cancelled = true; };
+    // ถ้า LIFF SDK โหลดไปแล้ว (เช่น หลัง redirect กลับมา)
+    if (window.liff) {
+      setLiffLoading(true);
+      initLiff();
+      return () => { cancelled = true; };
+    }
+
+    // โหลด LIFF SDK แบบ dynamic script
+    const script = document.createElement("script");
+    script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+    script.async = true;
+    script.onload = () => {
+      if (!cancelled) {
+        setLiffLoading(true);
+        initLiff();
+      }
+    };
+    script.onerror = () => {
+      console.error("LIFF SDK failed to load");
+      if (!cancelled) setLiffReady(true);
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      cancelled = true;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
