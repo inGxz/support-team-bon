@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const CHANNEL_ACCESS_TOKEN =
-  process.env.LINE_CHANNEL_ACCESS_TOKEN ||
-  "DqSGNqsocKnqKCaEcExvPg/onN3k71xJloz7em5Be5AcBN2/x4jE0+uie6o8EAq410shTOdM7CW0UWVd2Zcowv+kOZ4NUS/D+MpaonJOBxCEiqmO/LCg5NkXkJlitv6Pj/mR/3PAnv/T6/BZTmo+hwdB04t89/1O/w1cDnyilFU=";
+const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
 
 export async function POST(req: NextRequest) {
   try {
