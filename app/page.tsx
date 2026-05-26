@@ -282,13 +282,6 @@ function LineLoginScreen({ onLogin, loading, error }: { onLogin: () => void; loa
               และแจ้งสถานะงานผ่าน LINE
             </p>
           </div>
-          {/* Debug info */}
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-left space-y-1">
-            <p className="text-gray-500 text-xs font-bold">🔍 Debug Info:</p>
-            <p className="text-gray-400 text-xs break-all">liff: {typeof window !== "undefined" && (window as any).liff ? "✅ loaded" : "❌ not loaded"}</p>
-            <p className="text-gray-400 text-xs break-all">url: {typeof window !== "undefined" ? window.location.href.slice(0, 80) : "-"}</p>
-            {error && <p className="text-red-400 text-xs break-all">error: {error}</p>}
-          </div>
           <button
             onClick={onLogin}
             disabled={loading}
