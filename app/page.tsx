@@ -5,7 +5,24 @@ import { useState, useEffect } from "react";
 const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
 
+const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "2010203041-YMuS2DBp";
+
 const TODAY = new Date().toISOString().split("T")[0];
+
+// ================= LIFF TYPES =================
+declare global {
+  interface Window {
+    liff: {
+      init: (config: { liffId: string }) => Promise<void>;
+      isLoggedIn: () => boolean;
+      login: (config?: { redirectUri?: string }) => void;
+      logout: () => void;
+      getProfile: () => Promise<{ userId: string; displayName: string; pictureUrl: string; statusMessage?: string }>;
+      isInClient: () => boolean;
+      ready: Promise<void>;
+    };
+  }
+}
 
 // ================= SOUND =================
 function playDing() {
@@ -230,6 +247,40 @@ function StepSummary({ items }: { items: { label: string; value: string }[] }) {
   );
 }
 
+// ================= LINE LOGIN MODAL =================
+function LineLoginModal({ onLogin, loading }: { onLogin: () => void; loading: boolean }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+        <div className="h-2" style={{ background: "#06C755" }} />
+        <div className="px-8 py-10 space-y-5">
+          <div className="text-5xl">💚</div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">เข้าสู่ระบบด้วย LINE</h2>
+            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+              กรุณา Login ด้วย LINE ของคุณเพื่อสั่งงาน<br />
+              ระบบจะจำ Job ID ของคุณโดยอัตโนมัติ<br />
+              และแจ้งสถานะงานผ่าน LINE
+            </p>
+          </div>
+          <button
+            onClick={onLogin}
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl font-bold text-white text-base transition flex items-center justify-center gap-3 disabled:opacity-60"
+            style={{ backgroundColor: "#06C755" }}
+          >
+            {loading ? (
+              <><span className="animate-spin">⏳</span> กำลังเชื่อมต่อ...</>
+            ) : (
+              <><span className="text-xl">💬</span> Login ด้วย LINE</>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ================= MAIN PAGE =================
 export default function Page() {
   const [dark, setDark] = useState(false);
@@ -271,6 +322,12 @@ export default function Page() {
   const [jobHistory, setJobHistory] = useState<JobRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  // LINE / LIFF
+  const [liffReady, setLiffReady] = useState(false);
+  const [lineProfile, setLineProfile] = useState<{ userId: string; displayName: string; pictureUrl: string } | null>(null);
+  const [liffLoading, setLiffLoading] = useState(false);
+  const [showLineLogin, setShowLineLogin] = useState(false);
+
   // MODALS
   const [showPreview, setShowPreview] = useState(false);
   const [pendingTask, setPendingTask] = useState<{ task: string; extra: string } | null>(null);
@@ -279,6 +336,34 @@ export default function Page() {
   const [jobIdModal, setJobIdModal] = useState<string | null>(null);
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [confirmBack, setConfirmBack] = useState<(() => void) | null>(null);
+
+  // LIFF initialization
+  useEffect(() => {
+    const initLiff = async () => {
+      try {
+        if (typeof window === "undefined" || !window.liff) return;
+        setLiffLoading(true);
+        await window.liff.init({ liffId: LIFF_ID });
+        setLiffReady(true);
+        if (window.liff.isLoggedIn()) {
+          const profile = await window.liff.getProfile();
+          setLineProfile(profile);
+          // Auto-fill customer name if not already set
+          setCustomerName((prev) => prev || profile.displayName);
+        } else {
+          setShowLineLogin(true);
+        }
+      } catch (err) {
+        console.error("LIFF init error:", err);
+        setLiffReady(true); // allow usage even if LIFF fails
+      } finally {
+        setLiffLoading(false);
+      }
+    };
+    // Wait a tick for the LIFF SDK script to load
+    const timer = setTimeout(initLiff, 300);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     try {
@@ -292,6 +377,28 @@ export default function Page() {
       if (savedDark) setDark(JSON.parse(savedDark));
     } catch {}
   }, []);
+
+  const handleLineLogin = () => {
+    try {
+      if (window.liff && !window.liff.isLoggedIn()) {
+        window.liff.login();
+      }
+    } catch (err) {
+      console.error("LINE login error:", err);
+    }
+  };
+
+  const handleLineLogout = () => {
+    try {
+      if (window.liff) {
+        window.liff.logout();
+        setLineProfile(null);
+        setShowLineLogin(true);
+      }
+    } catch (err) {
+      console.error("LINE logout error:", err);
+    }
+  };
 
   const saveRecentJob = (jobId: string) => {
     try {
@@ -393,9 +500,20 @@ export default function Page() {
   const submitTask = async (task: string, extra: string) => {
     setSubmitting(true);
     try {
+      const lineUserId = lineProfile?.userId || null;
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify({ type: "create", customerName, agent, taskType, task, detail: `${extra} | ${detail} | Deadline: ${deadline}`, reference: refLink, deadline }),
+        body: JSON.stringify({
+          type: "create",
+          customerName,
+          agent,
+          taskType,
+          task,
+          detail: `${extra} | ${detail} | Deadline: ${deadline}`,
+          reference: refLink,
+          deadline,
+          lineUserId,
+        }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -404,6 +522,27 @@ export default function Page() {
       saveJobHistory(data.jobId, task);
       saveCustomer(customerName);
       setJobIdModal(data.jobId);
+
+      // Send LINE push notification if user is logged in
+      if (lineUserId) {
+        try {
+          await fetch("/api/line/push", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: lineUserId,
+              jobId: data.jobId,
+              type: "created",
+              customerName,
+              taskLabel: task,
+            }),
+          });
+        } catch {
+          // Push failure is non-critical — don't block the flow
+          console.warn("LINE push failed");
+        }
+      }
+
       resetAll();
     } catch {
       setErrorModal("ไม่สามารถส่งงานได้ กรุณาตรวจสอบการเชื่อมต่ออินเตอร์เน็ตแล้วลองใหม่อีกครั้ง");
@@ -430,9 +569,19 @@ export default function Page() {
     setTracking(true);
     setTrackResult(null);
     try {
-      const res = await fetch(`${SCRIPT_URL}?jobId=${searchId}`);
+      const lineUserId = lineProfile?.userId || "";
+      const url = lineUserId
+        ? `${SCRIPT_URL}?jobId=${searchId}&lineUserId=${encodeURIComponent(lineUserId)}`
+        : `${SCRIPT_URL}?jobId=${searchId}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error();
       const data = await res.json();
+      // If backend returns an access-denied flag, show error
+      if (data.error === "FORBIDDEN") {
+        setTrackResult(null);
+        setErrorModal("❌ คุณไม่มีสิทธิ์ดูงานนี้ กรุณา Login ด้วย LINE ที่สั่งงาน");
+        return;
+      }
       setTrackResult(data);
     } catch {
       setErrorModal("ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
@@ -462,6 +611,7 @@ export default function Page() {
       {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
       {confirmBack && <ConfirmModal message="ข้อมูลที่กรอกไปจะหายทั้งหมด ต้องการกลับจริงไหม?" onConfirm={() => { confirmBack(); setConfirmBack(null); }} onCancel={() => setConfirmBack(null)} />}
       {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setTrackingId(id); trackJob(id); }} />}
+      {showLineLogin && !lineProfile && liffReady && <LineLoginModal onLogin={handleLineLogin} loading={liffLoading} />}
 
       <div className="max-w-5xl mx-auto space-y-6">
 
@@ -492,13 +642,34 @@ export default function Page() {
           </div>
 
           {/* Buttons — outside overflow-hidden */}
-          <div className="absolute top-4 right-4 flex gap-2 z-10">
+          <div className="absolute top-4 right-4 flex gap-2 z-10 items-center">
             <button
               onClick={toggleDark}
               className="bg-white/20 hover:bg-white/30 text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm"
             >
               {dark ? "☀️" : "🌙"}
             </button>
+            {/* LINE profile pill */}
+            {lineProfile ? (
+              <button
+                onClick={handleLineLogout}
+                title="Logout จาก LINE"
+                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm max-w-[140px]"
+              >
+                {lineProfile.pictureUrl && (
+                  <img src={lineProfile.pictureUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                )}
+                <span className="truncate">{lineProfile.displayName}</span>
+                <span className="opacity-60 text-[10px] shrink-0">✕</span>
+              </button>
+            ) : liffReady ? (
+              <button
+                onClick={() => setShowLineLogin(true)}
+                className="flex items-center gap-1.5 bg-[#06C755]/80 hover:bg-[#06C755] text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm"
+              >
+                💬 LINE Login
+              </button>
+            ) : null}
           </div>
         </div>
 
