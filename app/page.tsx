@@ -247,18 +247,37 @@ function StepSummary({ items }: { items: { label: string; value: string }[] }) {
   );
 }
 
-// ================= LINE LOGIN MODAL =================
-function LineLoginModal({ onLogin, loading }: { onLogin: () => void; loading: boolean }) {
+// ================= LINE LOADING SCREEN =================
+function LiffLoadingScreen() {
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 flex flex-col items-center justify-center z-50" style={{ background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)" }}>
+      <div className="text-5xl mb-4 animate-bounce">💬</div>
+      <p className="text-white font-bold text-lg">กำลังโหลด...</p>
+      <p className="text-purple-200 text-sm mt-1">กรุณารอสักครู่</p>
+    </div>
+  );
+}
+
+// ================= LINE LOGIN SCREEN (fullscreen บังคับ) =================
+function LineLoginScreen({ onLogin, loading }: { onLogin: () => void; loading: boolean }) {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center z-50 p-6" style={{ background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)" }}>
+      {/* Logo / Header */}
+      <div className="text-center mb-10">
+        <div className="text-6xl mb-3">🚀</div>
+        <h1 className="text-white text-2xl font-black tracking-widest uppercase">SUPPORT TEAMBON</h1>
+        <p className="text-purple-200 text-sm tracking-widest uppercase mt-1">VT MARKET</p>
+      </div>
+
+      {/* Card */}
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
         <div className="h-2" style={{ background: "#06C755" }} />
-        <div className="px-8 py-10 space-y-5">
+        <div className="px-8 py-8 space-y-5">
           <div className="text-5xl">💚</div>
           <div>
             <h2 className="text-xl font-bold text-gray-800">เข้าสู่ระบบด้วย LINE</h2>
             <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              กรุณา Login ด้วย LINE ของคุณเพื่อสั่งงาน<br />
+              กรุณา Login ด้วย LINE ของคุณก่อนใช้งาน<br />
               ระบบจะจำ Job ID ของคุณโดยอัตโนมัติ<br />
               และแจ้งสถานะงานผ่าน LINE
             </p>
@@ -266,7 +285,7 @@ function LineLoginModal({ onLogin, loading }: { onLogin: () => void; loading: bo
           <button
             onClick={onLogin}
             disabled={loading}
-            className="w-full py-3.5 rounded-xl font-bold text-white text-base transition flex items-center justify-center gap-3 disabled:opacity-60"
+            className="w-full py-4 rounded-xl font-bold text-white text-base transition flex items-center justify-center gap-3 disabled:opacity-60 active:scale-95"
             style={{ backgroundColor: "#06C755" }}
           >
             {loading ? (
@@ -337,32 +356,51 @@ export default function Page() {
   const [errorModal, setErrorModal] = useState<string | null>(null);
   const [confirmBack, setConfirmBack] = useState<(() => void) | null>(null);
 
-  // LIFF initialization
+  // LIFF initialization — poll until window.liff is ready
   useEffect(() => {
-    const initLiff = async () => {
+    let cancelled = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 30; // รอสูงสุด 15 วินาที (30 × 500ms)
+
+    const tryInit = async () => {
+      if (cancelled) return;
+      if (typeof window === "undefined") return;
+
+      // รอ LIFF SDK โหลดเสร็จก่อน
+      if (!window.liff) {
+        attempts++;
+        if (attempts < MAX_ATTEMPTS) {
+          setTimeout(tryInit, 500);
+        } else {
+          // โหลดไม่สำเร็จ — เปิดให้ใช้งานปกติได้แต่ไม่มี LINE login
+          if (!cancelled) setLiffReady(true);
+        }
+        return;
+      }
+
+      setLiffLoading(true);
       try {
-        if (typeof window === "undefined" || !window.liff) return;
-        setLiffLoading(true);
         await window.liff.init({ liffId: LIFF_ID });
+        if (cancelled) return;
         setLiffReady(true);
         if (window.liff.isLoggedIn()) {
           const profile = await window.liff.getProfile();
+          if (cancelled) return;
           setLineProfile(profile);
-          // Auto-fill customer name if not already set
           setCustomerName((prev) => prev || profile.displayName);
         } else {
           setShowLineLogin(true);
         }
       } catch (err) {
         console.error("LIFF init error:", err);
-        setLiffReady(true); // allow usage even if LIFF fails
+        if (!cancelled) setLiffReady(true);
       } finally {
-        setLiffLoading(false);
+        if (!cancelled) setLiffLoading(false);
       }
     };
-    // Wait a tick for the LIFF SDK script to load
-    const timer = setTimeout(initLiff, 300);
-    return () => clearTimeout(timer);
+
+    setTimeout(tryInit, 500);
+    return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -603,6 +641,10 @@ export default function Page() {
     }
   };
 
+  // บังคับ login — แสดงหน้า loading / login ก่อนถ้ายังไม่ได้ login
+  if (!liffReady) return <LiffLoadingScreen />;
+  if (!lineProfile) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} />;
+
   return (
     <main className={`min-h-screen ${bg} p-4 transition-colors duration-300`}>
 
@@ -611,7 +653,6 @@ export default function Page() {
       {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
       {confirmBack && <ConfirmModal message="ข้อมูลที่กรอกไปจะหายทั้งหมด ต้องการกลับจริงไหม?" onConfirm={() => { confirmBack(); setConfirmBack(null); }} onCancel={() => setConfirmBack(null)} />}
       {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setTrackingId(id); trackJob(id); }} />}
-      {showLineLogin && !lineProfile && liffReady && <LineLoginModal onLogin={handleLineLogin} loading={liffLoading} />}
 
       <div className="max-w-5xl mx-auto space-y-6">
 

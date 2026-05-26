@@ -31,7 +31,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Script
           src="https://static.line-scdn.net/liff/edge/2/sdk.js"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
         {children}
       </body>
