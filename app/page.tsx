@@ -466,41 +466,39 @@ export default function Page() {
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* HEADER */}
-        <div className="relative rounded-2xl overflow-hidden shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-700" />
-          <div className="absolute -top-8 -left-8 w-40 h-40 bg-purple-400/30 rounded-full blur-2xl" />
-          <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-indigo-400/30 rounded-full blur-2xl" />
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+        <div className="relative">
+          <div className="relative rounded-2xl overflow-hidden shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-700" />
+            <div className="absolute -top-8 -left-8 w-40 h-40 bg-purple-400/30 rounded-full blur-2xl" />
+            <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-indigo-400/30 rounded-full blur-2xl" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
-          {/* Top right buttons */}
-          <div className="absolute top-4 right-4 flex gap-2">
-            <button
-              onClick={() => setShowHistory(true)}
-              className="bg-white/20 hover:bg-white/30 text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm flex items-center gap-1"
-            >
-              📋 <span className="hidden sm:inline">ประวัติงาน</span>
-              {jobHistory.length > 0 && <span className="bg-white/30 rounded-full px-1.5 text-xs">{jobHistory.length}</span>}
-            </button>
-            <button onClick={toggleDark} className="bg-white/20 hover:bg-white/30 text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm">
-              {dark ? "☀️" : "🌙"}
-            </button>
+            <div className="relative px-8 py-8 flex flex-col items-center text-center">
+              <span className="text-4xl mb-2">🚀</span>
+              <h1 className="text-2xl font-black tracking-widest uppercase" style={{ background: "linear-gradient(90deg,#fff 0%,#e0d7ff 40%,#fff 70%,#c4b5fd 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                SUPPORT TEAMBON
+              </h1>
+              <h2 className="text-lg font-bold tracking-[0.3em] uppercase mt-1" style={{ background: "linear-gradient(90deg,#c4b5fd 0%,#fff 50%,#a5b4fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                VT MARKET
+              </h2>
+              <div className="mt-4 flex items-center gap-3 w-full justify-center">
+                <div className="h-px w-10 bg-purple-300/50" />
+                <p className="text-xs tracking-[0.2em] uppercase font-semibold" style={{ background: "linear-gradient(90deg,#b8860b 0%,#ffd700 30%,#fffacd 55%,#ffd700 75%,#b8860b 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                  Premium Workflow System
+                </p>
+                <div className="h-px w-10 bg-purple-300/50" />
+              </div>
+            </div>
           </div>
 
-          <div className="relative px-8 py-8 flex flex-col items-center text-center">
-            <span className="text-4xl mb-2">🚀</span>
-            <h1 className="text-2xl font-black tracking-widest uppercase" style={{ background: "linear-gradient(90deg,#fff 0%,#e0d7ff 40%,#fff 70%,#c4b5fd 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              SUPPORT TEAMBON
-            </h1>
-            <h2 className="text-lg font-bold tracking-[0.3em] uppercase mt-1" style={{ background: "linear-gradient(90deg,#c4b5fd 0%,#fff 50%,#a5b4fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              VT MARKETS
-            </h2>
-            <div className="mt-4 flex items-center gap-3 w-full justify-center">
-              <div className="h-px w-10 bg-purple-300/50" />
-              <p className="text-xs tracking-[0.2em] uppercase font-semibold" style={{ background: "linear-gradient(90deg,#b8860b 0%,#ffd700 30%,#fffacd 55%,#ffd700 75%,#b8860b 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                Premium Workflow System
-              </p>
-              <div className="h-px w-10 bg-purple-300/50" />
-            </div>
+          {/* Buttons — outside overflow-hidden */}
+          <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <button
+              onClick={toggleDark}
+              className="bg-white/20 hover:bg-white/30 text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm"
+            >
+              {dark ? "☀️" : "🌙"}
+            </button>
           </div>
         </div>
 
@@ -653,9 +651,20 @@ export default function Page() {
         <div className={card + " space-y-4"}>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#10b981 0%,#06b6d4 60%,#3b82f6 100%)">🔍 Track Job ID</GradText></h2>
-            {recentJobs.length > 0 && (
-              <button onClick={() => { setRecentJobs([]); try { localStorage.removeItem("recentJobs"); } catch {} }} className="text-xs text-gray-400 hover:text-red-400 transition">ล้างประวัติ ✕</button>
-            )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowHistory(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 text-xs font-semibold hover:bg-purple-100 transition"
+              >
+                📋 ประวัติงาน
+                {jobHistory.length > 0 && (
+                  <span className="bg-purple-500 text-white rounded-full px-1.5 py-0.5 text-xs leading-none">{jobHistory.length}</span>
+                )}
+              </button>
+              {recentJobs.length > 0 && (
+                <button onClick={() => { setRecentJobs([]); try { localStorage.removeItem("recentJobs"); } catch {} }} className="text-xs text-gray-400 hover:text-red-400 transition">ล้างประวัติ ✕</button>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2">
