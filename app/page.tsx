@@ -492,7 +492,7 @@ export default function Page() {
               SUPPORT TEAMBON
             </h1>
             <h2 className="text-lg font-bold tracking-[0.3em] uppercase mt-1" style={{ background: "linear-gradient(90deg,#c4b5fd 0%,#fff 50%,#a5b4fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              VT MARKET
+              VT MARKETS
             </h2>
             <div className="mt-4 flex items-center gap-3 w-full justify-center">
               <div className="h-px w-10 bg-purple-300/50" />
