@@ -372,7 +372,7 @@ export default function Page() {
         if (attempts < MAX_ATTEMPTS) {
           setTimeout(tryInit, 500);
         } else {
-          // โหลดไม่สำเร็จ — เปิดให้ใช้งานปกติได้แต่ไม่มี LINE login
+          // SDK โหลดไม่ได้ — แสดงหน้า login พร้อม fallback redirect
           if (!cancelled) setLiffReady(true);
         }
         return;
@@ -418,11 +418,16 @@ export default function Page() {
 
   const handleLineLogin = () => {
     try {
-      if (window.liff && !window.liff.isLoggedIn()) {
+      if (window.liff) {
         window.liff.login();
+      } else {
+        // LIFF SDK ยังไม่โหลด → redirect ไป LIFF URL โดยตรง
+        window.location.href = `https://liff.line.me/${LIFF_ID}`;
       }
     } catch (err) {
       console.error("LINE login error:", err);
+      // fallback กรณี error
+      window.location.href = `https://liff.line.me/${LIFF_ID}`;
     }
   };
 
