@@ -39,7 +39,16 @@ function getWorkflow(task: string): string {
   return "อื่นๆ";
 }
 
-function cardBg(status: string): string {
+function isOverdue(deadline: string, status: string): boolean {
+  if (status === "Done" || status === "เสร็จแล้ว") return false;
+  if (!deadline) return false;
+  try {
+    return new Date(deadline) < new Date();
+  } catch { return false; }
+}
+
+function cardBg(status: string, overdue: boolean): string {
+  if (overdue) return "bg-red-50 border-red-300";
   if (status === "Done" || status === "เสร็จแล้ว") return "bg-green-50 border-green-200";
   if (status === "In Progress" || status === "กำลังทำ") return "bg-blue-50 border-blue-200";
   return "bg-white border-gray-100";
@@ -84,6 +93,7 @@ export default function AdminPage() {
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
 
   const [filter, setFilter] = useState("ทั้งหมด");
+  const [workflowFilter, setWorkflowFilter] = useState("ทั้งหมด");
   const [search, setSearch] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState(30);
@@ -214,19 +224,42 @@ export default function AdminPage() {
   const monthlyEntries = Object.entries(monthlyCount).slice(-6).reverse();
 
   const filtered = jobs.filter((j) => {
-    const matchFilter =
+    const matchStatus =
       filter === "ทั้งหมด" ||
       (filter === "Pending" && (j.status === "Pending" || !j.status)) ||
       (filter === "In Progress" && (j.status === "In Progress" || j.status === "กำลังทำ")) ||
-      (filter === "Done" && (j.status === "Done" || j.status === "เสร็จแล้ว"));
+      (filter === "Done" && (j.status === "Done" || j.status === "เสร็จแล้ว")) ||
+      (filter === "Overdue" && isOverdue(j.deadline, j.status));
+    const matchWorkflow =
+      workflowFilter === "ทั้งหมด" || getWorkflow(j.task) === workflowFilter;
     const q = search.toLowerCase();
     const matchSearch =
       !q ||
       j.jobId.toLowerCase().includes(q) ||
       j.customerName.toLowerCase().includes(q) ||
       j.agent.toLowerCase().includes(q);
-    return matchFilter && matchSearch;
+    return matchStatus && matchWorkflow && matchSearch;
   });
+
+  const overdueCount = jobs.filter((j) => isOverdue(j.deadline, j.status)).length;
+
+  const exportCSV = () => {
+    const headers = ["Job ID", "ลูกค้า", "เซลล์", "ประเภทงาน", "Deadline", "สถานะ", "Delivery Link", "วันที่สั่ง"];
+    const rows = filtered.map((j) => [
+      j.jobId, j.customerName, j.agent, j.task,
+      formatDate(j.deadline), j.status, j.deliveryLink, j.timestamp,
+    ]);
+    const csv = [headers, ...rows]
+      .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `teambon-jobs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // ─── LOGIN SCREEN ───────────────────────────────────────────────────────────
   if (!isLoggedIn) {
@@ -284,6 +317,12 @@ export default function AdminPage() {
             </div>
           )}
           <button
+            onClick={exportCSV}
+            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+          >
+            📥 Export CSV
+          </button>
+          <button
             onClick={() => fetchJobs()}
             className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
           >
@@ -304,14 +343,19 @@ export default function AdminPage() {
 
       <div className="max-w-4xl mx-auto p-4 space-y-4">
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-5 gap-3">
           {[
             { label: "ทั้งหมด", count: stats.total, bg: "bg-white border-gray-200", text: "text-gray-700" },
             { label: "Pending", count: stats.pending, bg: "bg-amber-50 border-amber-200", text: "text-amber-700" },
             { label: "In Progress", count: stats.inProgress, bg: "bg-blue-50 border-blue-200", text: "text-blue-700" },
             { label: "Done", count: stats.done, bg: "bg-green-50 border-green-200", text: "text-green-700" },
+            { label: "Overdue", count: overdueCount, bg: "bg-red-50 border-red-200", text: "text-red-700" },
           ].map((s) => (
-            <div key={s.label} className={`${s.bg} border rounded-xl p-3 text-center cursor-pointer hover:shadow-sm transition`} onClick={() => setFilter(s.label === "ทั้งหมด" ? "ทั้งหมด" : s.label)}>
+            <div
+              key={s.label}
+              className={`${s.bg} border rounded-xl p-3 text-center cursor-pointer hover:shadow-sm transition ${filter === s.label ? "ring-2 ring-purple-400" : ""}`}
+              onClick={() => setFilter(s.label)}
+            >
               <p className={`text-2xl font-black ${s.text}`}>{s.count}</p>
               <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
             </div>
@@ -380,21 +424,27 @@ export default function AdminPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="flex gap-2 flex-wrap">
-            {["ทั้งหมด", "Pending", "In Progress", "Done"].map((f) => (
+          {/* Workflow filter */}
+          <div className="flex gap-2 flex-wrap items-center">
+            <span className="text-xs text-gray-400 font-medium">Workflow:</span>
+            {[
+              { label: "ทั้งหมด", color: "" },
+              { label: "Video", color: "text-pink-600 border-pink-200 bg-pink-50" },
+              { label: "Design", color: "text-cyan-600 border-cyan-200 bg-cyan-50" },
+              { label: "Ads", color: "text-orange-600 border-orange-200 bg-orange-50" },
+              { label: "อื่นๆ", color: "text-gray-600 border-gray-200 bg-gray-50" },
+            ].map(({ label, color }) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${
-                  filter === f
+                key={label}
+                onClick={() => setWorkflowFilter(label)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition border ${
+                  workflowFilter === label
                     ? "bg-purple-500 text-white border-purple-500"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600"
+                    : color || "bg-white text-gray-600 border-gray-200 hover:border-purple-300"
                 }`}
               >
-                {f}{" "}
-                <span className="opacity-70">
-                  ({f === "ทั้งหมด" ? stats.total : f === "Pending" ? stats.pending : f === "In Progress" ? stats.inProgress : stats.done})
-                </span>
+                {label === "Video" ? "🎬" : label === "Design" ? "🎨" : label === "Ads" ? "📢" : ""} {label}
+                {label !== "ทั้งหมด" && <span className="ml-1 opacity-70">({workflowCount[label] || 0})</span>}
               </button>
             ))}
           </div>
@@ -426,7 +476,7 @@ export default function AdminPage() {
               const isSaved = savedMap[job.jobId];
 
               return (
-                <div key={job.jobId} className={`rounded-xl border shadow-sm overflow-hidden transition-colors ${cardBg(edit.status)}`}>
+                <div key={job.jobId} className={`rounded-xl border shadow-sm overflow-hidden transition-colors ${cardBg(edit.status, isOverdue(job.deadline, edit.status))}`}>
                   {/* Header */}
                   <div className="px-5 py-3 flex items-center justify-between border-b border-black/5">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -435,6 +485,9 @@ export default function AdminPage() {
                         <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
                         {job.status || "Pending"}
                       </span>
+                      {isOverdue(job.deadline, edit.status) && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-600 border border-red-300">⚠️ Overdue</span>
+                      )}
                       {job.lineUserId && (
                         <span className="text-xs text-green-500 font-semibold">💬 LINE</span>
                       )}
