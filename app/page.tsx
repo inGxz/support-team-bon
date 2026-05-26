@@ -41,6 +41,23 @@ function playDing() {
   } catch {}
 }
 
+// ================= DATE FORMATTER =================
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "-";
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 // ================= GRADIENT TEXT =================
 function GradText({ gradient, children }: { gradient: string; children: React.ReactNode }) {
   return (
@@ -212,7 +229,7 @@ function JobHistoryPanel({ jobs, dark, onClose, onTrack }: { jobs: JobRecord[]; 
                     </div>
                     <p className={`text-sm font-medium mt-0.5 truncate ${textMain}`}>{j.customerName} — {j.task}</p>
                     <p className={`text-xs mt-0.5 ${textSub}`}>
-                      📅 {j.deadline}
+                      📅 {formatDate(j.deadline)}
                       {daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)"}
                     </p>
                     <p className={`text-xs ${textSub}`}>🕐 ส่งเมื่อ {j.submittedAt}</p>
@@ -295,7 +312,7 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobIte
                       </div>
                       <p className={`text-sm font-medium truncate ${dark ? "text-white" : "text-gray-800"}`}>{j.task}</p>
                       <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                        📅 {j.deadline}
+                        📅 {formatDate(j.deadline)}
                         {!isDone && (daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)")}
                       </p>
                     </div>
@@ -1060,7 +1077,7 @@ export default function Page() {
                   { label: "📝 รายละเอียด", value: trackResult.detail },
                   { label: "👤 ลูกค้า", value: trackResult.customerName },
                   { label: "🧑‍💼 เซลล์", value: trackResult.agent },
-                  { label: "📅 Deadline", value: trackResult.deadline },
+                  { label: "📅 Deadline", value: formatDate(trackResult.deadline) },
                   { label: "🔗 Reference", value: trackResult.reference },
                 ].filter((r) => r.value).map((r) => (
                   <div key={r.label} className="flex gap-3 px-5 py-3">
