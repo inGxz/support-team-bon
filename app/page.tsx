@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
 
-const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "2010203041-YMuS2DBp";
+const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "2010203041-kgA7NuVs";
 
 const TODAY = new Date().toISOString().split("T")[0];
 
