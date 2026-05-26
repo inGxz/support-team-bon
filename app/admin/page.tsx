@@ -17,6 +17,34 @@ type Job = {
 
 type EditState = { status: string; deliveryLink: string };
 
+// แปลง timestamp ไทย "26/5/2569 22:35:56" → "พ.ค. 2026"
+function parseMonthYear(timestamp: string): string {
+  try {
+    const parts = timestamp.split("/");
+    if (parts.length >= 3) {
+      const month = parseInt(parts[1]);
+      const yearCE = parseInt(parts[2]) - 543;
+      const monthNames = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+      return `${monthNames[month - 1] ?? "?"} ${yearCE}`;
+    }
+  } catch {}
+  return "ไม่ระบุ";
+}
+
+function getWorkflow(task: string): string {
+  const t = (task || "").toLowerCase();
+  if (t.includes("video")) return "Video";
+  if (t.includes("design")) return "Design";
+  if (t.includes("ads")) return "Ads";
+  return "อื่นๆ";
+}
+
+function cardBg(status: string): string {
+  if (status === "Done" || status === "เสร็จแล้ว") return "bg-green-50 border-green-200";
+  if (status === "In Progress" || status === "กำลังทำ") return "bg-blue-50 border-blue-200";
+  return "bg-white border-gray-100";
+}
+
 function formatDate(dateStr: string): string {
   if (!dateStr) return "-";
   try {
@@ -155,6 +183,21 @@ export default function AdminPage() {
     done: jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length,
   };
 
+  // Workflow breakdown
+  const workflowCount: Record<string, number> = {};
+  jobs.forEach((j) => {
+    const wf = getWorkflow(j.task);
+    workflowCount[wf] = (workflowCount[wf] || 0) + 1;
+  });
+
+  // Monthly report (last 6 months)
+  const monthlyCount: Record<string, number> = {};
+  jobs.forEach((j) => {
+    const m = parseMonthYear(j.timestamp);
+    monthlyCount[m] = (monthlyCount[m] || 0) + 1;
+  });
+  const monthlyEntries = Object.entries(monthlyCount).slice(-6).reverse();
+
   const filtered = jobs.filter((j) => {
     const matchFilter =
       filter === "ทั้งหมด" ||
@@ -254,6 +297,60 @@ export default function AdminPage() {
           ))}
         </div>
 
+        {/* Workflow breakdown */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">📊 แยกตาม Workflow</p>
+            <div className="space-y-2">
+              {[
+                { label: "🎬 Video", color: "bg-pink-500", key: "Video" },
+                { label: "🎨 Design", color: "bg-cyan-500", key: "Design" },
+                { label: "📢 Ads", color: "bg-orange-500", key: "Ads" },
+                { label: "อื่นๆ", color: "bg-gray-400", key: "อื่นๆ" },
+              ].map(({ label, color, key }) => {
+                const count = workflowCount[key] || 0;
+                const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
+                return (
+                  <div key={key}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-600 font-medium">{label}</span>
+                      <span className="font-bold text-gray-800">{count} งาน</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">📅 ยอดสั่งงานรายเดือน</p>
+            {monthlyEntries.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-4">ไม่มีข้อมูล</p>
+            ) : (
+              <div className="space-y-2">
+                {monthlyEntries.map(([month, count]) => {
+                  const max = Math.max(...monthlyEntries.map(([, c]) => c));
+                  const pct = max ? Math.round((count / max) * 100) : 0;
+                  return (
+                    <div key={month}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-600 font-medium">{month}</span>
+                        <span className="font-bold text-gray-800">{count} งาน</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className="bg-purple-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Search + Filter */}
         <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
           <input
@@ -308,9 +405,9 @@ export default function AdminPage() {
               const isSaved = savedMap[job.jobId];
 
               return (
-                <div key={job.jobId} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div key={job.jobId} className={`rounded-xl border shadow-sm overflow-hidden transition-colors ${cardBg(edit.status)}`}>
                   {/* Header */}
-                  <div className="px-5 py-3 flex items-center justify-between border-b border-gray-50 bg-gray-50/50">
+                  <div className="px-5 py-3 flex items-center justify-between border-b border-black/5">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-black text-purple-600">{job.jobId}</span>
                       <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1.5 ${st.bg} ${st.text} ${st.border}`}>
