@@ -173,12 +173,12 @@ function sendLinePush(lineUserId, jobId, customerName, task) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function generateJobId() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let id = "JOB-";
-  for (let i = 0; i < 6; i++) {
-    id += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return id;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  // นับจากแถวที่มีข้อมูล (ลบ header 1 แถว) แล้ว +1
+  const nextNumber = Math.max(lastRow, 1); // ป้องกัน 0
+  const padded = String(nextNumber).padStart(3, "0");
+  return "STM-" + padded;
 }
 
 function jsonResponse(data) {

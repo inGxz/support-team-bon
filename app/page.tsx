@@ -676,8 +676,27 @@ export default function Page() {
         {/* CUSTOMER */}
         <div className={card + " space-y-4"}>
           <div className="relative">
-            <label className={labelCls}>👤 ลูกค้า <span className="text-xs text-gray-400">(กรุณาใส่ชื่อ)</span></label>
-            <input className={inputCls(!!errors.customerName)} placeholder="Customer Name" value={customerName} onChange={(e) => handleCustomerInput(e.target.value)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} autoComplete="off" />
+            <label className={labelCls}>
+              👤 ลูกค้า
+              {lineProfile
+                ? <span className="text-xs text-green-500 font-normal">✅ ล็อคจาก LINE</span>
+                : <span className="text-xs text-gray-400">(กรุณาใส่ชื่อ)</span>
+              }
+            </label>
+            <div className="relative">
+              <input
+                className={inputCls(!!errors.customerName) + (lineProfile ? " bg-green-50 cursor-not-allowed text-gray-500" : "")}
+                placeholder="Customer Name"
+                value={customerName}
+                onChange={(e) => !lineProfile && handleCustomerInput(e.target.value)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                autoComplete="off"
+                readOnly={!!lineProfile}
+              />
+              {lineProfile && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-sm">🔒</span>
+              )}
+            </div>
             {errors.customerName && <p className="text-red-400 text-xs mt-1">⚠️ {errors.customerName}</p>}
             {showSuggestions && (
               <div className={`absolute z-10 w-full mt-1 rounded-xl shadow-lg border overflow-hidden ${dark ? "bg-gray-800 border-gray-600" : "bg-white border-gray-200"}`}>
