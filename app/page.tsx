@@ -432,7 +432,9 @@ export default function Page() {
   const [stepError, setStepError] = useState("");
 
   // DESIGN / ADS
+  const [designStep, setDesignStep] = useState(0);
   const [designType, setDesignType] = useState("");
+  const [designColorTheme, setDesignColorTheme] = useState("");
   const [adsType, setAdsType] = useState("");
   const [contentType, setContentType] = useState("");
   const [filmingType, setFilmingType] = useState("");
@@ -663,7 +665,7 @@ export default function Page() {
     extra.split("|").map((s) => s.trim()).filter(Boolean).forEach((part) => {
       const [key, ...rest] = part.split(":");
       if (key && rest.length) {
-        const icons: Record<string, string> = { Platform: "📱 Platform", Goal: "🎯 Goal", Mood: "🎭 Mood", Music: "🎵 Music", Voice: "🎙️ Voice", Type: "🖼️ ประเภท Design", AdsType: "📢 ประเภท Ads" };
+        const icons: Record<string, string> = { Platform: "📱 Platform", Goal: "🎯 Goal", Mood: "🎭 Mood", Music: "🎵 Music", Voice: "🎙️ Voice", Type: "🖼️ ประเภท Design", AdsType: "📢 ประเภท Ads", ColorTheme: "🎨 ธีมสี" };
         const label = icons[key.trim()] ?? key.trim();
         const value = rest.join(":").trim();
         if (value && value !== "-") base[label] = value;
@@ -709,7 +711,7 @@ export default function Page() {
       if (extra) {
         const parts = extra.split("|").map((s) => s.trim());
         // หา subType จาก Type: หรือ AdsType: หรือ Platform: (field แรก)
-        const typeEntry = parts.find((p) => p.startsWith("Type:") || p.startsWith("AdsType:") || p.startsWith("Platform:"));
+        const typeEntry = parts.find((p) => p.startsWith("Type:") || p.startsWith("AdsType:") || p.startsWith("Platform:") || p.startsWith("ColorTheme:"));
         if (typeEntry) {
           subType = typeEntry.split(":").slice(1).join(":").trim();
           workflowParams = parts.filter((p) => p !== typeEntry && !p.startsWith("Detail:")).join(" | ");
@@ -780,7 +782,7 @@ export default function Page() {
   const resetAll = () => {
     setTaskType(""); setStep(0);
     setPlatform("Platform"); setGoal("Goal"); setMood("Mood"); setMusic("Music"); setVoice("Voice");
-    setDesignType(""); setAdsType(""); setDeadline(""); setDetail(""); setRefLink(""); setErrors({});
+    setDesignType(""); setDesignStep(0); setDesignColorTheme(""); setAdsType(""); setDeadline(""); setDetail(""); setRefLink(""); setErrors({});
     setImageFiles([]); setImagePreviews([]); setContentType(""); setFilmingType("");
   };
 
@@ -1055,13 +1057,55 @@ export default function Page() {
         {/* DESIGN */}
         {taskType === "Design" && (
           <div className={card + " space-y-4"}>
-            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#06b6d4 0%,#3b82f6 60%,#6366f1 100%)">🎨 Design Workflow</GradText></h2>
-            <select className={inputCls()} value={designType} onChange={(e) => setDesignType(e.target.value)}>
-              <option value="">เลือกประเภท Design</option>
-              <option>Logo</option><option>Poster</option><option>Banner</option><option>Infographic</option><option>PDF</option><option>Profile</option>
-            </select>
-            <button className={btnPrimary} onClick={() => openPreview("Design", `Type:${designType || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
-            <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!designType)}>← กลับเลือก Workflow</button>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#06b6d4 0%,#3b82f6 60%,#6366f1 100%)">🎨 Design Workflow</GradText></h2>
+              <span className={`text-xs ${dark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-400"} px-3 py-1 rounded-full`}>Step {designStep + 1} / 2</span>
+            </div>
+            <div className={`w-full ${dark ? "bg-gray-700" : "bg-gray-100"} rounded-full h-2`}>
+              <div className="bg-gradient-to-r from-cyan-400 to-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${((designStep + 1) / 2) * 100}%` }} />
+            </div>
+
+            {designStep === 0 && (<>
+              <label className={labelCls}>🖼️ ประเภทงาน Design</label>
+              <select className={inputCls()} value={designType} onChange={(e) => setDesignType(e.target.value)}>
+                <option value="">เลือกประเภท Design</option>
+                <option>Poster</option>
+                <option>Banner</option>
+                <option>Infographic</option>
+                <option>PDF</option>
+                <option>Profile</option>
+                <option>Seminar</option>
+                <option>Webinar</option>
+                <option>Company Profile</option>
+                <option>Cover</option>
+                <option>Menu</option>
+                <option>Roll-up</option>
+                <option>Ads Creative</option>
+                <option>Presentation</option>
+                <option>Calendar</option>
+              </select>
+              <button className={btnPrimary} onClick={() => { if (!designType) { return; } setDesignStep(1); }}>Next →</button>
+              <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!designType)}>← กลับเลือก Workflow</button>
+            </>)}
+
+            {designStep === 1 && (<>
+              <label className={labelCls}>🎨 ธีมสีของงาน</label>
+              <select className={inputCls()} value={designColorTheme} onChange={(e) => setDesignColorTheme(e.target.value)}>
+                <option value="">เลือกธีมสี</option>
+                <option>Minimal White — ขาว เทา เรียบสะอาด</option>
+                <option>Corporate Blue — น้ำเงิน เป็นทางการ</option>
+                <option>Luxury Gold — ทอง ดำ หรูหรา</option>
+                <option>Bold & Vibrant — สีสด จัดจ้าน</option>
+                <option>Pastel Soft — พาสเทล นุ่มนวล</option>
+                <option>Dark & Modern — ดำ โมเดิร์น</option>
+                <option>Nature Green — เขียว ธรรมชาติ</option>
+                <option>Warm Tone — แดง ส้ม โทนอุ่น</option>
+                <option>Cool Tone — ฟ้า ม่วง โทนเย็น</option>
+                <option>Custom — ระบุเองในช่อง Detail</option>
+              </select>
+              <button className={btnPrimary} onClick={() => openPreview("Design", `Type:${designType} | ColorTheme:${designColorTheme || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
+              <button className={btnBack} onClick={() => setDesignStep(0)}>← กลับ</button>
+            </>)}
           </div>
         )}
 
