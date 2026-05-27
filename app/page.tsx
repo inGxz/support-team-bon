@@ -192,7 +192,7 @@ function JobIdModal({ jobId, onClose }: { jobId: string; onClose: () => void }) 
 
 // ================= JOB HISTORY PANEL =================
 type JobRecord = { jobId: string; task: string; customerName: string; deadline: string; submittedAt: string };
-type MyJobItem = { jobId: string; customerName: string; task: string; deadline: string; status: string; timestamp: string; revisionCount?: string };
+type MyJobItem = { jobId: string; customerName: string; task: string; deadline: string; status: string; timestamp: string; revisionCount?: string; subType?: string; workflowParams?: string };
 
 function JobHistoryPanel({ jobs, dark, onClose, onTrack }: { jobs: JobRecord[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void }) {
   const card = dark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100";
@@ -309,24 +309,22 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobIte
                         📅 {formatDate(j.deadline)}
                         {!isDone && (daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)")}
                       </p>
+                      {j.timestamp && (
+                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+                          🕐 สั่งเมื่อ {String(j.timestamp)}
+                        </p>
+                      )}
+                      {j.subType && (
+                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                          📌 ประเภท: <span className="font-medium">{j.subType}</span>
+                        </p>
+                      )}
+                      {j.workflowParams && (
+                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"} break-all`}>
+                          ⚙️ {j.workflowParams}
+                        </p>
+                      )}
                     </div>
-                    {(() => {
-                      const revCount = parseInt(j.revisionCount || "0") || 0;
-                      if (!isDone) return null;
-                      if (revCount >= 3) return (
-                        <span className="shrink-0 px-3 py-1.5 bg-gray-100 text-gray-400 text-xs rounded-lg font-semibold border border-gray-200">
-                          แก้ครบ 3 ครั้ง
-                        </span>
-                      );
-                      return (
-                        <button
-                          onClick={() => { onClose(); window.open(`/revision?jobId=${j.jobId}`, "_blank"); }}
-                          className="shrink-0 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg hover:bg-red-100 transition font-semibold"
-                        >
-                          🔄 แก้งาน {revCount > 0 ? `(${revCount}/3)` : ""}
-                        </button>
-                      );
-                    })()}
                   </div>
                 );
               })}

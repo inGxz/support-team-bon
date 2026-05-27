@@ -119,13 +119,15 @@ function getMyJobs(lineUserId) {
     const row = data[i];
     if (String(row[COL.LINE_USER_ID - 1]) === lineUserId) {
       jobs.push({
-        jobId:         row[COL.JOB_ID         - 1],
-        customerName:  row[COL.CUSTOMER_NAME  - 1],
-        task:          row[COL.TASK           - 1],
-        deadline:      row[COL.DEADLINE       - 1],
-        status:        row[COL.STATUS         - 1],
-        timestamp:     row[COL.TIMESTAMP      - 1],
-        revisionCount: String(row[COL.REVISION_COUNT - 1] || "0"),
+        jobId:          row[COL.JOB_ID          - 1],
+        customerName:   row[COL.CUSTOMER_NAME   - 1],
+        task:           row[COL.TASK            - 1],
+        deadline:       row[COL.DEADLINE        - 1],
+        status:         row[COL.STATUS          - 1],
+        timestamp:      row[COL.TIMESTAMP       - 1],
+        revisionCount:  String(row[COL.REVISION_COUNT  - 1] || "0"),
+        subType:        String(row[COL.SUB_TYPE        - 1] || ""),
+        workflowParams: String(row[COL.WORKFLOW_PARAMS - 1] || ""),
       });
     }
   }
@@ -320,12 +322,13 @@ function submitRevision(body) {
         sheet.getRange(rowNum, COL.REVISION_NOTE).setValue(body.revisionNote || "");
         sheet.getRange(rowNum, COL.REVISION_COUNT).setValue(currentCount + 1);
 
-        // แจ้ง admin group
+        // แจ้ง admin group + ส่งยืนยันกลับหาลูกค้า
         var customerName = String(data[i][COL.CUSTOMER_NAME - 1] || "");
         var task         = String(data[i][COL.TASK          - 1] || "");
         var agent        = String(data[i][COL.AGENT         - 1] || "");
         var lineUserId   = String(data[i][COL.LINE_USER_ID  - 1] || "");
         notifyRevisionToAdmin(body.jobId, customerName, task, agent, body.revisionNote || "", currentCount + 1, lineUserId);
+        notifyRevisionToCustomer(lineUserId, body.jobId, task, body.revisionNote || "", currentCount + 1);
 
         return jsonResponse({ success: true });
       }
@@ -506,6 +509,71 @@ function onStatusChange(e) {
     sendLinePush(lineUserId, jobId, customerName, task, deliveryLink, revCount);
   } catch (err) {
     console.error("onStatusChange error:", err);
+  }
+}
+
+// ─── notifyRevisionToCustomer: ยืนยันรับคำขอแก้ไขกลับหาลูกค้า ────────────────
+function notifyRevisionToCustomer(lineUserId, jobId, task, note, count) {
+  try {
+    const token = getLineToken();
+    if (!token || !lineUserId) return;
+
+    const noteShort = note ? (note.length > 100 ? note.substring(0, 100) + "..." : note) : "-";
+    const remaining = Math.max(0, 3 - count);
+
+    var bubble = {
+      type: "bubble", size: "kilo",
+      header: {
+        type: "box", layout: "vertical", paddingAll: "md",
+        backgroundColor: "#7C3AED",
+        contents: [
+          { type: "text", text: "✅ รับทราบคำขอแก้ไขแล้ว", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: "SUPPORT TEAMBON VT MARKET", color: "#DDD6FE", size: "xs" }
+        ]
+      },
+      body: {
+        type: "box", layout: "vertical", spacing: "sm", paddingAll: "md",
+        contents: [
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "Job ID",   size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: String(jobId || "-"), size: "xs", color: "#111827", weight: "bold", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "งาน",      size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: String(task || "-"), size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "separator", margin: "sm" },
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "รายละเอียด", size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: noteShort, size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "separator", margin: "sm" },
+          { type: "text",
+            text: "ทีมงานได้รับคำขอแก้ไขของคุณแล้ว และจะดำเนินการให้เร็วที่สุด 🙏",
+            size: "xs", color: "#4B5563", wrap: true, margin: "sm"
+          },
+          { type: "text",
+            text: "สิทธิ์แก้ไขคงเหลือ: " + remaining + " ครั้ง",
+            size: "xs", color: remaining > 0 ? "#059669" : "#DC2626", wrap: true, margin: "xs"
+          }
+        ]
+      }
+    };
+
+    var payload = {
+      to: lineUserId,
+      messages: [{ type: "flex", altText: "✅ รับทราบคำขอแก้ไข Job " + jobId + " แล้ว ทีมงานจะดำเนินการให้เร็วที่สุด", contents: bubble }]
+    };
+
+    UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "post",
+      contentType: "application/json",
+      headers: { "Authorization": "Bearer " + token },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch (err) {
+    console.error("notifyRevisionToCustomer error:", err);
   }
 }
 
