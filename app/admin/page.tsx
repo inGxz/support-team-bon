@@ -7,6 +7,7 @@ type Job = {
   customerName: string;
   agent: string;
   task: string;
+  reference: string;
   detail: string;
   deadline: string;
   status: string;
@@ -515,6 +516,28 @@ export default function AdminPage() {
                         <span className="font-medium text-gray-800">{formatDate(job.deadline)}</span>
                       </div>
                     </div>
+
+                    {/* Reference link จากลูกค้า */}
+                    {job.reference && (
+                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <span className="text-amber-500 text-sm shrink-0 mt-0.5">🔗</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-amber-700 mb-0.5">ลิ้งอ้างอิงจากลูกค้า</p>
+                          {job.reference.startsWith("http") ? (
+                            <a
+                              href={job.reference}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 underline break-all hover:text-blue-800"
+                            >
+                              {job.reference}
+                            </a>
+                          ) : (
+                            <p className="text-xs text-amber-800 break-all">{job.reference}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {job.detail && (
                       <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 line-clamp-2 border border-gray-100">

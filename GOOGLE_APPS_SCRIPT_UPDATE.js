@@ -36,6 +36,7 @@ const COL = {
   DEADLINE:      8,   // H - Deadline
   STATUS:        9,   // I - Status  ← สถานะงาน (Pending / In Progress / Done)
   LINE_USER_ID:  10,  // J - lineUserId
+  DELIVERY_LINK: 11,  // K - delivery link (admin ใส่ลิ้งไฟล์ก่อน mark Done)
 };
 
 // ─── LINE Channel Access Token ────────────────────────────────────────────────
@@ -46,10 +47,20 @@ function getLineToken() {
   return props.getProperty("LINE_CHANNEL_ACCESS_TOKEN") || "";
 }
 
-// ─── doGet: ดึงข้อมูล Job (พร้อม privacy check) ──────────────────────────────
+// ─── doGet ───────────────────────────────────────────────────────────────────
 function doGet(e) {
+  const action     = e.parameter.action     || "";
   const jobId      = e.parameter.jobId      || "";
   const lineUserId = e.parameter.lineUserId || "";
+
+  // Admin: ดึงงานทั้งหมด
+  if (action === "admin") {
+    const adminSecret = PropertiesService.getScriptProperties().getProperty("ADMIN_SECRET") || "";
+    if (!adminSecret || e.parameter.adminSecret !== adminSecret) {
+      return jsonResponse({ error: "FORBIDDEN" });
+    }
+    return getAllJobs();
+  }
 
   // ถ้าไม่มี jobId แต่มี lineUserId → ดึงงานทั้งหมดของ user นี้
   if (!jobId && lineUserId) {
@@ -116,32 +127,121 @@ function getMyJobs(lineUserId) {
   return jsonResponse({ jobs });
 }
 
-// ─── doPost: สร้าง Job ใหม่ ────────────────────────────────────────────────────
+// ─── doPost ───────────────────────────────────────────────────────────────────
 function doPost(e) {
   try {
-    const body       = JSON.parse(e.postData.contents);
-    const sheet      = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-    const jobId      = generateJobId();
-    const timestamp  = new Date().toLocaleString("th-TH");
+    const body = JSON.parse(e.postData.contents);
 
-    // ลำดับ column ตรงกับ sheet: A=Date B=JobID C=customerName D=agent E=Task F=Reference G=Detail H=Deadline I=Status J=lineUserId
+    if (body.action === "update") {
+      return updateJob(body);
+    }
+
+    return createJob(body);
+  } catch (err) {
+    return jsonResponse({ error: "FAILED", message: String(err) });
+  }
+}
+
+// ─── createJob: สร้าง Job ใหม่ ────────────────────────────────────────────────
+function createJob(body) {
+  try {
+    const sheet     = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    const jobId     = generateJobId();
+    const timestamp = new Date().toLocaleString("th-TH");
+
     sheet.appendRow([
-      timestamp,                // A: Date
-      jobId,                    // B: Job ID
-      body.customerName || "",  // C: customerName
-      body.agent        || "",  // D: agent
-      body.task         || "",  // E: Task
-      body.reference    || "",  // F: Reference
-      body.detail       || "",  // G: Detail
-      body.deadline     || "",  // H: Deadline
-      "Pending",                // I: Status
-      body.lineUserId   || "",  // J: lineUserId
+      timestamp,
+      jobId,
+      body.customerName || "",
+      body.agent        || "",
+      body.task         || "",
+      body.reference    || "",
+      body.detail       || "",
+      body.deadline     || "",
+      "Pending",
+      body.lineUserId   || "",
+      "",                        // K: deliveryLink (ว่างไว้ก่อน)
     ]);
 
     return jsonResponse({ success: true, jobId });
   } catch (err) {
     return jsonResponse({ error: "CREATE_FAILED", message: String(err) });
   }
+}
+
+// ─── updateJob: Admin อัปเดตสถานะ / delivery link ────────────────────────────
+function updateJob(body) {
+  const adminSecret = PropertiesService.getScriptProperties().getProperty("ADMIN_SECRET") || "";
+  if (!adminSecret || body.adminSecret !== adminSecret) {
+    return jsonResponse({ error: "FORBIDDEN" });
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const data  = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][COL.JOB_ID - 1]) === String(body.jobId)) {
+      var rowNum    = i + 1;
+      var oldStatus = String(data[i][COL.STATUS - 1] || "");
+
+      if (body.status !== undefined) {
+        sheet.getRange(rowNum, COL.STATUS).setValue(body.status);
+      }
+      if (body.deliveryLink !== undefined) {
+        sheet.getRange(rowNum, COL.DELIVERY_LINK).setValue(body.deliveryLink);
+      }
+
+      // ส่ง LINE push ถ้าเพิ่งเปลี่ยนเป็น Done
+      var newStatus = body.status !== undefined ? body.status : oldStatus;
+      var isDone    = newStatus === "Done" || newStatus === "เสร็จแล้ว";
+      var wasNotDone = oldStatus !== "Done" && oldStatus !== "เสร็จแล้ว";
+
+      if (isDone && wasNotDone) {
+        var lineUserId    = String(data[i][COL.LINE_USER_ID  - 1] || "");
+        var customerName  = String(data[i][COL.CUSTOMER_NAME - 1] || "");
+        var task          = String(data[i][COL.TASK          - 1] || "");
+        var deliveryLink  = body.deliveryLink !== undefined
+          ? String(body.deliveryLink)
+          : String(data[i][COL.DELIVERY_LINK - 1] || "");
+
+        if (lineUserId) {
+          sendLinePush(lineUserId, body.jobId, customerName, task, deliveryLink);
+        }
+      }
+
+      return jsonResponse({ success: true });
+    }
+  }
+
+  return jsonResponse({ error: "NOT_FOUND" });
+}
+
+// ─── getAllJobs: Admin ดึงงานทั้งหมด ──────────────────────────────────────────
+function getAllJobs() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data  = sheet.getDataRange().getValues();
+  var jobs  = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row[COL.JOB_ID - 1]) continue; // ข้ามแถวว่าง
+    jobs.push({
+      jobId:        String(row[COL.JOB_ID        - 1]),
+      customerName: String(row[COL.CUSTOMER_NAME - 1] || ""),
+      agent:        String(row[COL.AGENT         - 1] || ""),
+      task:         String(row[COL.TASK          - 1] || ""),
+      reference:    String(row[COL.REFERENCE     - 1] || ""),
+      detail:       String(row[COL.DETAIL        - 1] || ""),
+      deadline:     String(row[COL.DEADLINE      - 1] || ""),
+      status:       String(row[COL.STATUS        - 1] || "Pending"),
+      lineUserId:   String(row[COL.LINE_USER_ID  - 1] || ""),
+      deliveryLink: String(row[COL.DELIVERY_LINK - 1] || ""),
+      timestamp:    String(row[COL.TIMESTAMP     - 1] || ""),
+    });
+  }
+
+  jobs.reverse(); // ล่าสุดก่อน
+  return jsonResponse({ jobs });
 }
 
 // ─── onStatusChange: Trigger เมื่อแก้ไข Sheet ────────────────────────────────
@@ -159,43 +259,138 @@ function onStatusChange(e) {
     const newStatus = String(e.value || "").trim();
     if (newStatus !== "Done" && newStatus !== "เสร็จแล้ว") return;
 
-    const row         = range.getRow();
-    const jobId       = sheet.getRange(row, COL.JOB_ID).getValue();
-    const lineUserId  = sheet.getRange(row, COL.LINE_USER_ID).getValue();
+    const row          = range.getRow();
+    const jobId        = sheet.getRange(row, COL.JOB_ID).getValue();
+    const lineUserId   = sheet.getRange(row, COL.LINE_USER_ID).getValue();
     const customerName = sheet.getRange(row, COL.CUSTOMER_NAME).getValue();
-    const task        = sheet.getRange(row, COL.TASK).getValue();
+    const task         = sheet.getRange(row, COL.TASK).getValue();
+    const deliveryLink = COL.DELIVERY_LINK
+      ? String(sheet.getRange(row, COL.DELIVERY_LINK).getValue() || "")
+      : "";
 
     if (!lineUserId) return; // ไม่มี userId → ไม่ส่ง push
 
-    sendLinePush(lineUserId, jobId, customerName, task);
+    sendLinePush(lineUserId, jobId, customerName, task, deliveryLink);
   } catch (err) {
     console.error("onStatusChange error:", err);
   }
 }
 
-// ─── sendLinePush: ส่ง LINE Push Message ──────────────────────────────────────
-function sendLinePush(lineUserId, jobId, customerName, task) {
+// ─── sendLinePush: ส่ง LINE Flex Message เมื่องาน Done ───────────────────────
+function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink) {
   const token = getLineToken();
-  const message =
-    "✅ งานของคุณเสร็จแล้ว!\n\n" +
-    "📋 Job ID: " + jobId + "\n" +
-    "👤 ลูกค้า: " + customerName + "\n" +
-    (task ? "📦 งาน: " + task + "\n" : "") +
-    "\nกรุณาติดต่อทีมงานเพื่อรับงาน\nระบบ SUPPORT TEAMBON VT MARKET";
+
+  // สร้าง body contents
+  var bodyContents = [
+    {
+      type: "text",
+      text: "📋 Job ID: " + jobId,
+      size: "sm",
+      color: "#333333",
+      weight: "bold"
+    }
+  ];
+
+  if (customerName) {
+    bodyContents.push({
+      type: "text",
+      text: "👤 ลูกค้า: " + customerName,
+      size: "sm",
+      color: "#555555"
+    });
+  }
+
+  if (task) {
+    bodyContents.push({
+      type: "text",
+      text: "📦 งาน: " + task,
+      size: "sm",
+      color: "#555555",
+      wrap: true
+    });
+  }
+
+  bodyContents.push({ type: "separator", margin: "md" });
+  bodyContents.push({
+    type: "text",
+    text: deliveryLink ? "กดปุ่มด้านล่างเพื่อรับไฟล์งาน" : "กรุณาติดต่อทีมงานเพื่อรับงาน",
+    size: "xs",
+    color: "#aaaaaa",
+    margin: "md",
+    wrap: true
+  });
+  bodyContents.push({
+    type: "text",
+    text: "ระบบ SUPPORT TEAMBON VT MARKET",
+    size: "xs",
+    color: "#aaaaaa",
+    wrap: true
+  });
+
+  // สร้าง footer (ปุ่ม) ถ้ามี deliveryLink
+  var footer = deliveryLink ? {
+    type: "box",
+    layout: "vertical",
+    contents: [
+      {
+        type: "button",
+        action: {
+          type: "uri",
+          label: "📂 เปิดไฟล์งาน",
+          uri: deliveryLink
+        },
+        style: "primary",
+        color: "#22c55e",
+        height: "sm"
+      }
+    ]
+  } : null;
+
+  var bubble = {
+    type: "bubble",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#22c55e",
+      contents: [
+        {
+          type: "text",
+          text: "✅ งานของคุณเสร็จแล้ว!",
+          weight: "bold",
+          size: "xl",
+          color: "#ffffff"
+        }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: bodyContents
+    }
+  };
+
+  if (footer) bubble.footer = footer;
 
   const payload = JSON.stringify({
     to: lineUserId,
-    messages: [{ type: "text", text: message }],
+    messages: [
+      {
+        type: "flex",
+        altText: "✅ งานของคุณเสร็จแล้ว! Job ID: " + jobId,
+        contents: bubble
+      }
+    ]
   });
 
   const options = {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: "Bearer " + token,
+      Authorization: "Bearer " + token
     },
     payload: payload,
-    muteHttpExceptions: true,
+    muteHttpExceptions: true
   };
 
   const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", options);
