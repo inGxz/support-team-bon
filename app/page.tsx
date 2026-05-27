@@ -434,18 +434,8 @@ export default function Page() {
   const [contentType, setContentType] = useState("");
   const [filmingType, setFilmingType] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [showRevision, setShowRevision] = useState(false);
-  const [revisionNote, setRevisionNote] = useState("");
-  const [revisionSubmitting, setRevisionSubmitting] = useState(false);
-  const [revisionDone, setRevisionDone] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
-
-  // TRACK
-  const [trackingId, setTrackingId] = useState("");
-  const [trackResult, setTrackResult] = useState<any>(null);
-  const [tracking, setTracking] = useState(false);
-  const [recentJobs, setRecentJobs] = useState<string[]>([]);
 
   // JOB HISTORY
   const [jobHistory, setJobHistory] = useState<JobRecord[]>([]);
@@ -539,25 +529,6 @@ export default function Page() {
     } catch {}
   }, []);
 
-  // อ่าน ?jobId= จาก URL (เช่น เปิดมาจากหน้า track งาน)
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const jobIdParam = params.get("jobId") || "";
-      if (jobIdParam) {
-        setTrackingId(jobIdParam);
-        setTimeout(async () => {
-          const el = document.getElementById("track-section");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
-          const res = await fetch(`${SCRIPT_URL}?jobId=${encodeURIComponent(jobIdParam)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (!data.error) setTrackResult(data);
-          }
-        }, 300);
-      }
-    } catch {}
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLineLogin = () => {
     try {
@@ -700,35 +671,6 @@ export default function Page() {
     setShowPreview(true);
   };
 
-  // SUBMIT
-  const submitRevision = async () => {
-    if (!revisionNote.trim() || !trackResult?.jobId) return;
-    setRevisionSubmitting(true);
-    try {
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          action: "revision",
-          jobId: trackResult.jobId,
-          revisionNote: revisionNote.trim(),
-        }),
-      });
-      const text = await res.text();
-      let data: any = {};
-      try { data = JSON.parse(text); } catch { throw new Error("Response not JSON: " + text.substring(0, 100)); }
-      if (data.error) throw new Error("GAS error: " + data.error + " — " + (data.message || ""));
-      setRevisionDone(true);
-      setShowRevision(false);
-      setRevisionNote("");
-      setTrackResult((prev: any) => prev ? { ...prev, status: "Revision" } : prev);
-    } catch (err: any) {
-      alert("Error: " + (err?.message || String(err)));
-    } finally {
-      setRevisionSubmitting(false);
-    }
-  };
-
   const submitTask = async (task: string, extra: string) => {
     setSubmitting(true);
     try {
@@ -838,34 +780,6 @@ export default function Page() {
     setImageFiles([]); setImagePreviews([]); setContentType(""); setFilmingType("");
   };
 
-  // TRACK
-  const trackJob = async (id?: string) => {
-    const searchId = id || trackingId;
-    if (!searchId) return;
-    if (id) setTrackingId(id);
-    setTracking(true);
-    setTrackResult(null);
-    try {
-      const lineUserId = lineProfile?.userId || "";
-      const url = lineUserId
-        ? `${SCRIPT_URL}?jobId=${searchId}&lineUserId=${encodeURIComponent(lineUserId)}`
-        : `${SCRIPT_URL}?jobId=${searchId}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      // If backend returns an access-denied flag, show error
-      if (data.error === "FORBIDDEN") {
-        setTrackResult(null);
-        setErrorModal("❌ คุณไม่มีสิทธิ์ดูงานนี้ กรุณา Login ด้วย LINE ที่สั่งงาน");
-        return;
-      }
-      setTrackResult(data);
-    } catch {
-      setErrorModal("ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
-    } finally {
-      setTracking(false);
-    }
-  };
 
   // CUSTOMER SUGGEST
   const handleCustomerInput = (val: string) => {
@@ -891,8 +805,8 @@ export default function Page() {
       {jobIdModal && <JobIdModal jobId={jobIdModal} onClose={() => setJobIdModal(null)} />}
       {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
       {confirmBack && <ConfirmModal message="ข้อมูลที่กรอกไปจะหายทั้งหมด ต้องการกลับจริงไหม?" onConfirm={() => { confirmBack(); setConfirmBack(null); }} onCancel={() => setConfirmBack(null)} />}
-      {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setTrackingId(id); trackJob(id); }} />}
-      {showMyJobs && <MyJobsPanel jobs={myJobsList} dark={dark} onClose={() => setShowMyJobs(false)} onTrack={(id) => { setTrackingId(id); trackJob(id); }} loading={loadingMyJobs} />}
+      {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setShowHistory(false); window.open(`/revision?jobId=${id}`, "_blank"); }} />}
+      {showMyJobs && <MyJobsPanel jobs={myJobsList} dark={dark} onClose={() => setShowMyJobs(false)} onTrack={(id) => { setShowMyJobs(false); window.open(`/revision?jobId=${id}`, "_blank"); }} loading={loadingMyJobs} />}
 
       <div className="max-w-5xl mx-auto space-y-6">
 
@@ -1186,121 +1100,35 @@ export default function Page() {
           </div>
         )}
 
-        {/* TRACK */}
-        <div id="track-section" className={card + " space-y-4"}>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#10b981 0%,#06b6d4 60%,#3b82f6 100%)">🔍 Track Job ID</GradText></h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={fetchMyJobs}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 text-xs font-semibold hover:bg-teal-100 transition"
-              >
-                👤 งานของฉัน
-              </button>
-              <button
-                onClick={() => setShowHistory(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 text-xs font-semibold hover:bg-purple-100 transition"
-              >
-                📋 ประวัติงาน
-                {jobHistory.length > 0 && (
-                  <span className="bg-purple-500 text-white rounded-full px-1.5 py-0.5 text-xs leading-none">{jobHistory.length}</span>
-                )}
-              </button>
-              {recentJobs.length > 0 && (
-                <button onClick={() => { setRecentJobs([]); try { localStorage.removeItem("recentJobs"); } catch {} }} className="text-xs text-gray-400 hover:text-red-400 transition">ล้างประวัติ ✕</button>
+        {/* MY JOBS + HISTORY */}
+        <div className={card + " space-y-3"}>
+          <h2 className="text-xl font-bold">
+            <GradText gradient="linear-gradient(90deg,#10b981 0%,#06b6d4 60%,#3b82f6 100%)">📋 ติดตามงาน</GradText>
+          </h2>
+          <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>ดูสถานะงานทั้งหมดของคุณได้ที่นี่</p>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <button
+              onClick={fetchMyJobs}
+              className="flex flex-col items-center gap-2 py-5 rounded-2xl bg-gradient-to-br from-teal-50 to-green-50 border border-teal-200 hover:from-teal-100 hover:to-green-100 transition active:scale-95"
+            >
+              <span className="text-3xl">👤</span>
+              <span className="text-sm font-bold text-teal-700">งานของฉัน</span>
+              <span className="text-xs text-teal-500">ดูงานทั้งหมดที่สั่ง</span>
+            </button>
+            <button
+              onClick={() => setShowHistory(true)}
+              className="flex flex-col items-center gap-2 py-5 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 hover:from-purple-100 hover:to-indigo-100 transition active:scale-95 relative"
+            >
+              <span className="text-3xl">📋</span>
+              <span className="text-sm font-bold text-purple-700">ประวัติการสั่งงาน</span>
+              <span className="text-xs text-purple-500">ดูรายการที่ผ่านมา</span>
+              {jobHistory.length > 0 && (
+                <span className="absolute top-2 right-2 bg-purple-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {jobHistory.length}
+                </span>
               )}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <input className={inputCls()} placeholder="กรอก Job ID ที่ได้รับ" value={trackingId} onChange={(e) => setTrackingId(e.target.value)} onKeyDown={(e) => e.key === "Enter" && trackJob()} />
-            <button className={`px-5 py-2 rounded-xl font-semibold text-white transition min-w-[110px] flex items-center justify-center gap-2 ${tracking ? "bg-indigo-400 cursor-not-allowed" : "bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 hover:scale-[1.02]"}`} onClick={() => trackJob()} disabled={tracking}>
-              {tracking ? <><span className="animate-spin">⏳</span><span>ค้นหา...</span></> : <>🔍 Search</>}
             </button>
           </div>
-
-          {recentJobs.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 mb-2 font-medium">🕐 Job ล่าสุด</p>
-              <div className="flex flex-wrap gap-2">
-                {recentJobs.map((j) => (
-                  <button key={j} onClick={() => setTrackingId(j)} className="px-3 py-1 bg-purple-50 border border-purple-200 text-purple-600 text-xs rounded-lg hover:bg-purple-100 transition font-medium">{j}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {tracking && (
-            <div className="rounded-xl border border-gray-100 p-4 space-y-3 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/3" /><div className="h-4 bg-gray-200 rounded w-1/2" /><div className="h-4 bg-gray-200 rounded w-2/3" /><div className="h-4 bg-gray-200 rounded w-1/2" />
-            </div>
-          )}
-
-          {!tracking && trackResult && (
-            <div className="rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-              <div className={`px-5 py-3 flex items-center gap-2 text-white font-semibold text-sm ${
-                trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "bg-green-500" :
-                trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "bg-blue-500" :
-                trackResult.status === "Revision" ? "bg-red-500" : "bg-amber-400"}`}>
-                <span>{trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "✅" : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "🔄" : trackResult.status === "Revision" ? "🔄" : "⏳"}</span>
-                <span>สถานะ: {trackResult.status}</span>
-              </div>
-              <div className={`${dark ? "bg-gray-800" : "bg-white"} divide-y ${dark ? "divide-gray-700" : "divide-gray-50"}`}>
-                {[
-                  { label: "📦 ประเภทงาน", value: trackResult.task },
-                  { label: "📝 รายละเอียด", value: trackResult.detail },
-                  { label: "👤 ลูกค้า", value: trackResult.customerName },
-                  { label: "🧑‍💼 เซลล์", value: trackResult.agent },
-                  { label: "📅 Deadline", value: formatDate(trackResult.deadline) },
-                  { label: "🔗 Reference", value: trackResult.reference },
-                ].filter((r) => r.value).map((r) => (
-                  <div key={r.label} className="flex gap-3 px-5 py-3">
-                    <span className="text-gray-400 text-sm min-w-[130px]">{r.label}</span>
-                    {r.label === "🔗 Reference" && r.value ? (
-                      <a href={r.value} target="_blank" rel="noopener noreferrer" className="text-purple-500 text-sm font-medium hover:underline break-all">↗ {r.value}</a>
-                    ) : (
-                      <span className={`${dark ? "text-gray-200" : "text-gray-800"} text-sm font-medium break-all`}>{r.value}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Revision button — โชว์เฉพาะ Done */}
-              {(trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว") && !revisionDone && (
-                <div className="px-5 py-3 border-t border-gray-100">
-                  {!showRevision ? (
-                    <button onClick={() => setShowRevision(true)}
-                      className="w-full py-2.5 rounded-xl border-2 border-dashed border-red-300 text-red-500 text-sm font-semibold hover:bg-red-50 transition">
-                      🔄 ขอแก้ไขงาน (Revision)
-                    </button>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-red-600">🔄 บอกสิ่งที่ต้องการแก้ไข</p>
-                      <textarea
-                        className="w-full p-3 rounded-xl border border-red-200 text-sm resize-none focus:ring-2 focus:ring-red-300 outline-none bg-red-50 text-gray-800"
-                        rows={3} placeholder="กรอกรายละเอียดที่ต้องการแก้ไข..."
-                        value={revisionNote} onChange={(e) => setRevisionNote(e.target.value)} />
-                      <div className="flex gap-2">
-                        <button onClick={() => { setShowRevision(false); setRevisionNote(""); }}
-                          className="flex-1 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:bg-gray-50 transition">
-                          ยกเลิก
-                        </button>
-                        <button onClick={submitRevision} disabled={!revisionNote.trim() || revisionSubmitting}
-                          className="flex-1 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition disabled:opacity-50">
-                          {revisionSubmitting ? "⏳ กำลังส่ง..." : "ส่งคำขอแก้ไข"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {revisionDone && (
-                <div className="px-5 py-3 border-t border-gray-100 bg-red-50">
-                  <p className="text-sm text-red-600 font-semibold text-center">🔄 ส่งคำขอแก้ไขแล้ว — ทีมงานจะดำเนินการเร็วๆ นี้</p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
       </div>
