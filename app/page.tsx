@@ -433,8 +433,8 @@ export default function Page() {
   const [adsType, setAdsType] = useState("");
   const [contentType, setContentType] = useState("");
   const [filmingType, setFilmingType] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
 
   // TRACK
@@ -670,7 +670,7 @@ export default function Page() {
         if (value && value !== "-") base[label] = value;
       }
     });
-    if (imageFile) base["🖼️ รูปแนบ"] = imageFile.name;
+    if (imageFiles.length > 0) base["🖼️ รูปแนบ"] = imageFiles.map(f => f.name).join(", ");
     setPreviewData(base);
     setPendingTask({ task, extra });
     setShowPreview(true);
@@ -682,23 +682,25 @@ export default function Page() {
     try {
       const lineUserId = lineProfile?.userId || null;
 
-      // Convert image to base64 if provided
-      let imageBase64 = "";
-      let imageName = "";
-      let imageMime = "";
-      if (imageFile) {
+      // Convert images to base64 if provided
+      let imageBase64s: string[] = [];
+      let imageNames: string[] = [];
+      let imageMimes: string[] = [];
+      if (imageFiles.length > 0) {
         setImageUploading(true);
-        imageBase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const result = ev.target?.result as string;
-            // Strip data:image/...;base64, prefix
-            resolve(result.split(",")[1] || "");
-          };
-          reader.readAsDataURL(imageFile);
-        });
-        imageName = imageFile.name;
-        imageMime = imageFile.type;
+        for (const file of imageFiles) {
+          const b64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const result = ev.target?.result as string;
+              resolve(result.split(",")[1] || "");
+            };
+            reader.readAsDataURL(file);
+          });
+          imageBase64s.push(b64);
+          imageNames.push(file.name);
+          imageMimes.push(file.type);
+        }
         setImageUploading(false);
       }
       // แยก subType กับ workflowParams ออกจาก extra
@@ -732,9 +734,9 @@ export default function Page() {
           lineUserId,
           subType,
           workflowParams,
-          imageBase64,
-          imageName,
-          imageMime,
+          imageBase64s,
+          imageNames,
+          imageMimes,
         }),
       });
       if (!res.ok) throw new Error();
@@ -781,7 +783,7 @@ export default function Page() {
     setTaskType(""); setStep(0);
     setPlatform("Platform"); setGoal("Goal"); setMood("Mood"); setMusic("Music"); setVoice("Voice");
     setDesignType(""); setAdsType(""); setDeadline(""); setDetail(""); setRefLink(""); setErrors({});
-    setImageFile(null); setImagePreview(""); setContentType(""); setFilmingType("");
+    setImageFiles([]); setImagePreviews([]); setContentType(""); setFilmingType("");
   };
 
   // TRACK
@@ -963,36 +965,44 @@ export default function Page() {
             )}
           </div>
 
-          {/* IMAGE UPLOAD */}
+          {/* IMAGE UPLOAD — max 3 */}
           <div>
-            <label className={labelCls}>🖼️ แนบรูปภาพ <span className="text-xs text-gray-400">(ไม่บังคับ)</span></label>
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed transition
-                ${imageFile ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-gray-50 hover:border-purple-200 hover:bg-purple-50/50"}`}>
-                <span className="text-lg">{imageFile ? "🖼️" : "➕"}</span>
-                <span className={`text-sm truncate ${imageFile ? "text-purple-700 font-medium" : "text-gray-400"}`}>
-                  {imageFile ? imageFile.name : "เลือกไฟล์รูป (JPG, PNG, WEBP — ไม่เกิน 5MB)"}
-                </span>
-                {imageFile && (
-                  <button type="button" onClick={(e) => { e.preventDefault(); setImageFile(null); setImagePreview(""); }}
-                    className="ml-auto text-red-400 hover:text-red-600 text-xs font-bold shrink-0">✕ ลบ</button>
-                )}
-              </div>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                if (file.size > 5 * 1024 * 1024) { alert("รูปใหญ่เกินไป — กรุณาเลือกรูปที่มีขนาดไม่เกิน 5MB"); return; }
-                setImageFile(file);
-                const reader = new FileReader();
-                reader.onload = (ev) => setImagePreview(ev.target?.result as string);
-                reader.readAsDataURL(file);
-              }} />
-            </label>
-            {imagePreview && (
-              <div className="mt-2 rounded-xl overflow-hidden border border-purple-100 shadow-sm">
-                <img src={imagePreview} alt="preview" className="w-full max-h-48 object-contain bg-gray-50" />
-              </div>
-            )}
+            <label className={labelCls}>🖼️ แนบรูปภาพ <span className="text-xs text-gray-400">(ไม่บังคับ — สูงสุด 3 รูป)</span></label>
+            <div className="space-y-2">
+              {imagePreviews.map((preview, idx) => (
+                <div key={idx} className="relative rounded-xl overflow-hidden border border-purple-100 shadow-sm">
+                  <img src={preview} alt={`preview ${idx + 1}`} className="w-full max-h-40 object-contain bg-gray-50" />
+                  <button type="button"
+                    onClick={() => {
+                      setImageFiles((prev) => prev.filter((_, i) => i !== idx));
+                      setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow">✕</button>
+                  <div className="absolute bottom-2 left-2 bg-black/40 text-white text-xs px-2 py-0.5 rounded-full">{imageFiles[idx]?.name}</div>
+                </div>
+              ))}
+              {imageFiles.length < 3 && (
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div className="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-purple-200 hover:bg-purple-50/50 transition">
+                    <span className="text-lg">➕</span>
+                    <span className="text-sm text-gray-400">
+                      {imageFiles.length === 0 ? "เลือกไฟล์รูป (JPG, PNG, WEBP — ไม่เกิน 5MB)" : `เพิ่มรูปอีก (${3 - imageFiles.length} รูปที่เหลือ)`}
+                    </span>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) { alert("รูปใหญ่เกินไป — กรุณาเลือกรูปที่มีขนาดไม่เกิน 5MB"); return; }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      setImageFiles((prev) => [...prev, file]);
+                      setImagePreviews((prev) => [...prev, ev.target?.result as string]);
+                    };
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+              )}
+            </div>
           </div>
         </div>
 

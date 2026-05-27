@@ -717,18 +717,24 @@ export default function AdminPage() {
                           </div>
                         )}
 
-                        {/* Customer image attachment */}
+                        {/* Customer image attachments (comma-separated URLs) */}
                         {job.imageUrl && (
                           <div className="rounded-xl overflow-hidden border border-purple-100 shadow-sm">
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border-b border-purple-100">
                               <span className="text-purple-500 text-sm">🖼️</span>
-                              <p className="text-xs font-bold text-purple-700">รูปจากลูกค้า</p>
-                              <a href={job.imageUrl} target="_blank" rel="noopener noreferrer"
-                                className="ml-auto text-xs text-blue-500 hover:underline">↗ เปิดใน Drive</a>
+                              <p className="text-xs font-bold text-purple-700">รูปจากลูกค้า ({job.imageUrl.split(",").filter(Boolean).length} รูป)</p>
                             </div>
-                            <img src={job.imageUrl} alt="customer attachment"
-                              className="w-full max-h-56 object-contain bg-gray-50 cursor-pointer"
-                              onClick={() => window.open(job.imageUrl, "_blank")} />
+                            {job.imageUrl.split(",").filter(Boolean).map((url, idx) => (
+                              <div key={idx} className="relative border-b border-purple-50 last:border-0">
+                                <img src={url.trim()} alt={`attachment ${idx + 1}`}
+                                  className="w-full max-h-56 object-contain bg-gray-50 cursor-pointer"
+                                  onClick={() => window.open(url.trim(), "_blank")} />
+                                <a href={url.trim()} target="_blank" rel="noopener noreferrer"
+                                  className="absolute bottom-2 right-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow transition">
+                                  ↗ เปิดใน Drive
+                                </a>
+                              </div>
+                            ))}
                           </div>
                         )}
 

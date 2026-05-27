@@ -171,11 +171,19 @@ function createJob(body) {
     const jobId     = generateJobId();
     const timestamp = new Date().toLocaleString("th-TH");
 
-    // Upload image to Drive if provided
+    // Upload images to Drive if provided (up to 3)
     var imageUrl = "";
-    if (body.imageBase64 && body.imageBase64.length > 0) {
-      imageUrl = saveImageToDrive(body.imageBase64, body.imageName || "image.jpg", body.imageMime || "image/jpeg");
+    var imageUrls = [];
+    var base64s  = body.imageBase64s || (body.imageBase64 ? [body.imageBase64] : []);
+    var names    = body.imageNames   || (body.imageName   ? [body.imageName]   : []);
+    var mimes    = body.imageMimes   || (body.imageMime   ? [body.imageMime]   : []);
+    for (var i = 0; i < base64s.length && i < 3; i++) {
+      if (base64s[i] && base64s[i].length > 0) {
+        var url = saveImageToDrive(base64s[i], names[i] || ("image_" + (i+1) + ".jpg"), mimes[i] || "image/jpeg");
+        if (url) imageUrls.push(url);
+      }
     }
+    imageUrl = imageUrls.join(",");
 
     sheet.appendRow([
       timestamp,
