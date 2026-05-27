@@ -438,6 +438,7 @@ export default function Page() {
   const [revisionNote, setRevisionNote] = useState("");
   const [revisionSubmitting, setRevisionSubmitting] = useState(false);
   const [revisionDone, setRevisionDone] = useState(false);
+  const [revisionLoadError, setRevisionLoadError] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
 
@@ -570,19 +571,41 @@ export default function Page() {
         setTimeout(async () => {
           const el = document.getElementById("track-section");
           if (el) el.scrollIntoView({ behavior: "smooth" });
-          // เรียก trackJob ด้วย jobId จาก URL
-          const res = await fetch(`${SCRIPT_URL}?jobId=${encodeURIComponent(jobIdParam)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (!data.error) {
-              setTrackResult(data);
-              if (revisionParam === "1") {
-                // เปิด revision form อัตโนมัติถ้ามาจากปุ่ม LINE
-                setShowRevision(true);
-              }
+
+          // helper: fetch พร้อม timeout 8 วินาที
+          const fetchWithTimeout = (url: string, ms = 8000) => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), ms);
+            return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+          };
+
+          // GAS URL โดยตรง (fallback กรณี proxy ล้มเหลว)
+          const GAS_DIRECT = "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
+
+          try {
+            // ลอง proxy ก่อน
+            let res = await fetchWithTimeout(`${SCRIPT_URL}?jobId=${encodeURIComponent(jobIdParam)}`).catch(() => null);
+
+            // ถ้า proxy ล้ม ลอง GAS โดยตรง
+            if (!res || !res.ok) {
+              res = await fetchWithTimeout(`${GAS_DIRECT}?jobId=${encodeURIComponent(jobIdParam)}`).catch(() => null);
             }
+
+            if (res && res.ok) {
+              const data = await res.json();
+              if (!data.error) {
+                setTrackResult(data);
+                if (revisionParam === "1") setShowRevision(true);
+              } else {
+                setRevisionLoadError(true);
+              }
+            } else {
+              setRevisionLoadError(true);
+            }
+          } catch {
+            setRevisionLoadError(true);
           }
-        }, 600);
+        }, 300);
       }
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -932,10 +955,30 @@ export default function Page() {
             <p className="text-red-100 text-sm">{trackResult?.jobId || trackingId}</p>
           </div>
 
-          {/* Loading state */}
-          {!trackResult && (
+          {/* Loading / Error state */}
+          {!trackResult && !revisionLoadError && (
             <div className="px-5 py-8 text-center text-gray-400 text-sm">
               ⏳ กำลังโหลดข้อมูลงาน...
+            </div>
+          )}
+          {!trackResult && revisionLoadError && (
+            <div className="px-5 py-6 text-center space-y-3">
+              <p className="text-red-500 text-sm font-semibold">⚠️ โหลดข้อมูลไม่ได้ กรุณาลองใหม่</p>
+              <button
+                onClick={() => {
+                  setRevisionLoadError(false);
+                  const id = trackingId;
+                  if (!id) return;
+                  const GAS_DIRECT = "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
+                  fetch(`${GAS_DIRECT}?jobId=${encodeURIComponent(id)}`)
+                    .then(r => r.json())
+                    .then(d => { if (!d.error) { setTrackResult(d); setShowRevision(true); } else setRevisionLoadError(true); })
+                    .catch(() => setRevisionLoadError(true));
+                }}
+                className="px-6 py-2 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition"
+              >
+                🔄 ลองใหม่
+              </button>
             </div>
           )}
 
