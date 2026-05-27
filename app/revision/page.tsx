@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-const GAS_URL =
-  "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
+// ใช้ Vercel proxy แทน GAS โดยตรง (หลีก CORS redirect บน mobile)
+const GAS_URL = "/api/gas";
 
 type JobData = {
   jobId: string;
