@@ -725,14 +725,17 @@ export default function AdminPage() {
                               <p className="text-xs font-bold text-purple-700">รูปจากลูกค้า ({job.imageUrl.split(",").filter(Boolean).length} รูป)</p>
                             </div>
                             {job.imageUrl.split(",").filter(Boolean).map((url, idx) => (
-                              <div key={idx} className="relative border-b border-purple-50 last:border-0">
-                                <img src={url.trim()} alt={`attachment ${idx + 1}`}
+                              <div key={idx} className="border-b border-purple-50 last:border-0">
+                                <img src={url.trim()} alt={`รูปที่ ${idx + 1}`}
                                   className="w-full max-h-56 object-contain bg-gray-50 cursor-pointer"
                                   onClick={() => window.open(url.trim(), "_blank")} />
-                                <a href={url.trim()} target="_blank" rel="noopener noreferrer"
-                                  className="absolute bottom-2 right-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow transition">
-                                  ↗ เปิดใน Drive
-                                </a>
+                                <div className="flex items-center justify-between px-3 py-1.5 bg-white">
+                                  <span className="text-xs font-medium text-gray-800">รูปที่ {idx + 1}</span>
+                                  <a href={url.trim()} target="_blank" rel="noopener noreferrer"
+                                    className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow transition">
+                                    ↗ เปิดใน Drive
+                                  </a>
+                                </div>
                               </div>
                             ))}
                           </div>
