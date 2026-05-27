@@ -555,24 +555,23 @@ function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink) {
     wrap: true
   });
 
-  // สร้าง footer (ปุ่ม) ถ้ามี deliveryLink
-  var footer = deliveryLink ? {
-    type: "box",
-    layout: "vertical",
-    contents: [
-      {
-        type: "button",
-        action: {
-          type: "uri",
-          label: "📂 เปิดไฟล์งาน",
-          uri: deliveryLink
-        },
-        style: "primary",
-        color: "#22c55e",
-        height: "sm"
-      }
-    ]
-  } : null;
+  // footer: ปุ่มเปิดไฟล์งาน + ปุ่มขอ revision
+  var revisionUrl = "https://support-team-bon.vercel.app/?jobId=" + jobId + "&revision=1";
+  var footerContents = [];
+  if (deliveryLink) {
+    footerContents.push({
+      type: "button",
+      action: { type: "uri", label: "📂 เปิดไฟล์งาน", uri: deliveryLink },
+      style: "primary", color: "#22c55e", height: "sm"
+    });
+  }
+  footerContents.push({
+    type: "button",
+    action: { type: "uri", label: "🔄 ขอแก้ไขงาน", uri: revisionUrl },
+    style: "secondary", height: "sm",
+    margin: deliveryLink ? "sm" : "none"
+  });
+  var footer = { type: "box", layout: "vertical", contents: footerContents };
 
   var bubble = {
     type: "bubble",

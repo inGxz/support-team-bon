@@ -539,6 +539,35 @@ export default function Page() {
     } catch {}
   }, []);
 
+  // อ่าน URL params — ?jobId=STM-XXXX&revision=1 (จากปุ่มใน LINE card)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const jobIdParam   = params.get("jobId");
+      const revisionParam = params.get("revision");
+      if (jobIdParam) {
+        setTrackingId(jobIdParam);
+        // scroll ไปส่วน track แล้ว track อัตโนมัติ
+        setTimeout(async () => {
+          const el = document.getElementById("track-section");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+          // เรียก trackJob ด้วย jobId จาก URL
+          const res = await fetch(`${SCRIPT_URL}?jobId=${encodeURIComponent(jobIdParam)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (!data.error) {
+              setTrackResult(data);
+              if (revisionParam === "1") {
+                // เปิด revision form อัตโนมัติถ้ามาจากปุ่ม LINE
+                setShowRevision(true);
+              }
+            }
+          }
+        }, 600);
+      }
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleLineLogin = () => {
     try {
       if (window.liff) {
@@ -1164,7 +1193,7 @@ export default function Page() {
         )}
 
         {/* TRACK */}
-        <div className={card + " space-y-4"}>
+        <div id="track-section" className={card + " space-y-4"}>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#10b981 0%,#06b6d4 60%,#3b82f6 100%)">🔍 Track Job ID</GradText></h2>
             <div className="flex items-center gap-2">
