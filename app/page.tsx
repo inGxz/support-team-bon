@@ -436,6 +436,7 @@ export default function Page() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
+  const [recentJobs, setRecentJobs] = useState<string[]>([]);
 
   // JOB HISTORY
   const [jobHistory, setJobHistory] = useState<JobRecord[]>([]);
