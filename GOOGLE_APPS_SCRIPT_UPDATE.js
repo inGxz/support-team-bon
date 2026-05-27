@@ -85,9 +85,11 @@ function doGet(e) {
     if (String(row[COL.JOB_ID - 1]) === jobId) {
 
       const storedUserId = String(row[COL.LINE_USER_ID - 1] || "");
+      const source       = e.parameter.source || "";
 
       // ถ้า job นี้ผูก lineUserId ไว้ → ต้องส่ง userId มาตรงกัน
-      if (storedUserId && storedUserId !== lineUserId) {
+      // ยกเว้น source=revision (หน้าขอแก้ไขงาน ไม่มี LIFF จึงไม่รู้ userId)
+      if (storedUserId && storedUserId !== lineUserId && source !== "revision") {
         return jsonResponse({ error: "FORBIDDEN" });
       }
 

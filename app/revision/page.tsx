@@ -39,7 +39,7 @@ export default function RevisionPage() {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
 
-    fetch(`${GAS_URL}?jobId=${encodeURIComponent(id)}`, { signal: controller.signal })
+    fetch(`${GAS_URL}?jobId=${encodeURIComponent(id)}&source=revision`, { signal: controller.signal })
       .then((r) => r.text())
       .then((text) => {
         clearTimeout(timer);
