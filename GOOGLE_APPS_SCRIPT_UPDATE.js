@@ -436,6 +436,20 @@ function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
+
+// ─── testDriveAuth: รันฟังก์ชันนี้ครั้งเดียวเพื่อ authorize DriveApp ────────────
+// วิธีใช้: เลือก testDriveAuth ใน dropdown แล้วกด Run
+function testDriveAuth() {
+  try {
+    var folderName = "Support Teambon - Customer Uploads";
+    var folders = DriveApp.getFoldersByName(folderName);
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+    Logger.log("✅ Drive authorized! Folder: " + folder.getName() + " | ID: " + folder.getId());
+  } catch(err) {
+    Logger.log("❌ Error: " + err);
+  }
+}
+
 function generateJobId() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   const lastRow = sheet.getLastRow();
