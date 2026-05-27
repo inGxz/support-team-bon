@@ -37,6 +37,8 @@ function getWorkflow(task: string): string {
   if (t.includes("video")) return "Video";
   if (t.includes("design")) return "Design";
   if (t.includes("ads")) return "Ads";
+  if (t.includes("content")) return "Content";
+  if (t.includes("filming") || t.includes("film")) return "Filming";
   return "อื่นๆ";
 }
 
@@ -81,11 +83,13 @@ const statusStyle = (s: string) => {
   return { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-300", dot: "bg-amber-400" };
 };
 
-const WORKFLOWS = ["Video", "Design", "Ads", "อื่นๆ"];
+const WORKFLOWS = ["Video", "Design", "Ads", "Content", "Filming", "อื่นๆ"];
 const WF_STYLE: Record<string, { bg: string; text: string; border: string; icon: string }> = {
-  Video:  { bg: "bg-pink-50",   text: "text-pink-700",   border: "border-pink-200",   icon: "🎬" },
-  Design: { bg: "bg-cyan-50",   text: "text-cyan-700",   border: "border-cyan-200",   icon: "🎨" },
-  Ads:    { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", icon: "📢" },
+  Video:   { bg: "bg-pink-50",   text: "text-pink-700",   border: "border-pink-200",   icon: "🎬" },
+  Design:  { bg: "bg-cyan-50",   text: "text-cyan-700",   border: "border-cyan-200",   icon: "🎨" },
+  Ads:     { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", icon: "📢" },
+  Content: { bg: "bg-emerald-50",text: "text-emerald-700",border: "border-emerald-200",icon: "✍️" },
+  Filming: { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200", icon: "🎥" },
   "อื่นๆ":{ bg: "bg-gray-50",  text: "text-gray-600",   border: "border-gray-200",   icon: "📁" },
 };
 
@@ -503,10 +507,12 @@ export default function AdminPage() {
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">📊 แยกตาม Workflow</p>
                 <div className="space-y-2">
                   {[
-                    { label: "🎬 Video", color: "bg-pink-500",   key: "Video"  },
-                    { label: "🎨 Design",color: "bg-cyan-500",   key: "Design" },
-                    { label: "📢 Ads",   color: "bg-orange-500", key: "Ads"    },
-                    { label: "อื่นๆ",   color: "bg-gray-400",   key: "อื่นๆ"  },
+                    { label: "🎬 Video",  color: "bg-pink-500",    key: "Video"   },
+                    { label: "🎨 Design", color: "bg-cyan-500",    key: "Design"  },
+                    { label: "📢 Ads",    color: "bg-orange-500",  key: "Ads"     },
+                    { label: "✍️ Content",color: "bg-emerald-500", key: "Content" },
+                    { label: "🎥 Filming",color: "bg-violet-500",  key: "Filming" },
+                    { label: "อื่นๆ",    color: "bg-gray-400",    key: "อื่นๆ"   },
                   ].map(({ label, color, key }) => {
                     const count = workflowCount[key] || 0;
                     const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
@@ -562,12 +568,14 @@ export default function AdminPage() {
               <div className="flex gap-2 flex-wrap items-center">
                 <span className="text-xs text-gray-400 font-medium">Workflow:</span>
                 {[
-                  { label: "ทั้งหมด", color: "" },
-                  { label: "Video",  color: "text-pink-600 border-pink-200 bg-pink-50"     },
-                  { label: "Design", color: "text-cyan-600 border-cyan-200 bg-cyan-50"     },
-                  { label: "Ads",    color: "text-orange-600 border-orange-200 bg-orange-50" },
-                  { label: "อื่นๆ", color: "text-gray-600 border-gray-200 bg-gray-50"      },
-                ].map(({ label, color }) => (
+                  { label: "ทั้งหมด", color: "",     icon: ""   },
+                  { label: "Video",   color: "text-pink-600 border-pink-200 bg-pink-50",        icon: "🎬" },
+                  { label: "Design",  color: "text-cyan-600 border-cyan-200 bg-cyan-50",         icon: "🎨" },
+                  { label: "Ads",     color: "text-orange-600 border-orange-200 bg-orange-50",   icon: "📢" },
+                  { label: "Content", color: "text-emerald-600 border-emerald-200 bg-emerald-50",icon: "✍️" },
+                  { label: "Filming", color: "text-violet-600 border-violet-200 bg-violet-50",   icon: "🎥" },
+                  { label: "อื่นๆ",  color: "text-gray-600 border-gray-200 bg-gray-50",         icon: ""   },
+                ].map(({ label, color, icon }) => (
                   <button
                     key={label}
                     onClick={() => setWorkflowFilter(label)}
@@ -577,7 +585,7 @@ export default function AdminPage() {
                         : color || "bg-white text-gray-600 border-gray-200 hover:border-purple-300"
                     }`}
                   >
-                    {label === "Video" ? "🎬" : label === "Design" ? "🎨" : label === "Ads" ? "📢" : ""} {label}
+                    {icon} {label}
                     {label !== "ทั้งหมด" && <span className="ml-1 opacity-70">({workflowCount[label] || 0})</span>}
                   </button>
                 ))}
@@ -714,12 +722,11 @@ export default function AdminPage() {
                             disabled={!dirty || isSaving}
                             onClick={() => handleSave(job.jobId)}
                             className={`shrink-0 px-5 py-2 rounded-lg text-sm font-bold transition ${
-                              isSaved  ? "bg-green-500 text-white" :
-                              dirty    ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:scale-[1.02] shadow-md" :
-                                         "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              isSaved ? "bg-green-500 text-white" :
+                              dirty   ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:scale-[1.02] shadow-md" :
+                                        "bg-gray-100 text-gray-400 cursor-not-allowed"
                             } disabled:opacity-60`}
                           >
-                            
                             {isSaving ? "⏳" : isSaved ? "✅ บันทึกแล้ว" : "💾 บันทึก"}
                           </button>
                         </div>
