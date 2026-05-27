@@ -19,6 +19,7 @@ export default function RevisionPage() {
   const [job, setJob] = useState<JobData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorMsg, setLoadErrorMsg] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -39,16 +40,26 @@ export default function RevisionPage() {
     const timer = setTimeout(() => controller.abort(), 10000);
 
     fetch(`${GAS_URL}?jobId=${encodeURIComponent(id)}`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((data) => {
+      .then((r) => r.text())
+      .then((text) => {
         clearTimeout(timer);
-        if (data.error) {
+        try {
+          const data = JSON.parse(text);
+          if (data.error) {
+            setLoadError(true);
+            setLoadErrorMsg(`GAS error: ${data.error} | ${data.message || ""} | jobId: ${id}`);
+          } else {
+            setJob(data);
+          }
+        } catch {
           setLoadError(true);
-        } else {
-          setJob(data);
+          setLoadErrorMsg(`JSON parse failed: ${text.substring(0, 120)}`);
         }
       })
-      .catch(() => setLoadError(true))
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorMsg(`Fetch error: ${String(err)}`);
+      })
       .finally(() => setLoading(false));
 
     return () => {
@@ -107,8 +118,13 @@ export default function RevisionPage() {
           <p className="text-4xl">😕</p>
           <p className="font-bold text-gray-700">ไม่พบข้อมูลงาน</p>
           <p className="text-gray-400 text-sm">
-            {jobId ? `ไม่พบ Job ID: ${jobId}` : "ไม่มี Job ID ใน URL"}
+            {jobId ? `Job ID: ${jobId}` : "ไม่มี Job ID ใน URL"}
           </p>
+          {loadErrorMsg && (
+            <p className="text-left text-xs text-red-400 bg-red-50 rounded-lg p-2 break-all">
+              {loadErrorMsg}
+            </p>
+          )}
           <button
             onClick={() => window.location.reload()}
             className="w-full py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition"
