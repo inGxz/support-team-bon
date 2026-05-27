@@ -41,6 +41,8 @@ const COL = {
   SUB_TYPE:       12,  // L - subType
   WORKFLOW_PARAMS:13,  // M - workflowParams
   IMAGE_URL:      14,  // N - imageUrl (Google Drive link)
+  REVISION_NOTE:  15,  // O - revisionNote
+  REVISION_COUNT: 16,  // P - revisionCount
 };
 
 // ─── LINE Channel Access Token ────────────────────────────────────────────────
@@ -136,10 +138,8 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
 
-    if (body.action === "update") {
-      return updateJob(body);
-    }
-
+    if (body.action === "update")   return updateJob(body);
+    if (body.action === "revision") return submitRevision(body);
     return createJob(body);
   } catch (err) {
     return jsonResponse({ error: "FAILED", message: String(err) });
@@ -202,9 +202,193 @@ function createJob(body) {
       imageUrl,                    // N: imageUrl (Drive)
     ]);
 
+    // แจ้งเตือน admin group
+    notifyAdminGroup(jobId, body.customerName, body.task, body.deadline, body.detail, body.agent, body.lineUserId || "");
+
     return jsonResponse({ success: true, jobId });
   } catch (err) {
     return jsonResponse({ error: "CREATE_FAILED", message: String(err) });
+  }
+}
+
+// ─── getLineProfilePic: ดึงรูป profile จาก LINE API ─────────────────────────
+function getLineProfilePic(lineUserId, token) {
+  try {
+    if (!lineUserId || !token) return "";
+    var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/profile/" + lineUserId, {
+      method: "GET",
+      headers: { "Authorization": "Bearer " + token },
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() !== 200) return "";
+    var profile = JSON.parse(res.getContentText());
+    return profile.pictureUrl || "";
+  } catch(err) {
+    return "";
+  }
+}
+
+// ─── notifyAdminGroup: แจ้งเตือนกลุ่ม admin เมื่อมีงานใหม่ ──────────────────
+function notifyAdminGroup(jobId, customerName, task, deadline, detail, agent, lineUserId) {
+  try {
+    const token   = getLineToken();
+    const groupId = PropertiesService.getScriptProperties().getProperty("ADMIN_GROUP_ID");
+    if (!token || !groupId) return;
+
+    const detailText   = detail   ? (detail.length > 80 ? detail.substring(0, 80) + "..." : detail) : "-";
+    const deadlineText = deadline || "-";
+    const pictureUrl   = getLineProfilePic(lineUserId, token);
+
+    // hero image (รูปโปรไฟล์) — แสดงถ้ามี
+    var hero = pictureUrl ? {
+      type: "image",
+      url: pictureUrl,
+      size: "full",
+      aspectRatio: "20:9",
+      aspectMode: "cover"
+    } : null;
+
+    var bubble = {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box", layout: "vertical", paddingAll: "md",
+        backgroundColor: "#7C3AED",
+        contents: [
+          { type: "text", text: "📋 งานใหม่เข้ามา!", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: customerName || "-", color: "#E9D5FF", size: "sm" }
+        ]
+      },
+      body: {
+        type: "box", layout: "vertical", spacing: "sm", paddingAll: "md",
+        contents: [
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "Job ID",   size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: jobId || "-", size: "xs", color: "#111827", weight: "bold", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "งาน",     size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: task || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "เซลล์",   size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: agent || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "Deadline", size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: deadlineText, size: "xs", color: "#DC2626", weight: "bold", flex: 3, wrap: true }
+          ]},
+          { type: "separator", margin: "sm" },
+          { type: "text", text: detailText, size: "xs", color: "#374151", wrap: true, margin: "sm" }
+        ]
+      }
+    };
+
+    if (hero) bubble.hero = hero;
+
+    var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      payload: JSON.stringify({ to: groupId, messages: [{ type: "flex", altText: "📋 งานใหม่! " + jobId + " — " + (customerName || "-"), contents: bubble }] }),
+      muteHttpExceptions: true
+    });
+
+    console.log("notifyAdminGroup response:", res.getResponseCode(), res.getContentText());
+  } catch(err) {
+    console.error("notifyAdminGroup error:", err);
+  }
+}
+
+
+// ─── submitRevision: ลูกค้าขอแก้ไขงาน ───────────────────────────────────────
+function submitRevision(body) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    const data  = sheet.getDataRange().getValues();
+
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][COL.JOB_ID - 1]) === String(body.jobId)) {
+        var rowNum = i + 1;
+        var currentStatus = String(data[i][COL.STATUS - 1] || "");
+        var currentCount  = parseInt(data[i][COL.REVISION_COUNT - 1] || "0") || 0;
+
+        // เปลี่ยนสถานะเป็น Revision
+        sheet.getRange(rowNum, COL.STATUS).setValue("Revision");
+        sheet.getRange(rowNum, COL.REVISION_NOTE).setValue(body.revisionNote || "");
+        sheet.getRange(rowNum, COL.REVISION_COUNT).setValue(currentCount + 1);
+
+        // แจ้ง admin group
+        var customerName = String(data[i][COL.CUSTOMER_NAME - 1] || "");
+        var task         = String(data[i][COL.TASK          - 1] || "");
+        var agent        = String(data[i][COL.AGENT         - 1] || "");
+        var lineUserId   = String(data[i][COL.LINE_USER_ID  - 1] || "");
+        notifyRevisionToAdmin(body.jobId, customerName, task, agent, body.revisionNote || "", currentCount + 1, lineUserId);
+
+        return jsonResponse({ success: true });
+      }
+    }
+    return jsonResponse({ error: "NOT_FOUND" });
+  } catch(err) {
+    return jsonResponse({ error: "REVISION_FAILED", message: String(err) });
+  }
+}
+
+// ─── notifyRevisionToAdmin: แจ้ง admin เมื่อลูกค้าขอ revision ────────────────
+function notifyRevisionToAdmin(jobId, customerName, task, agent, note, count, lineUserId) {
+  try {
+    const token   = getLineToken();
+    const groupId = PropertiesService.getScriptProperties().getProperty("ADMIN_GROUP_ID");
+    if (!token || !groupId) return;
+
+    const pictureUrl = getLineProfilePic(lineUserId, token);
+    const noteText   = note ? (note.length > 80 ? note.substring(0, 80) + "..." : note) : "-";
+
+    var bubble = {
+      type: "bubble", size: "kilo",
+      header: {
+        type: "box", layout: "vertical", paddingAll: "md",
+        backgroundColor: "#DC2626",
+        contents: [
+          { type: "text", text: "🔄 ลูกค้าขอแก้ไขงาน!", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: customerName || "-", color: "#FCA5A5", size: "sm" }
+        ]
+      },
+      body: {
+        type: "box", layout: "vertical", spacing: "sm", paddingAll: "md",
+        contents: [
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "Job ID",    size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: jobId || "-", size: "xs", color: "#111827", weight: "bold", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "งาน",      size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: task || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "เซลล์",    size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: agent || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "ครั้งที่",  size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: String(count), size: "xs", color: "#DC2626", weight: "bold", flex: 3 }
+          ]},
+          { type: "separator", margin: "sm" },
+          { type: "text", text: "📝 สิ่งที่ต้องการแก้:", size: "xs", color: "#6B7280", margin: "sm" },
+          { type: "text", text: noteText, size: "xs", color: "#374151", wrap: true }
+        ]
+      }
+    };
+
+    if (pictureUrl) bubble.hero = { type: "image", url: pictureUrl, size: "full", aspectRatio: "20:9", aspectMode: "cover" };
+
+    UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      payload: JSON.stringify({ to: groupId, messages: [{ type: "flex", altText: "🔄 " + customerName + " ขอแก้ไขงาน " + jobId, contents: bubble }] }),
+      muteHttpExceptions: true
+    });
+  } catch(err) {
+    console.error("notifyRevisionToAdmin error:", err);
   }
 }
 
@@ -278,6 +462,8 @@ function getAllJobs() {
       subType:        String(row[COL.SUB_TYPE         - 1] || ""),
       workflowParams: String(row[COL.WORKFLOW_PARAMS  - 1] || ""),
       imageUrl:       String(row[COL.IMAGE_URL        - 1] || ""),
+      revisionNote:   String(row[COL.REVISION_NOTE    - 1] || ""),
+      revisionCount:  String(row[COL.REVISION_COUNT   - 1] || "0"),
       timestamp:      String(row[COL.TIMESTAMP        - 1] || ""),
     });
   }
@@ -456,6 +642,37 @@ function testDriveAuth() {
   } catch(err) {
     Logger.log("❌ Error: " + err);
   }
+}
+
+
+// ─── testAdminNotify: ทดสอบส่งแจ้งเตือนเข้า group ───────────────────────────
+function testAdminNotify() {
+  const token   = getLineToken();
+  const groupId = PropertiesService.getScriptProperties().getProperty("ADMIN_GROUP_ID");
+
+  Logger.log("Token: " + (token ? token.substring(0, 20) + "..." : "❌ ไม่มี"));
+  Logger.log("Group ID: " + (groupId || "❌ ไม่มี"));
+
+  if (!token || !groupId) {
+    Logger.log("❌ หยุด — ขาด token หรือ groupId");
+    return;
+  }
+
+  var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    payload: JSON.stringify({
+      to: groupId,
+      messages: [{ type: "text", text: "🧪 ทดสอบแจ้งเตือน admin group — ระบบทำงานปกติ ✅" }]
+    }),
+    muteHttpExceptions: true
+  });
+
+  Logger.log("Status: " + res.getResponseCode());
+  Logger.log("Response: " + res.getContentText());
 }
 
 function generateJobId() {

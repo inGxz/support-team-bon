@@ -434,6 +434,10 @@ export default function Page() {
   const [contentType, setContentType] = useState("");
   const [filmingType, setFilmingType] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [showRevision, setShowRevision] = useState(false);
+  const [revisionNote, setRevisionNote] = useState("");
+  const [revisionSubmitting, setRevisionSubmitting] = useState(false);
+  const [revisionDone, setRevisionDone] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
 
@@ -677,6 +681,31 @@ export default function Page() {
   };
 
   // SUBMIT
+  const submitRevision = async () => {
+    if (!revisionNote.trim() || !trackResult?.jobId) return;
+    setRevisionSubmitting(true);
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "revision",
+          jobId: trackResult.jobId,
+          revisionNote: revisionNote.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setRevisionDone(true);
+      setShowRevision(false);
+      setRevisionNote("");
+      // อัปเดต trackResult status เป็น Revision
+      setTrackResult((prev: any) => prev ? { ...prev, status: "Revision" } : prev);
+    } catch {
+      alert("ไม่สามารถส่งคำขอแก้ไขได้ กรุณาลองใหม่");
+    } finally {
+      setRevisionSubmitting(false);
+    }
+  };
+
   const submitTask = async (task: string, extra: string) => {
     setSubmitting(true);
     try {
@@ -1186,8 +1215,11 @@ export default function Page() {
 
           {!tracking && trackResult && (
             <div className="rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-              <div className={`px-5 py-3 flex items-center gap-2 text-white font-semibold text-sm ${trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "bg-green-500" : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "bg-blue-500" : "bg-amber-400"}`}>
-                <span>{trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "✅" : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "🔄" : "⏳"}</span>
+              <div className={`px-5 py-3 flex items-center gap-2 text-white font-semibold text-sm ${
+                trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "bg-green-500" :
+                trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "bg-blue-500" :
+                trackResult.status === "Revision" ? "bg-red-500" : "bg-amber-400"}`}>
+                <span>{trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "✅" : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "🔄" : trackResult.status === "Revision" ? "🔄" : "⏳"}</span>
                 <span>สถานะ: {trackResult.status}</span>
               </div>
               <div className={`${dark ? "bg-gray-800" : "bg-white"} divide-y ${dark ? "divide-gray-700" : "divide-gray-50"}`}>
@@ -1209,6 +1241,41 @@ export default function Page() {
                   </div>
                 ))}
               </div>
+
+              {/* Revision button — โชว์เฉพาะ Done */}
+              {(trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว") && !revisionDone && (
+                <div className="px-5 py-3 border-t border-gray-100">
+                  {!showRevision ? (
+                    <button onClick={() => setShowRevision(true)}
+                      className="w-full py-2.5 rounded-xl border-2 border-dashed border-red-300 text-red-500 text-sm font-semibold hover:bg-red-50 transition">
+                      🔄 ขอแก้ไขงาน (Revision)
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-red-600">🔄 บอกสิ่งที่ต้องการแก้ไข</p>
+                      <textarea
+                        className="w-full p-3 rounded-xl border border-red-200 text-sm resize-none focus:ring-2 focus:ring-red-300 outline-none bg-red-50 text-gray-800"
+                        rows={3} placeholder="กรอกรายละเอียดที่ต้องการแก้ไข..."
+                        value={revisionNote} onChange={(e) => setRevisionNote(e.target.value)} />
+                      <div className="flex gap-2">
+                        <button onClick={() => { setShowRevision(false); setRevisionNote(""); }}
+                          className="flex-1 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:bg-gray-50 transition">
+                          ยกเลิก
+                        </button>
+                        <button onClick={submitRevision} disabled={!revisionNote.trim() || revisionSubmitting}
+                          className="flex-1 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition disabled:opacity-50">
+                          {revisionSubmitting ? "⏳ กำลังส่ง..." : "ส่งคำขอแก้ไข"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {revisionDone && (
+                <div className="px-5 py-3 border-t border-gray-100 bg-red-50">
+                  <p className="text-sm text-red-600 font-semibold text-center">🔄 ส่งคำขอแก้ไขแล้ว — ทีมงานจะดำเนินการเร็วๆ นี้</p>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -16,6 +16,8 @@ type Job = {
   lineUserId: string;
   deliveryLink: string;
   imageUrl: string;
+  revisionNote: string;
+  revisionCount: string;
   timestamp: string;
 };
 
@@ -57,6 +59,7 @@ function cardBg(status: string, overdue: boolean): string {
   if (overdue) return "bg-red-50 border-red-300";
   if (status === "Done" || status === "เสร็จแล้ว") return "bg-green-50 border-green-200";
   if (status === "In Progress" || status === "กำลังทำ") return "bg-blue-50 border-blue-200";
+  if (status === "Revision") return "bg-red-50 border-red-300";
   return "bg-white border-gray-100";
 }
 
@@ -76,13 +79,15 @@ function formatDate(dateStr: string): string {
   }
 }
 
-const STATUS_OPTS = ["Pending", "In Progress", "Done"];
+const STATUS_OPTS = ["Pending", "In Progress", "Done", "Revision"];
 
 const statusStyle = (s: string) => {
   if (s === "Done" || s === "เสร็จแล้ว")
     return { bg: "bg-green-100", text: "text-green-700", border: "border-green-300", dot: "bg-green-500" };
   if (s === "In Progress" || s === "กำลังทำ")
     return { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-300", dot: "bg-blue-500" };
+  if (s === "Revision")
+    return { bg: "bg-red-100", text: "text-red-700", border: "border-red-300", dot: "bg-red-500" };
   return { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-300", dot: "bg-amber-400" };
 };
 
@@ -713,6 +718,24 @@ export default function AdminPage() {
                               ) : (
                                 <p className="text-xs text-amber-800 break-all">{job.reference}</p>
                               )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Revision info */}
+                        {job.revisionNote && (
+                          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                            <span className="text-red-500 text-sm shrink-0 mt-0.5">🔄</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="text-xs font-bold text-red-700">ขอแก้ไขงาน</p>
+                                {parseInt(job.revisionCount || "0") > 0 && (
+                                  <span className="text-xs bg-red-100 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full font-medium">
+                                    ครั้งที่ {job.revisionCount}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-red-800 whitespace-pre-wrap">{job.revisionNote}</p>
                             </div>
                           </div>
                         )}
