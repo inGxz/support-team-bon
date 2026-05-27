@@ -556,7 +556,7 @@ function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink) {
   });
 
   // footer: ปุ่มเปิดไฟล์งาน + ปุ่มขอ revision
-  var revisionUrl = "https://support-team-bon.vercel.app/?jobId=" + jobId + "&revision=1";
+  var revisionUrl = "https://support-team-bon.vercel.app/revision?jobId=" + jobId;
   var footerContents = [];
   if (deliveryLink) {
     footerContents.push({

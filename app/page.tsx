@@ -438,7 +438,6 @@ export default function Page() {
   const [revisionNote, setRevisionNote] = useState("");
   const [revisionSubmitting, setRevisionSubmitting] = useState(false);
   const [revisionDone, setRevisionDone] = useState(false);
-  const [revisionLoadError, setRevisionLoadError] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
 
@@ -476,18 +475,6 @@ export default function Page() {
   // LIFF initialization — โหลด SDK แบบ dynamic แล้วรอ onload
   useEffect(() => {
     let cancelled = false;
-
-    // บันทึก URL params ไว้ใน sessionStorage ก่อน LIFF redirect กิน
-    // (แก้ปัญหา mobile วนลูป login แล้ว params หาย)
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const jobIdParam = params.get("jobId");
-      const revisionParam = params.get("revision");
-      if (jobIdParam) {
-        sessionStorage.setItem("_liff_jobId", jobIdParam);
-        if (revisionParam === "1") sessionStorage.setItem("_liff_revision", "1");
-      }
-    } catch {}
 
     const initLiff = async () => {
       try {
@@ -552,58 +539,20 @@ export default function Page() {
     } catch {}
   }, []);
 
-  // อ่าน URL params — ?jobId=STM-XXXX&revision=1 (จากปุ่มใน LINE card)
-  // รองรับทั้ง URL params และ sessionStorage (กรณี LIFF redirect กิน params บน mobile)
+  // อ่าน ?jobId= จาก URL (เช่น เปิดมาจากหน้า track งาน)
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      // อ่านจาก URL ก่อน ถ้าไม่มีค่อยอ่านจาก sessionStorage (mobile fallback)
-      const jobIdParam    = params.get("jobId")    || sessionStorage.getItem("_liff_jobId")    || "";
-      const revisionParam = params.get("revision") || sessionStorage.getItem("_liff_revision") || "";
-
-      // ล้าง sessionStorage หลังอ่านแล้ว (ป้องกัน stale state)
-      sessionStorage.removeItem("_liff_jobId");
-      sessionStorage.removeItem("_liff_revision");
-
+      const jobIdParam = params.get("jobId") || "";
       if (jobIdParam) {
         setTrackingId(jobIdParam);
-        // scroll ไปส่วน track แล้ว track อัตโนมัติ
         setTimeout(async () => {
           const el = document.getElementById("track-section");
           if (el) el.scrollIntoView({ behavior: "smooth" });
-
-          // helper: fetch พร้อม timeout 8 วินาที
-          const fetchWithTimeout = (url: string, ms = 8000) => {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), ms);
-            return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-          };
-
-          // GAS URL โดยตรง (fallback กรณี proxy ล้มเหลว)
-          const GAS_DIRECT = "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
-
-          try {
-            // ลอง proxy ก่อน
-            let res = await fetchWithTimeout(`${SCRIPT_URL}?jobId=${encodeURIComponent(jobIdParam)}`).catch(() => null);
-
-            // ถ้า proxy ล้ม ลอง GAS โดยตรง
-            if (!res || !res.ok) {
-              res = await fetchWithTimeout(`${GAS_DIRECT}?jobId=${encodeURIComponent(jobIdParam)}`).catch(() => null);
-            }
-
-            if (res && res.ok) {
-              const data = await res.json();
-              if (!data.error) {
-                setTrackResult(data);
-                if (revisionParam === "1") setShowRevision(true);
-              } else {
-                setRevisionLoadError(true);
-              }
-            } else {
-              setRevisionLoadError(true);
-            }
-          } catch {
-            setRevisionLoadError(true);
+          const res = await fetch(`${SCRIPT_URL}?jobId=${encodeURIComponent(jobIdParam)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (!data.error) setTrackResult(data);
           }
         }, 300);
       }
@@ -931,95 +880,9 @@ export default function Page() {
     }
   };
 
-  // ตรวจว่าเปิดมาด้วย revision mode หรือเปล่า (จากปุ่มใน LINE card)
-  // ถ้าใช่ → ไม่บังคับ login เพราะ revision form ไม่ต้องการ LINE profile
-  const isRevisionMode =
-    (typeof window !== "undefined" &&
-      (new URLSearchParams(window.location.search).get("revision") === "1" ||
-       sessionStorage.getItem("_liff_revision") === "1")) ||
-    showRevision;
-
   // บังคับ login — แสดงหน้า loading / login ก่อนถ้ายังไม่ได้ login
-  // ยกเว้นกรณี revision mode (ลูกค้ากดขอแก้ไขจาก LINE → ไม่ต้องล็อคอินซ้ำ)
-  if (!liffReady && !isRevisionMode) return <LiffLoadingScreen />;
-  if (!lineProfile && !isRevisionMode) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} error={liffError} />;
-
-  // Revision-only minimal page — แสดงเมื่อมาจาก LINE card (ไม่ต้อง login)
-  if (!lineProfile && isRevisionMode) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 flex flex-col items-center justify-center">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-red-500 to-rose-600 px-5 py-4">
-            <p className="text-white font-bold text-lg">🔄 ขอแก้ไขงาน</p>
-            <p className="text-red-100 text-sm">{trackResult?.jobId || trackingId}</p>
-          </div>
-
-          {/* Loading / Error state */}
-          {!trackResult && !revisionLoadError && (
-            <div className="px-5 py-8 text-center text-gray-400 text-sm">
-              ⏳ กำลังโหลดข้อมูลงาน...
-            </div>
-          )}
-          {!trackResult && revisionLoadError && (
-            <div className="px-5 py-6 text-center space-y-3">
-              <p className="text-red-500 text-sm font-semibold">⚠️ โหลดข้อมูลไม่ได้ กรุณาลองใหม่</p>
-              <button
-                onClick={() => {
-                  setRevisionLoadError(false);
-                  const id = trackingId;
-                  if (!id) return;
-                  const GAS_DIRECT = "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
-                  fetch(`${GAS_DIRECT}?jobId=${encodeURIComponent(id)}`)
-                    .then(r => r.json())
-                    .then(d => { if (!d.error) { setTrackResult(d); setShowRevision(true); } else setRevisionLoadError(true); })
-                    .catch(() => setRevisionLoadError(true));
-                }}
-                className="px-6 py-2 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition"
-              >
-                🔄 ลองใหม่
-              </button>
-            </div>
-          )}
-
-          {/* Job info + revision form */}
-          {trackResult && (
-            <div className="px-5 py-4 space-y-4">
-              <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
-                <p className="font-semibold text-gray-700">{trackResult.task || "-"}</p>
-                <p className="text-gray-400 text-xs">ลูกค้า: {trackResult.customerName || "-"}</p>
-              </div>
-
-              {revisionDone ? (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                  <p className="text-green-600 font-semibold text-sm">✅ ส่งคำขอแก้ไขแล้ว</p>
-                  <p className="text-green-500 text-xs mt-1">ทีมงานจะดำเนินการเร็วๆ นี้</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-red-600">📝 รายละเอียดที่ต้องการแก้ไข</p>
-                  <textarea
-                    className="w-full p-3 rounded-xl border border-red-200 text-sm resize-none focus:ring-2 focus:ring-red-300 outline-none bg-red-50 text-gray-800"
-                    rows={4}
-                    placeholder="กรอกรายละเอียดที่ต้องการแก้ไข..."
-                    value={revisionNote}
-                    onChange={(e) => setRevisionNote(e.target.value)}
-                  />
-                  <button
-                    onClick={submitRevision}
-                    disabled={!revisionNote.trim() || revisionSubmitting}
-                    className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition disabled:opacity-50"
-                  >
-                    {revisionSubmitting ? "⏳ กำลังส่ง..." : "ส่งคำขอแก้ไข"}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </main>
-    );
-  }
+  if (!liffReady) return <LiffLoadingScreen />;
+  if (!lineProfile) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} error={liffError} />;
 
   return (
     <main className={`min-h-screen ${bg} p-4 transition-colors duration-300`}>
