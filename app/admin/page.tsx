@@ -540,8 +540,8 @@ export default function AdminPage() {
                     )}
 
                     {job.detail && (
-                      <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 line-clamp-2 border border-gray-100">
-                        {job.detail}
+                      <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 line-clamp-2 border border-blue-100">
+                        📝 {job.detail}
                       </p>
                     )}
 
