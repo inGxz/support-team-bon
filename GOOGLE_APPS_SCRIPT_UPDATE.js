@@ -119,12 +119,13 @@ function getMyJobs(lineUserId) {
     const row = data[i];
     if (String(row[COL.LINE_USER_ID - 1]) === lineUserId) {
       jobs.push({
-        jobId:        row[COL.JOB_ID        - 1],
-        customerName: row[COL.CUSTOMER_NAME - 1],
-        task:         row[COL.TASK          - 1],
-        deadline:     row[COL.DEADLINE      - 1],
-        status:       row[COL.STATUS        - 1],
-        timestamp:    row[COL.TIMESTAMP     - 1],
+        jobId:         row[COL.JOB_ID         - 1],
+        customerName:  row[COL.CUSTOMER_NAME  - 1],
+        task:          row[COL.TASK           - 1],
+        deadline:      row[COL.DEADLINE       - 1],
+        status:        row[COL.STATUS         - 1],
+        timestamp:     row[COL.TIMESTAMP      - 1],
+        revisionCount: String(row[COL.REVISION_COUNT - 1] || "0"),
       });
     }
   }
@@ -430,7 +431,8 @@ function updateJob(body) {
           : String(data[i][COL.DELIVERY_LINK - 1] || "");
 
         if (lineUserId) {
-          sendLinePush(lineUserId, body.jobId, customerName, task, deliveryLink);
+          var revCount = parseInt(data[i][COL.REVISION_COUNT - 1] || "0") || 0;
+          sendLinePush(lineUserId, body.jobId, customerName, task, deliveryLink, revCount);
         }
       }
 
@@ -500,14 +502,16 @@ function onStatusChange(e) {
 
     if (!lineUserId) return; // ไม่มี userId → ไม่ส่ง push
 
-    sendLinePush(lineUserId, jobId, customerName, task, deliveryLink);
+    const revCount = parseInt(sheet.getRange(row, COL.REVISION_COUNT).getValue() || "0") || 0;
+    sendLinePush(lineUserId, jobId, customerName, task, deliveryLink, revCount);
   } catch (err) {
     console.error("onStatusChange error:", err);
   }
 }
 
 // ─── sendLinePush: ส่ง LINE Flex Message เมื่องาน Done ───────────────────────
-function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink) {
+function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink, revisionCount) {
+  revisionCount = revisionCount || 0;
   const token = getLineToken();
 
   // สร้าง body contents
@@ -557,7 +561,7 @@ function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink) {
     wrap: true
   });
 
-  // footer: ปุ่มเปิดไฟล์งาน + ปุ่มขอ revision
+  // footer: ปุ่มเปิดไฟล์งาน + ปุ่มขอ revision (ซ่อนถ้าแก้ครบ 3 ครั้งแล้ว)
   var revisionUrl = "https://support-team-bon.vercel.app/revision?jobId=" + jobId;
   var footerContents = [];
   if (deliveryLink) {
@@ -567,12 +571,21 @@ function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink) {
       style: "primary", color: "#22c55e", height: "sm"
     });
   }
-  footerContents.push({
-    type: "button",
-    action: { type: "uri", label: "🔄 ขอแก้ไขงาน", uri: revisionUrl },
-    style: "secondary", height: "sm",
-    margin: deliveryLink ? "sm" : "none"
-  });
+  if (revisionCount < 3) {
+    footerContents.push({
+      type: "button",
+      action: { type: "uri", label: "🔄 ขอแก้ไขงาน", uri: revisionUrl },
+      style: "secondary", height: "sm",
+      margin: deliveryLink ? "sm" : "none"
+    });
+  }
+  // ถ้าไม่มีปุ่มเลย ใส่ placeholder text แทน
+  if (footerContents.length === 0) {
+    footerContents.push({
+      type: "text", text: "✅ งานนี้ขอแก้ไขครบ 3 ครั้งแล้ว",
+      size: "xs", color: "#9ca3af", align: "center"
+    });
+  }
   var footer = { type: "box", layout: "vertical", contents: footerContents };
 
   var bubble = {
