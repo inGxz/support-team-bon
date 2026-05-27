@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 
-const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
+// ใช้ Vercel proxy แทน GAS โดยตรง (แก้ CORS + mobile redirect)
+const SCRIPT_URL = "/api/gas";
 
 const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "2010203041-kgA7NuVs";
 
@@ -476,6 +476,18 @@ export default function Page() {
   useEffect(() => {
     let cancelled = false;
 
+    // บันทึก URL params ไว้ใน sessionStorage ก่อน LIFF redirect กิน
+    // (แก้ปัญหา mobile วนลูป login แล้ว params หาย)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const jobIdParam = params.get("jobId");
+      const revisionParam = params.get("revision");
+      if (jobIdParam) {
+        sessionStorage.setItem("_liff_jobId", jobIdParam);
+        if (revisionParam === "1") sessionStorage.setItem("_liff_revision", "1");
+      }
+    } catch {}
+
     const initLiff = async () => {
       try {
         await window.liff.init({ liffId: LIFF_ID });
@@ -540,11 +552,18 @@ export default function Page() {
   }, []);
 
   // อ่าน URL params — ?jobId=STM-XXXX&revision=1 (จากปุ่มใน LINE card)
+  // รองรับทั้ง URL params และ sessionStorage (กรณี LIFF redirect กิน params บน mobile)
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const jobIdParam   = params.get("jobId");
-      const revisionParam = params.get("revision");
+      // อ่านจาก URL ก่อน ถ้าไม่มีค่อยอ่านจาก sessionStorage (mobile fallback)
+      const jobIdParam    = params.get("jobId")    || sessionStorage.getItem("_liff_jobId")    || "";
+      const revisionParam = params.get("revision") || sessionStorage.getItem("_liff_revision") || "";
+
+      // ล้าง sessionStorage หลังอ่านแล้ว (ป้องกัน stale state)
+      sessionStorage.removeItem("_liff_jobId");
+      sessionStorage.removeItem("_liff_revision");
+
       if (jobIdParam) {
         setTrackingId(jobIdParam);
         // scroll ไปส่วน track แล้ว track อัตโนมัติ
