@@ -7,6 +7,8 @@ type Job = {
   customerName: string;
   agent: string;
   task: string;
+  subType: string;
+  workflowParams: string;
   reference: string;
   detail: string;
   deadline: string;
@@ -669,6 +671,23 @@ export default function AdminPage() {
                                getWorkflow(job.task) === "Design" ? "🎨" :
                                getWorkflow(job.task) === "Ads"    ? "📢" : "📁"} {job.task}
                             </span>
+                          </div>
+                        )}
+
+                        {/* Sub-type */}
+                        {job.subType && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400 font-medium shrink-0">ประเภทย่อย:</span>
+                            <span className="text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full">{job.subType}</span>
+                          </div>
+                        )}
+
+                        {/* Workflow params (Video: Platform/Goal/Mood etc.) */}
+                        {job.workflowParams && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {job.workflowParams.split("|").map((p) => p.trim()).filter(Boolean).map((p) => (
+                              <span key={p} className="text-xs bg-purple-50 border border-purple-100 text-purple-600 px-2 py-0.5 rounded-full">{p}</span>
+                            ))}
                           </div>
                         )}
 

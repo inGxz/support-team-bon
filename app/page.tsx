@@ -677,6 +677,23 @@ export default function Page() {
     setSubmitting(true);
     try {
       const lineUserId = lineProfile?.userId || null;
+      // แยก subType กับ workflowParams ออกจาก extra
+      // extra รูปแบบ: "Platform:TikTok | Goal:Branding | Mood:Cinematic | Music:Epic | Voice:AI"
+      // หรือ "Type:Logo | Detail:..." สำหรับ Design/Ads/Content/Filming
+      let subType = "";
+      let workflowParams = "";
+      if (extra) {
+        const parts = extra.split("|").map((s) => s.trim());
+        // หา subType จาก Type: หรือ AdsType: หรือ Platform: (field แรก)
+        const typeEntry = parts.find((p) => p.startsWith("Type:") || p.startsWith("AdsType:") || p.startsWith("Platform:"));
+        if (typeEntry) {
+          subType = typeEntry.split(":").slice(1).join(":").trim();
+          workflowParams = parts.filter((p) => p !== typeEntry && !p.startsWith("Detail:")).join(" | ");
+        } else {
+          workflowParams = parts.filter((p) => !p.startsWith("Detail:")).join(" | ");
+        }
+      }
+
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify({
@@ -685,10 +702,12 @@ export default function Page() {
           agent,
           taskType,
           task,
-          detail: `${extra} | ${detail} | Deadline: ${deadline}`,
+          detail,
           reference: refLink,
           deadline,
           lineUserId,
+          subType,
+          workflowParams,
         }),
       });
       if (!res.ok) throw new Error();
@@ -1097,23 +1116,23 @@ export default function Page() {
 
           {!tracking && trackResult && (
             <div className="rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-              <div className={`px-5 py-3 flex items-center gap-2 text-white font-semibold text-sm ${trackResult.status === "Done" || trackResult.status === "\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e41\u0e25\u0e49\u0e27" ? "bg-green-500" : trackResult.status === "In Progress" || trackResult.status === "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e17\u0e33" ? "bg-blue-500" : "bg-amber-400"}`}>
-                <span>{trackResult.status === "Done" || trackResult.status === "\u0e40\u0e2a\u0e23\u0e47\u0e08\u0e41\u0e25\u0e49\u0e27" ? "\u2705" : trackResult.status === "In Progress" || trackResult.status === "\u0e01\u0e33\u0e25\u0e31\u0e07\u0e17\u0e33" ? "\U0001f504" : "\u23f3"}</span>
-                <span>\u0e2a\u0e16\u0e32\u0e19\u0e30: {trackResult.status}</span>
+              <div className={`px-5 py-3 flex items-center gap-2 text-white font-semibold text-sm ${trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "bg-green-500" : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "bg-blue-500" : "bg-amber-400"}`}>
+                <span>{trackResult.status === "Done" || trackResult.status === "เสร็จแล้ว" ? "✅" : trackResult.status === "In Progress" || trackResult.status === "กำลังทำ" ? "🔄" : "⏳"}</span>
+                <span>สถานะ: {trackResult.status}</span>
               </div>
               <div className={`${dark ? "bg-gray-800" : "bg-white"} divide-y ${dark ? "divide-gray-700" : "divide-gray-50"}`}>
                 {[
-                  { label: "\U0001f4e6 \u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e07\u0e32\u0e19", value: trackResult.task },
-                  { label: "\U0001f4dd \u0e23\u0e32\u0e22\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14", value: trackResult.detail },
-                  { label: "\U0001f464 \u0e25\u0e39\u0e01\u0e04\u0e49\u0e32", value: trackResult.customerName },
-                  { label: "\U0001f9d1\u200d\U0001f4bc \u0e40\u0e0b\u0e25\u0e25\u0e4c", value: trackResult.agent },
-                  { label: "\U0001f4c5 Deadline", value: formatDate(trackResult.deadline) },
-                  { label: "\U0001f517 Reference", value: trackResult.reference },
+                  { label: "📦 ประเภทงาน", value: trackResult.task },
+                  { label: "📝 รายละเอียด", value: trackResult.detail },
+                  { label: "👤 ลูกค้า", value: trackResult.customerName },
+                  { label: "🧑‍💼 เซลล์", value: trackResult.agent },
+                  { label: "📅 Deadline", value: formatDate(trackResult.deadline) },
+                  { label: "🔗 Reference", value: trackResult.reference },
                 ].filter((r) => r.value).map((r) => (
                   <div key={r.label} className="flex gap-3 px-5 py-3">
                     <span className="text-gray-400 text-sm min-w-[130px]">{r.label}</span>
-                    {r.label === "\U0001f517 Reference" && r.value ? (
-                      <a href={r.value} target="_blank" rel="noopener noreferrer" className="text-purple-500 text-sm font-medium hover:underline break-all">\u2197 {r.value}</a>
+                    {r.label === "🔗 Reference" && r.value ? (
+                      <a href={r.value} target="_blank" rel="noopener noreferrer" className="text-purple-500 text-sm font-medium hover:underline break-all">↗ {r.value}</a>
                     ) : (
                       <span className={`${dark ? "text-gray-200" : "text-gray-800"} text-sm font-medium break-all`}>{r.value}</span>
                     )}

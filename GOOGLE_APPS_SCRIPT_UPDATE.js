@@ -34,9 +34,11 @@ const COL = {
   REFERENCE:     6,   // F - Reference
   DETAIL:        7,   // G - Detail
   DEADLINE:      8,   // H - Deadline
-  STATUS:        9,   // I - Status  ← สถานะงาน (Pending / In Progress / Done)
-  LINE_USER_ID:  10,  // J - lineUserId
-  DELIVERY_LINK: 11,  // K - delivery link (admin ใส่ลิ้งไฟล์ก่อน mark Done)
+  STATUS:          9,   // I - Status  ← สถานะงาน (Pending / In Progress / Done)
+  LINE_USER_ID:   10,  // J - lineUserId
+  DELIVERY_LINK:  11,  // K - delivery link (admin ใส่ลิ้งไฟล์ก่อน mark Done)
+  SUB_TYPE:       12,  // L - subType  ← ประเภทย่อย เช่น Logo, TikTok, Facebook Ads
+  WORKFLOW_PARAMS:13,  // M - workflowParams ← พารามิเตอร์ workflow เช่น Goal:Branding|Mood:Cinematic
 };
 
 // ─── LINE Channel Access Token ────────────────────────────────────────────────
@@ -152,15 +154,17 @@ function createJob(body) {
     sheet.appendRow([
       timestamp,
       jobId,
-      body.customerName || "",
-      body.agent        || "",
-      body.task         || "",
-      body.reference    || "",
-      body.detail       || "",
-      body.deadline     || "",
+      body.customerName    || "",
+      body.agent           || "",
+      body.task            || "",
+      body.reference       || "",
+      body.detail          || "",
+      body.deadline        || "",
       "Pending",
-      body.lineUserId   || "",
-      "",                        // K: deliveryLink (ว่างไว้ก่อน)
+      body.lineUserId      || "",
+      "",                          // K: deliveryLink (ว่างไว้ก่อน)
+      body.subType         || "",  // L: subType
+      body.workflowParams  || "",  // M: workflowParams
     ]);
 
     return jsonResponse({ success: true, jobId });
@@ -226,17 +230,19 @@ function getAllJobs() {
     var row = data[i];
     if (!row[COL.JOB_ID - 1]) continue; // ข้ามแถวว่าง
     jobs.push({
-      jobId:        String(row[COL.JOB_ID        - 1]),
-      customerName: String(row[COL.CUSTOMER_NAME - 1] || ""),
-      agent:        String(row[COL.AGENT         - 1] || ""),
-      task:         String(row[COL.TASK          - 1] || ""),
-      reference:    String(row[COL.REFERENCE     - 1] || ""),
-      detail:       String(row[COL.DETAIL        - 1] || ""),
-      deadline:     String(row[COL.DEADLINE      - 1] || ""),
-      status:       String(row[COL.STATUS        - 1] || "Pending"),
-      lineUserId:   String(row[COL.LINE_USER_ID  - 1] || ""),
-      deliveryLink: String(row[COL.DELIVERY_LINK - 1] || ""),
-      timestamp:    String(row[COL.TIMESTAMP     - 1] || ""),
+      jobId:          String(row[COL.JOB_ID          - 1]),
+      customerName:   String(row[COL.CUSTOMER_NAME   - 1] || ""),
+      agent:          String(row[COL.AGENT            - 1] || ""),
+      task:           String(row[COL.TASK             - 1] || ""),
+      reference:      String(row[COL.REFERENCE        - 1] || ""),
+      detail:         String(row[COL.DETAIL           - 1] || ""),
+      deadline:       String(row[COL.DEADLINE         - 1] || ""),
+      status:         String(row[COL.STATUS           - 1] || "Pending"),
+      lineUserId:     String(row[COL.LINE_USER_ID     - 1] || ""),
+      deliveryLink:   String(row[COL.DELIVERY_LINK    - 1] || ""),
+      subType:        String(row[COL.SUB_TYPE         - 1] || ""),
+      workflowParams: String(row[COL.WORKFLOW_PARAMS  - 1] || ""),
+      timestamp:      String(row[COL.TIMESTAMP        - 1] || ""),
     });
   }
 
