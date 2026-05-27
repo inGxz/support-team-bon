@@ -498,6 +498,7 @@ export default function AdminPage() {
 
                   {/* Body */}
                   <div className="px-5 py-4 space-y-3">
+                    {/* Info grid: ลูกค้า / เซลล์ / deadline */}
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                       <div className="flex gap-2">
                         <span className="text-gray-400 shrink-0">👤</span>
@@ -507,15 +508,36 @@ export default function AdminPage() {
                         <span className="text-gray-400 shrink-0">🧑‍💼</span>
                         <span className="font-medium text-gray-800">{job.agent || "-"}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="text-gray-400 shrink-0">📦</span>
-                        <span className="font-medium text-gray-800">{job.task || "-"}</span>
-                      </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 col-span-2">
                         <span className="text-gray-400 shrink-0">📅</span>
                         <span className="font-medium text-gray-800">{formatDate(job.deadline)}</span>
                       </div>
                     </div>
+
+                    {/* Workflow badge */}
+                    {job.task && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 font-medium">ประเภทงาน:</span>
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                          getWorkflow(job.task) === "Video"  ? "bg-pink-50 text-pink-700 border-pink-200" :
+                          getWorkflow(job.task) === "Design" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                          getWorkflow(job.task) === "Ads"    ? "bg-orange-50 text-orange-700 border-orange-200" :
+                                                               "bg-gray-100 text-gray-600 border-gray-200"
+                        }`}>
+                          {getWorkflow(job.task) === "Video"  ? "🎬" :
+                           getWorkflow(job.task) === "Design" ? "🎨" :
+                           getWorkflow(job.task) === "Ads"    ? "📢" : "📁"} {job.task}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Detail จากลูกค้า */}
+                    {job.detail && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                        <p className="text-xs font-bold text-blue-500 mb-1">📝 รายละเอียดงาน</p>
+                        <p className="text-xs text-blue-800 whitespace-pre-wrap">{job.detail}</p>
+                      </div>
+                    )}
 
                     {/* Reference link จากลูกค้า */}
                     {job.reference && (
@@ -537,12 +559,6 @@ export default function AdminPage() {
                           )}
                         </div>
                       </div>
-                    )}
-
-                    {job.detail && (
-                      <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2 line-clamp-2 border border-blue-100">
-                        📝 {job.detail}
-                      </p>
                     )}
 
                     {/* Edit controls */}
