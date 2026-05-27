@@ -65,34 +65,94 @@ function generateReportHTML(
   label: string,
   byWorkflow: { wf: string; total: number; pending: number; inProgress: number; done: number }[]
 ): string {
+  const total      = jobs.length;
   const done       = jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length;
   const inProgress = jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length;
   const pending    = jobs.filter((j) => j.status === "Pending" || !j.status).length;
   const revision   = jobs.filter((j) => j.status === "Revision").length;
+  const overdue    = jobs.filter((j) => isOverdue(j.deadline, j.status)).length;
+  const revisedJobs = jobs.filter((j) => parseInt(j.revisionCount || "0") > 0).length;
+  const completionRate = total ? Math.round((done / total) * 100) : 0;
+  const revisionRate   = total ? Math.round((revisedJobs / total) * 100) : 0;
 
-  const wfRows = byWorkflow.map((r) => `
-    <tr>
-      <td>${r.wf}</td>
-      <td class="center bold">${r.total}</td>
-      <td class="center amber">${r.pending}</td>
-      <td class="center blue">${r.inProgress}</td>
-      <td class="center green">${r.done}</td>
-    </tr>
-  `).join("");
+  // Avg turnaround: mean (deadline − orderDate) for Done jobs
+  const doneJobs = jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว");
+  let avgDays = 0;
+  if (doneJobs.length > 0) {
+    const totalDays = doneJobs.reduce((sum, j) => {
+      const od = parseThaiTimestamp(j.timestamp);
+      if (!od || !j.deadline) return sum;
+      const diff = Math.ceil((new Date(j.deadline).getTime() - od.getTime()) / 86400000);
+      return sum + (diff > 0 ? diff : 0);
+    }, 0);
+    avgDays = Math.round((totalDays / doneJobs.length) * 10) / 10;
+  }
 
-  const jobRows = jobs.map((j, i) => `
-    <tr class="${i % 2 === 0 ? "even" : ""}">
-      <td class="bold purple">${j.jobId}</td>
-      <td>${j.task || "-"}</td>
-      <td>${j.subType || "-"}</td>
-      <td>${formatDateTH(j.deadline)}</td>
-      <td class="center"><span class="badge ${
-        j.status === "Done" || j.status === "เสร็จแล้ว" ? "badge-done" :
-        j.status === "In Progress" ? "badge-progress" :
-        j.status === "Revision"    ? "badge-revision" : "badge-pending"
-      }">${j.status || "Pending"}</span></td>
-    </tr>
-  `).join("");
+  // Donut chart (r=36, circ≈226.2, start at 12 o'clock = offset +56.55)
+  const circ = 226.2;
+  const startOff = circ / 4;
+  const seg = (len: number, color: string, off: number) =>
+    `<circle cx="48" cy="48" r="36" fill="none" stroke="${color}" stroke-width="10" stroke-dasharray="${len.toFixed(1)} ${(circ - len).toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>`;
+  const dL = total ? (done / total) * circ : 0;
+  const pL = total ? (inProgress / total) * circ : 0;
+  const ndL = total ? (pending / total) * circ : 0;
+  const rL = total ? (revision / total) * circ : 0;
+  const donutSVG = [
+    seg(dL,  "#4ade80", startOff),
+    seg(pL,  "#60a5fa", startOff - dL),
+    seg(ndL, "#fbbf24", startOff - dL - pL),
+    seg(rL,  "#f87171", startOff - dL - pL - ndL),
+  ].join("");
+
+  // Bar chart
+  const maxWf = Math.max(...byWorkflow.map((r) => r.total), 1);
+  const wfIcon = (wf: string) =>
+    wf === "Video" ? "🎬" : wf === "Design" ? "🎨" : wf === "Ads" ? "📢" : wf === "Content" ? "✍️" : wf === "Filming" ? "🎥" : "📁";
+
+  const wfBarRows = byWorkflow.map((r) => `
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12px;color:#444441">${wfIcon(r.wf)} ${r.wf}</span>
+        <span style="font-size:12px;font-weight:500;color:#1e1b2e">${r.total}</span>
+      </div>
+      <div style="height:6px;background:#f1f0ed;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round((r.total / maxWf) * 100)}%;background:#a78bfa;border-radius:3px"></div>
+      </div>
+    </div>`).join("");
+
+  const wfTableRows = byWorkflow.map((r, i) => {
+    const pct = r.total ? Math.round((r.done / r.total) * 100) : 0;
+    const pctStyle = pct >= 60
+      ? "background:#dcfce7;color:#15803d"
+      : pct >= 30 ? "background:#fef9c3;color:#92400e"
+      : "background:#fee2e2;color:#b91c1c";
+    return `<tr style="${i % 2 === 1 ? "background:#fafaf8;" : ""}border-bottom:0.5px solid #ebe9e1">
+      <td style="padding:9px 10px;font-weight:500;color:#1e1b2e">${wfIcon(r.wf)} ${r.wf}</td>
+      <td style="padding:9px 10px;text-align:center;font-weight:500;color:#1e1b2e">${r.total}</td>
+      <td style="padding:9px 10px;text-align:center;color:#15803d;font-weight:500">${r.done}</td>
+      <td style="padding:9px 10px;text-align:center;color:#1d4ed8">${r.inProgress}</td>
+      <td style="padding:9px 10px;text-align:center;color:#b45309">${r.pending}</td>
+      <td style="padding:9px 10px;text-align:center"><span style="${pctStyle};border-radius:999px;padding:2px 8px;font-size:10px;font-weight:500">${pct}%</span></td>
+    </tr>`;
+  }).join("");
+
+  const jobRows = jobs.map((j, i) => {
+    const ss =
+      j.status === "Done" || j.status === "เสร็จแล้ว" ? "background:#dcfce7;color:#15803d" :
+      j.status === "In Progress" || j.status === "กำลังทำ" ? "background:#dbeafe;color:#1d4ed8" :
+      j.status === "Revision" ? "background:#fee2e2;color:#b91c1c" : "background:#fef9c3;color:#92400e";
+    const od = isOverdue(j.deadline, j.status);
+    const rev = parseInt(j.revisionCount || "0");
+    return `<tr style="${i % 2 === 1 ? "background:#fafaf8;" : ""}border-bottom:0.5px solid #ebe9e1">
+      <td style="padding:8px 10px;font-weight:500;color:#4f46e5">${j.jobId}</td>
+      <td style="padding:8px 10px;color:#444441">${j.task || "-"} <span style="color:#888780">/ ${j.subType || "-"}</span></td>
+      <td style="padding:8px 10px;${od ? "color:#dc2626;font-weight:500" : "color:#888780"}">${od ? "⚠ " : ""}${formatDateTH(j.deadline)}</td>
+      <td style="padding:8px 10px;text-align:center"><span style="${ss};border-radius:999px;padding:2px 8px;font-size:10px;font-weight:500">${j.status || "Pending"}</span></td>
+      <td style="padding:8px 10px;text-align:right;color:#888780;font-size:11px">${rev} ครั้ง</td>
+    </tr>`;
+  }).join("");
+
+  const printDate = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" });
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -100,141 +160,167 @@ function generateReportHTML(
 <meta charset="UTF-8"/>
 <title>Report — SUPPORT TEAMBON ${label}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Sarabun', sans-serif; background: #f8f9fa; color: #1f2937; font-size: 13px; }
-  .page { max-width: 900px; margin: 0 auto; padding: 36px 40px; background: white; min-height: 100vh; }
-
-  /* Header */
-  .header { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #6d28d9 100%);
-    border-radius: 16px; padding: 28px 32px; margin-bottom: 28px; color: white; }
-  .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .brand { font-size: 22px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; }
-  .brand-sub { font-size: 11px; letter-spacing: 4px; opacity: 0.7; margin-top: 2px; text-transform: uppercase; }
-  .report-label { text-align: right; }
-  .report-label .period { font-size: 18px; font-weight: 700; }
-  .report-label .sub { font-size: 11px; opacity: 0.7; margin-top: 4px; }
-  .header-divider { height: 1px; background: rgba(255,255,255,0.2); margin: 16px 0; }
-  .header-stats { display: flex; gap: 24px; }
-  .hstat { text-align: center; }
-  .hstat-num { font-size: 28px; font-weight: 800; }
-  .hstat-label { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 1px; }
-
-  /* Section */
-  .section { margin-bottom: 24px; }
-  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1.5px; color: #6b7280; border-bottom: 2px solid #e5e7eb;
-    padding-bottom: 8px; margin-bottom: 14px; }
-
-  /* Summary cards */
-  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-  .card { border-radius: 12px; padding: 16px; text-align: center; border: 1px solid; }
-  .card-total    { background: #f5f3ff; border-color: #ddd6fe; }
-  .card-pending  { background: #fffbeb; border-color: #fde68a; }
-  .card-progress { background: #eff6ff; border-color: #bfdbfe; }
-  .card-done     { background: #f0fdf4; border-color: #bbf7d0; }
-  .card-num  { font-size: 32px; font-weight: 800; }
-  .card-label{ font-size: 11px; color: #6b7280; margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-  .num-purple { color: #7c3aed; } .num-amber { color: #d97706; }
-  .num-blue   { color: #2563eb; } .num-green  { color: #16a34a; }
-
-  /* Tables */
-  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th { background: #f3f4f6; text-align: left; padding: 10px 12px;
-    font-weight: 700; color: #374151; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-  td { padding: 9px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-  tr.even td { background: #fafafa; }
-  .center { text-align: center; }
-  .bold   { font-weight: 700; }
-  .purple { color: #7c3aed; }
-  .green  { color: #16a34a; font-weight: 600; }
-  .blue   { color: #2563eb; font-weight: 600; }
-  .amber  { color: #d97706; font-weight: 600; }
-
-  /* Badges */
-  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px;
-    font-size: 11px; font-weight: 700; border: 1px solid; }
-  .badge-done     { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
-  .badge-progress { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
-  .badge-pending  { background: #fef9c3; color: #92400e; border-color: #fde68a; }
-  .badge-revision { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
-
-  /* Footer */
-  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb;
-    display: flex; justify-content: space-between; align-items: center; }
-  .footer-brand { font-size: 11px; font-weight: 700; color: #9ca3af; letter-spacing: 2px; text-transform: uppercase; }
-  .footer-date  { font-size: 11px; color: #d1d5db; }
-
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Sarabun',sans-serif; background:#f1f0ed; color:#1f2937; }
+  .page { max-width:860px; margin:0 auto; background:white; }
   @media print {
-    body { background: white; }
-    .page { padding: 20px 24px; }
-    @page { margin: 16mm; size: A4; }
+    body { background:white; }
+    .page { max-width:100%; }
+    @page { margin:12mm; size:A4; }
   }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="header-top">
-      <div>
-        <div class="brand">🚀 Support Teambon</div>
-        <div class="brand-sub">VT Market — Job Report</div>
-      </div>
-      <div class="report-label">
-        <div class="period">📊 ${label}</div>
-        <div class="sub">สร้างเมื่อ ${new Date().toLocaleDateString("th-TH", { year:"numeric", month:"long", day:"numeric" })}</div>
-      </div>
+<div style="background:#1e1b2e;padding:28px 32px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+    <div>
+      <div style="font-size:10px;letter-spacing:4px;color:#6b6880;text-transform:uppercase;margin-bottom:6px">Monthly Report</div>
+      <div style="font-size:20px;font-weight:500;color:#fff;letter-spacing:0.5px">Support Teambon</div>
+      <div style="font-size:11px;color:#6b6880;letter-spacing:2px;text-transform:uppercase;margin-top:3px">VT Market</div>
     </div>
-    <div class="header-divider"></div>
-    <div class="header-stats">
-      <div class="hstat"><div class="hstat-num">${jobs.length}</div><div class="hstat-label">งานทั้งหมด</div></div>
-      <div class="hstat"><div class="hstat-num">${done}</div><div class="hstat-label">Done</div></div>
-      <div class="hstat"><div class="hstat-num">${inProgress}</div><div class="hstat-label">In Progress</div></div>
-      <div class="hstat"><div class="hstat-num">${pending}</div><div class="hstat-label">Pending</div></div>
-      ${revision > 0 ? `<div class="hstat"><div class="hstat-num">${revision}</div><div class="hstat-label">Revision</div></div>` : ""}
+    <div style="background:#2d2a3e;border-radius:10px;padding:10px 16px;text-align:right">
+      <div style="font-size:16px;font-weight:500;color:#c4b5fd">${label}</div>
+      <div style="font-size:10px;color:#6b6880;margin-top:3px">สร้างเมื่อ ${printDate}</div>
     </div>
   </div>
-
-  <!-- Summary cards -->
-  <div class="cards">
-    <div class="card card-total">   <div class="card-num num-purple">${jobs.length}</div><div class="card-label">ทั้งหมด</div></div>
-    <div class="card card-pending"> <div class="card-num num-amber">${pending}</div>   <div class="card-label">Pending</div></div>
-    <div class="card card-progress"><div class="card-num num-blue">${inProgress}</div>  <div class="card-label">In Progress</div></div>
-    <div class="card card-done">    <div class="card-num num-green">${done}</div>       <div class="card-label">Done</div></div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#2d2a3e;border-radius:10px;overflow:hidden">
+    <div style="background:#1e1b2e;padding:14px 12px;text-align:center">
+      <div style="font-size:22px;font-weight:500;color:#fff">${total}</div>
+      <div style="font-size:10px;color:#6b6880;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px">ทั้งหมด</div>
+    </div>
+    <div style="background:#1e1b2e;padding:14px 12px;text-align:center">
+      <div style="font-size:22px;font-weight:500;color:#4ade80">${done}</div>
+      <div style="font-size:10px;color:#6b6880;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px">Done</div>
+    </div>
+    <div style="background:#1e1b2e;padding:14px 12px;text-align:center">
+      <div style="font-size:22px;font-weight:500;color:#60a5fa">${inProgress}</div>
+      <div style="font-size:10px;color:#6b6880;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px">In Progress</div>
+    </div>
+    <div style="background:#1e1b2e;padding:14px 12px;text-align:center">
+      <div style="font-size:22px;font-weight:500;color:#fbbf24">${pending}</div>
+      <div style="font-size:10px;color:#6b6880;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px">Pending</div>
+    </div>
+    <div style="background:#1e1b2e;padding:14px 12px;text-align:center">
+      <div style="font-size:22px;font-weight:500;color:#f87171">${revision}</div>
+      <div style="font-size:10px;color:#6b6880;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px">Revision</div>
+    </div>
   </div>
+</div>
 
-  <!-- Workflow breakdown -->
-  <div class="section">
-    <div class="section-title">📋 แยกตาม Workflow</div>
-    <table>
-      <thead>
-        <tr><th>Workflow</th><th class="center">ทั้งหมด</th><th class="center">Pending</th><th class="center">In Progress</th><th class="center">Done</th></tr>
-      </thead>
-      <tbody>${wfRows}</tbody>
-    </table>
+<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:0.5px solid #ebe9e1">
+  <div style="padding:24px;border-right:0.5px solid #ebe9e1">
+    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:#888780;margin-bottom:16px">สัดส่วนสถานะ</div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <svg width="96" height="96" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="36" fill="none" stroke="#f1f0ed" stroke-width="10"/>
+        ${donutSVG}
+        <text x="48" y="44" text-anchor="middle" font-size="14" font-weight="500" fill="#1e1b2e">${completionRate}%</text>
+        <text x="48" y="57" text-anchor="middle" font-size="9" fill="#888780">Done</text>
+      </svg>
+      <div style="display:flex;flex-direction:column;gap:7px;flex:1">
+        ${[
+          { color:"#4ade80", label:"Done",        count: done       },
+          { color:"#60a5fa", label:"In Progress",  count: inProgress },
+          { color:"#fbbf24", label:"Pending",      count: pending    },
+          { color:"#f87171", label:"Revision",     count: revision   },
+        ].map(s => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0"></div>
+              <span style="font-size:12px;color:#444441">${s.label}</span>
+            </div>
+            <span style="font-size:12px;font-weight:500;color:#1e1b2e">${s.count}</span>
+          </div>`).join("")}
+      </div>
+    </div>
   </div>
+  <div style="padding:24px">
+    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:#888780;margin-bottom:16px">งานแยก Workflow</div>
+    <div style="display:flex;flex-direction:column;gap:10px">${wfBarRows}</div>
+  </div>
+</div>
 
-  <!-- Job list -->
-  <div class="section">
-    <div class="section-title">📄 รายการงานทั้งหมด (${jobs.length} งาน)</div>
-    <table>
-      <thead>
-        <tr><th>Job ID</th><th>ประเภทงาน</th><th>ประเภทย่อย</th><th>Deadline</th><th class="center">สถานะ</th></tr>
-      </thead>
-      <tbody>${jobRows}</tbody>
-    </table>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:0.5px solid #ebe9e1">
+  <div style="padding:16px 20px;border-right:0.5px solid #ebe9e1">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888780;margin-bottom:6px">Completion Rate</div>
+    <div style="font-size:20px;font-weight:500;color:#15803d">${completionRate}%</div>
+    <div style="margin-top:6px;height:3px;background:#f1f0ed;border-radius:2px;overflow:hidden">
+      <div style="height:100%;width:${completionRate}%;background:#4ade80;border-radius:2px"></div>
+    </div>
   </div>
+  <div style="padding:16px 20px;border-right:0.5px solid #ebe9e1">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888780;margin-bottom:6px">Revision Rate</div>
+    <div style="font-size:20px;font-weight:500;color:#b45309">${revisionRate}%</div>
+    <div style="margin-top:6px;height:3px;background:#f1f0ed;border-radius:2px;overflow:hidden">
+      <div style="height:100%;width:${Math.min(revisionRate, 100)}%;background:#fbbf24;border-radius:2px"></div>
+    </div>
+  </div>
+  <div style="padding:16px 20px;border-right:0.5px solid #ebe9e1">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888780;margin-bottom:6px">Overdue</div>
+    <div style="font-size:20px;font-weight:500;color:${overdue > 0 ? "#dc2626" : "#15803d"}">${overdue} งาน</div>
+    <div style="font-size:10px;color:#888780;margin-top:4px">${total ? Math.round((overdue / total) * 100) : 0}% ของทั้งหมด</div>
+  </div>
+  <div style="padding:16px 20px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888780;margin-bottom:6px">Avg. Turnaround</div>
+    <div style="font-size:20px;font-weight:500;color:#1e1b2e">${avgDays > 0 ? avgDays + " วัน" : "—"}</div>
+    <div style="font-size:10px;color:#888780;margin-top:4px">เฉลี่ยต่องาน Done</div>
+  </div>
+</div>
 
-  <!-- Footer -->
-  <div class="footer">
-    <div class="footer-brand">Support Teambon VT Market</div>
-    <div class="footer-date">พิมพ์เมื่อ ${new Date().toLocaleString("th-TH")}</div>
+<div style="padding:20px 28px;border-bottom:0.5px solid #ebe9e1">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="width:3px;height:16px;background:#4f46e5;border-radius:2px"></div>
+    <div style="font-size:11px;font-weight:500;color:#1e1b2e;text-transform:uppercase;letter-spacing:1px">สรุปแยก Workflow</div>
   </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+    <thead>
+      <tr style="background:#f9f8f5">
+        <th style="padding:8px 10px;text-align:left;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:22%">Workflow</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">ทั้งหมด</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Done</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">In Progress</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Pending</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">% Done</th>
+      </tr>
+    </thead>
+    <tbody>${wfTableRows}</tbody>
+  </table>
+</div>
+
+<div style="padding:20px 28px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="width:3px;height:16px;background:#4f46e5;border-radius:2px"></div>
+    <div style="font-size:11px;font-weight:500;color:#1e1b2e;text-transform:uppercase;letter-spacing:1px">รายการงานทั้งหมด (${total} งาน)</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+    <thead>
+      <tr style="background:#f9f8f5">
+        <th style="padding:7px 10px;text-align:left;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:18%">Job ID</th>
+        <th style="padding:7px 10px;text-align:left;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:30%">ประเภท / ย่อย</th>
+        <th style="padding:7px 10px;text-align:left;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:20%">Deadline</th>
+        <th style="padding:7px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:17%">สถานะ</th>
+        <th style="padding:7px 10px;text-align:right;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:15%">แก้ไข</th>
+      </tr>
+    </thead>
+    <tbody>${jobRows}</tbody>
+  </table>
+</div>
+
+<div style="padding:14px 28px;background:#f9f8f5;border-top:0.5px solid #ebe9e1;display:flex;justify-content:space-between;align-items:center">
+  <div style="display:flex;align-items:center;gap:8px">
+    <div style="width:20px;height:20px;background:#1e1b2e;border-radius:4px;display:flex;align-items:center;justify-content:center">
+      <div style="width:8px;height:8px;background:#a78bfa;border-radius:2px"></div>
+    </div>
+    <span style="font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:#888780">Support Teambon VT Market</span>
+  </div>
+  <span style="font-size:10px;color:#b4b2a9">พิมพ์เมื่อ ${printDate}</span>
+</div>
 
 </div>
-<script>window.onload = () => window.print();</script>
+<script>window.onload = () => setTimeout(() => window.print(), 300);</script>
 </body>
 </html>`;
 }
