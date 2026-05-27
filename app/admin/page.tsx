@@ -112,6 +112,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
+  const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({});
 
   const [filter, setFilter] = useState("ทั้งหมด");
   const [workflowFilter, setWorkflowFilter] = useState("ทั้งหมด");
@@ -795,6 +796,21 @@ export default function AdminPage() {
                             } disabled:opacity-60`}
                           >
                             {isSaving ? "⏳" : isSaved ? "✅ บันทึกแล้ว" : "💾 บันทึก"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              const url = `${window.location.origin}/brief?jobId=${job.jobId}`;
+                              navigator.clipboard.writeText(url);
+                              setCopiedMap((p) => ({ ...p, [job.jobId]: true }));
+                              setTimeout(() => setCopiedMap((p) => ({ ...p, [job.jobId]: false })), 2500);
+                            }}
+                            className={`shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition border ${
+                              copiedMap[job.jobId]
+                                ? "bg-teal-500 text-white border-teal-500"
+                                : "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100"
+                            }`}
+                          >
+                            {copiedMap[job.jobId] ? "✅ คัดลอกแล้ว!" : "🔗 แชร์ฟรีแลน"}
                           </button>
                         </div>
                       </div>

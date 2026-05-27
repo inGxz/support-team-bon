@@ -89,19 +89,23 @@ function doGet(e) {
 
       // ถ้า job นี้ผูก lineUserId ไว้ → ต้องส่ง userId มาตรงกัน
       // ยกเว้น source=revision (หน้าขอแก้ไขงาน ไม่มี LIFF จึงไม่รู้ userId)
-      if (storedUserId && storedUserId !== lineUserId && source !== "revision") {
+      if (storedUserId && storedUserId !== lineUserId && source !== "revision" && source !== "brief") {
         return jsonResponse({ error: "FORBIDDEN" });
       }
 
       return jsonResponse({
-        jobId:        row[COL.JOB_ID        - 1],
-        customerName: row[COL.CUSTOMER_NAME - 1],
-        agent:        row[COL.AGENT         - 1],
-        task:         row[COL.TASK          - 1],
-        reference:    row[COL.REFERENCE     - 1],
-        detail:       row[COL.DETAIL        - 1],
-        deadline:     row[COL.DEADLINE      - 1],
-        status:       row[COL.STATUS        - 1],
+        jobId:          row[COL.JOB_ID          - 1],
+        customerName:   row[COL.CUSTOMER_NAME   - 1],
+        agent:          row[COL.AGENT           - 1],
+        task:           row[COL.TASK            - 1],
+        reference:      row[COL.REFERENCE       - 1],
+        detail:         row[COL.DETAIL          - 1],
+        deadline:       row[COL.DEADLINE        - 1],
+        status:         row[COL.STATUS          - 1],
+        subType:        String(row[COL.SUB_TYPE        - 1] || ""),
+        workflowParams: String(row[COL.WORKFLOW_PARAMS - 1] || ""),
+        imageUrl:       String(row[COL.IMAGE_URL       - 1] || ""),
+        revisionNote:   String(row[COL.REVISION_NOTE   - 1] || ""),
       });
     }
   }
