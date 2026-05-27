@@ -1,22 +1,23 @@
 /**
  * ============================================================
  *  UPDATED GOOGLE APPS SCRIPT  — SUPPORT TEAMBON VT MARKET
- *  Version: LINE Login Integration
+ *  Version: Image Upload + SubType/WorkflowParams
  *
  *  สิ่งที่เปลี่ยนแปลง:
- *  1. doPost()  — บันทึก lineUserId ไว้ใน column ใหม่
- *  2. doGet()   — ตรวจสอบ lineUserId ก่อนคืนข้อมูล (privacy)
- *  3. onStatusChange() — ส่ง LINE Push เมื่อสถานะเปลี่ยนเป็น Done
- *  4. sendLinePush()  — ฟังก์ชันส่ง LINE Messaging API
+ *  1. saveImageToDrive() — อัปโหลดรูปลูกค้าไป Google Drive อัตโนมัติ
+ *  2. createJob()  — เก็บ imageUrl (col N), subType (col L), workflowParams (col M)
+ *  3. getAllJobs() — คืน imageUrl ด้วย
+ *  4. generateJobId() — format STM-XXXX (sequential)
  *
- *  วิธีอัปเดต:
+ *  ⚠️ วิธีอัปเดต (สำคัญ — ต้องทำครบทุกขั้น):
  *  1. เปิด Google Apps Script ของคุณ
  *  2. แทนที่โค้ดเดิมทั้งหมดด้วยโค้ดนี้
- *  3. ตั้ง LINE_CHANNEL_ACCESS_TOKEN ใน Script Properties
- *     (Project Settings → Script Properties → Add property)
- *  4. ตั้ง Trigger สำหรับ onStatusChange:
- *     Triggers → Add Trigger → onStatusChange → From spreadsheet → On edit
- *  5. Deploy ใหม่เป็น Web App
+ *  3. กด "Save" (Ctrl+S)
+ *  4. กด "Run" → เลือก function ใดก็ได้ เช่น doGet
+ *     → จะมี popup "Authorization required" → คลิก "Review permissions"
+ *     → เลือก Google account ของคุณ → Allow (ให้ permission DriveApp ใหม่)
+ *  5. Manage deployments → Edit → New version → Deploy
+ *  6. เพิ่ม column N ชื่อ "imageUrl" ใน Google Sheet (ถ้ายังไม่มี)
  * ============================================================
  */
 
@@ -436,7 +437,9 @@ function jsonResponse(obj) {
 }
 
 function generateJobId() {
-  var now = new Date();
-  var pad = function(n) { return String(n).padStart(2, "0"); };
-  return "JOB" + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  // นับแถวข้อมูลจริง (ลบ header 1 แถว)
+  const nextNumber = Math.max(lastRow, 1);
+  return "STM-" + String(nextNumber).padStart(4, "0");
 }
