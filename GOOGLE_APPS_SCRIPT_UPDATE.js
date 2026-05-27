@@ -37,8 +37,9 @@ const COL = {
   STATUS:          9,   // I - Status  ← สถานะงาน (Pending / In Progress / Done)
   LINE_USER_ID:   10,  // J - lineUserId
   DELIVERY_LINK:  11,  // K - delivery link (admin ใส่ลิ้งไฟล์ก่อน mark Done)
-  SUB_TYPE:       12,  // L - subType  ← ประเภทย่อย เช่น Logo, TikTok, Facebook Ads
-  WORKFLOW_PARAMS:13,  // M - workflowParams ← พารามิเตอร์ workflow เช่น Goal:Branding|Mood:Cinematic
+  SUB_TYPE:       12,  // L - subType
+  WORKFLOW_PARAMS:13,  // M - workflowParams
+  IMAGE_URL:      14,  // N - imageUrl (Google Drive link)
 };
 
 // ─── LINE Channel Access Token ────────────────────────────────────────────────
@@ -145,11 +146,35 @@ function doPost(e) {
 }
 
 // ─── createJob: สร้าง Job ใหม่ ────────────────────────────────────────────────
+
+// ─── saveImageToDrive ─────────────────────────────────────────────────────────
+function saveImageToDrive(base64Data, fileName, mimeType) {
+  try {
+    var folderName = "Support Teambon - Customer Uploads";
+    var folders = DriveApp.getFoldersByName(folderName);
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+    var decoded = Utilities.base64Decode(base64Data);
+    var blob = Utilities.newBlob(decoded, mimeType || "image/jpeg", fileName || ("upload_" + Date.now() + ".jpg"));
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return "https://drive.google.com/uc?export=view&id=" + file.getId();
+  } catch (err) {
+    console.error("saveImageToDrive error:", err);
+    return "";
+  }
+}
+
 function createJob(body) {
   try {
     const sheet     = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
     const jobId     = generateJobId();
     const timestamp = new Date().toLocaleString("th-TH");
+
+    // Upload image to Drive if provided
+    var imageUrl = "";
+    if (body.imageBase64 && body.imageBase64.length > 0) {
+      imageUrl = saveImageToDrive(body.imageBase64, body.imageName || "image.jpg", body.imageMime || "image/jpeg");
+    }
 
     sheet.appendRow([
       timestamp,
@@ -162,9 +187,10 @@ function createJob(body) {
       body.deadline        || "",
       "Pending",
       body.lineUserId      || "",
-      "",                          // K: deliveryLink (ว่างไว้ก่อน)
+      "",                          // K: deliveryLink
       body.subType         || "",  // L: subType
       body.workflowParams  || "",  // M: workflowParams
+      imageUrl,                    // N: imageUrl (Drive)
     ]);
 
     return jsonResponse({ success: true, jobId });
@@ -242,6 +268,7 @@ function getAllJobs() {
       deliveryLink:   String(row[COL.DELIVERY_LINK    - 1] || ""),
       subType:        String(row[COL.SUB_TYPE         - 1] || ""),
       workflowParams: String(row[COL.WORKFLOW_PARAMS  - 1] || ""),
+      imageUrl:       String(row[COL.IMAGE_URL        - 1] || ""),
       timestamp:      String(row[COL.TIMESTAMP        - 1] || ""),
     });
   }
@@ -403,17 +430,13 @@ function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink) {
   console.log("LINE push response:", res.getContentText());
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function generateJobId() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const lastRow = sheet.getLastRow();
-  // นับจากแถวที่มีข้อมูล (ลบ header 1 แถว) แล้ว +1
-  const nextNumber = Math.max(lastRow, 1); // ป้องกัน 0
-  const padded = String(nextNumber).padStart(3, "0");
-  return "STM-" + padded;
+// ─── Helpers ───────────────────────────────────────────────────────────
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function jsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+function generateJobId() {
+  var now = new Date();
+  var pad = function(n) { return String(n).padStart(2, "0"); };
+  return "JOB" + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
 }

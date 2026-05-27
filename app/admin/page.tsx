@@ -15,6 +15,7 @@ type Job = {
   status: string;
   lineUserId: string;
   deliveryLink: string;
+  imageUrl: string;
   timestamp: string;
 };
 
@@ -713,6 +714,21 @@ export default function AdminPage() {
                                 <p className="text-xs text-amber-800 break-all">{job.reference}</p>
                               )}
                             </div>
+                          </div>
+                        )}
+
+                        {/* Customer image attachment */}
+                        {job.imageUrl && (
+                          <div className="rounded-xl overflow-hidden border border-purple-100 shadow-sm">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border-b border-purple-100">
+                              <span className="text-purple-500 text-sm">🖼️</span>
+                              <p className="text-xs font-bold text-purple-700">รูปจากลูกค้า</p>
+                              <a href={job.imageUrl} target="_blank" rel="noopener noreferrer"
+                                className="ml-auto text-xs text-blue-500 hover:underline">↗ เปิดใน Drive</a>
+                            </div>
+                            <img src={job.imageUrl} alt="customer attachment"
+                              className="w-full max-h-56 object-contain bg-gray-50 cursor-pointer"
+                              onClick={() => window.open(job.imageUrl, "_blank")} />
                           </div>
                         )}
 

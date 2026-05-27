@@ -433,6 +433,9 @@ export default function Page() {
   const [adsType, setAdsType] = useState("");
   const [contentType, setContentType] = useState("");
   const [filmingType, setFilmingType] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageUploading, setImageUploading] = useState(false);
 
   // TRACK
   const [trackingId, setTrackingId] = useState("");
@@ -667,6 +670,7 @@ export default function Page() {
         if (value && value !== "-") base[label] = value;
       }
     });
+    if (imageFile) base["🖼️ รูปแนบ"] = imageFile.name;
     setPreviewData(base);
     setPendingTask({ task, extra });
     setShowPreview(true);
@@ -677,6 +681,26 @@ export default function Page() {
     setSubmitting(true);
     try {
       const lineUserId = lineProfile?.userId || null;
+
+      // Convert image to base64 if provided
+      let imageBase64 = "";
+      let imageName = "";
+      let imageMime = "";
+      if (imageFile) {
+        setImageUploading(true);
+        imageBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const result = ev.target?.result as string;
+            // Strip data:image/...;base64, prefix
+            resolve(result.split(",")[1] || "");
+          };
+          reader.readAsDataURL(imageFile);
+        });
+        imageName = imageFile.name;
+        imageMime = imageFile.type;
+        setImageUploading(false);
+      }
       // แยก subType กับ workflowParams ออกจาก extra
       // extra รูปแบบ: "Platform:TikTok | Goal:Branding | Mood:Cinematic | Music:Epic | Voice:AI"
       // หรือ "Type:Logo | Detail:..." สำหรับ Design/Ads/Content/Filming
@@ -708,6 +732,9 @@ export default function Page() {
           lineUserId,
           subType,
           workflowParams,
+          imageBase64,
+          imageName,
+          imageMime,
         }),
       });
       if (!res.ok) throw new Error();
@@ -754,6 +781,7 @@ export default function Page() {
     setTaskType(""); setStep(0);
     setPlatform("Platform"); setGoal("Goal"); setMood("Mood"); setMusic("Music"); setVoice("Voice");
     setDesignType(""); setAdsType(""); setDeadline(""); setDetail(""); setRefLink(""); setErrors({});
+    setImageFile(null); setImagePreview(""); setContentType(""); setFilmingType("");
   };
 
   // TRACK
@@ -932,6 +960,38 @@ export default function Page() {
               <a href={refLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-2 text-xs text-purple-500 hover:text-purple-700 hover:underline transition">
                 ↗ เปิดลิ้งในแท็บใหม่
               </a>
+            )}
+          </div>
+
+          {/* IMAGE UPLOAD */}
+          <div>
+            <label className={labelCls}>🖼️ แนบรูปภาพ <span className="text-xs text-gray-400">(ไม่บังคับ)</span></label>
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <div className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed transition
+                ${imageFile ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-gray-50 hover:border-purple-200 hover:bg-purple-50/50"}`}>
+                <span className="text-lg">{imageFile ? "🖼️" : "➕"}</span>
+                <span className={`text-sm truncate ${imageFile ? "text-purple-700 font-medium" : "text-gray-400"}`}>
+                  {imageFile ? imageFile.name : "เลือกไฟล์รูป (JPG, PNG, WEBP — ไม่เกิน 5MB)"}
+                </span>
+                {imageFile && (
+                  <button type="button" onClick={(e) => { e.preventDefault(); setImageFile(null); setImagePreview(""); }}
+                    className="ml-auto text-red-400 hover:text-red-600 text-xs font-bold shrink-0">✕ ลบ</button>
+                )}
+              </div>
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) { alert("รูปใหญ่เกินไป — กรุณาเลือกรูปที่มีขนาดไม่เกิน 5MB"); return; }
+                setImageFile(file);
+                const reader = new FileReader();
+                reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+                reader.readAsDataURL(file);
+              }} />
+            </label>
+            {imagePreview && (
+              <div className="mt-2 rounded-xl overflow-hidden border border-purple-100 shadow-sm">
+                <img src={imagePreview} alt="preview" className="w-full max-h-48 object-contain bg-gray-50" />
+              </div>
             )}
           </div>
         </div>
