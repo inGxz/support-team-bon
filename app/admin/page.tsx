@@ -37,6 +37,208 @@ function parseMonthYear(timestamp: string): string {
   return "ไม่ระบุ";
 }
 
+// แปลง timestamp ไทย "27/5/2569, 13:26:32" → Date object (CE)
+function parseThaiTimestamp(timestamp: string): Date | null {
+  try {
+    const clean = timestamp.replace(",", "").trim();
+    const parts = clean.split(/[\s/]+/);
+    const day   = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1;
+    const yearCE = parseInt(parts[2]) - 543;
+    return new Date(yearCE, month, day);
+  } catch { return null; }
+}
+
+const MONTH_NAMES_TH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
+function formatDateTH(dateStr: string): string {
+  if (!dateStr) return "-";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${d.getDate()} ${MONTH_NAMES_TH[d.getMonth()]} ${d.getFullYear() + 543}`;
+  } catch { return dateStr; }
+}
+
+function generateReportHTML(
+  jobs: Job[],
+  label: string,
+  byWorkflow: { wf: string; total: number; pending: number; inProgress: number; done: number }[]
+): string {
+  const done       = jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length;
+  const inProgress = jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length;
+  const pending    = jobs.filter((j) => j.status === "Pending" || !j.status).length;
+  const revision   = jobs.filter((j) => j.status === "Revision").length;
+
+  const wfRows = byWorkflow.map((r) => `
+    <tr>
+      <td>${r.wf}</td>
+      <td class="center bold">${r.total}</td>
+      <td class="center amber">${r.pending}</td>
+      <td class="center blue">${r.inProgress}</td>
+      <td class="center green">${r.done}</td>
+    </tr>
+  `).join("");
+
+  const jobRows = jobs.map((j, i) => `
+    <tr class="${i % 2 === 0 ? "even" : ""}">
+      <td class="bold purple">${j.jobId}</td>
+      <td>${j.task || "-"}</td>
+      <td>${j.subType || "-"}</td>
+      <td>${formatDateTH(j.deadline)}</td>
+      <td class="center"><span class="badge ${
+        j.status === "Done" || j.status === "เสร็จแล้ว" ? "badge-done" :
+        j.status === "In Progress" ? "badge-progress" :
+        j.status === "Revision"    ? "badge-revision" : "badge-pending"
+      }">${j.status || "Pending"}</span></td>
+    </tr>
+  `).join("");
+
+  return `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<title>Report — SUPPORT TEAMBON ${label}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Sarabun', sans-serif; background: #f8f9fa; color: #1f2937; font-size: 13px; }
+  .page { max-width: 900px; margin: 0 auto; padding: 36px 40px; background: white; min-height: 100vh; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #6d28d9 100%);
+    border-radius: 16px; padding: 28px 32px; margin-bottom: 28px; color: white; }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .brand { font-size: 22px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; }
+  .brand-sub { font-size: 11px; letter-spacing: 4px; opacity: 0.7; margin-top: 2px; text-transform: uppercase; }
+  .report-label { text-align: right; }
+  .report-label .period { font-size: 18px; font-weight: 700; }
+  .report-label .sub { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+  .header-divider { height: 1px; background: rgba(255,255,255,0.2); margin: 16px 0; }
+  .header-stats { display: flex; gap: 24px; }
+  .hstat { text-align: center; }
+  .hstat-num { font-size: 28px; font-weight: 800; }
+  .hstat-label { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Section */
+  .section { margin-bottom: 24px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: #6b7280; border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 8px; margin-bottom: 14px; }
+
+  /* Summary cards */
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { border-radius: 12px; padding: 16px; text-align: center; border: 1px solid; }
+  .card-total    { background: #f5f3ff; border-color: #ddd6fe; }
+  .card-pending  { background: #fffbeb; border-color: #fde68a; }
+  .card-progress { background: #eff6ff; border-color: #bfdbfe; }
+  .card-done     { background: #f0fdf4; border-color: #bbf7d0; }
+  .card-num  { font-size: 32px; font-weight: 800; }
+  .card-label{ font-size: 11px; color: #6b7280; margin-top: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .num-purple { color: #7c3aed; } .num-amber { color: #d97706; }
+  .num-blue   { color: #2563eb; } .num-green  { color: #16a34a; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { background: #f3f4f6; text-align: left; padding: 10px 12px;
+    font-weight: 700; color: #374151; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 9px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  tr.even td { background: #fafafa; }
+  .center { text-align: center; }
+  .bold   { font-weight: 700; }
+  .purple { color: #7c3aed; }
+  .green  { color: #16a34a; font-weight: 600; }
+  .blue   { color: #2563eb; font-weight: 600; }
+  .amber  { color: #d97706; font-weight: 600; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; border: 1px solid; }
+  .badge-done     { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+  .badge-progress { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+  .badge-pending  { background: #fef9c3; color: #92400e; border-color: #fde68a; }
+  .badge-revision { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+
+  /* Footer */
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb;
+    display: flex; justify-content: space-between; align-items: center; }
+  .footer-brand { font-size: 11px; font-weight: 700; color: #9ca3af; letter-spacing: 2px; text-transform: uppercase; }
+  .footer-date  { font-size: 11px; color: #d1d5db; }
+
+  @media print {
+    body { background: white; }
+    .page { padding: 20px 24px; }
+    @page { margin: 16mm; size: A4; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="brand">🚀 Support Teambon</div>
+        <div class="brand-sub">VT Market — Job Report</div>
+      </div>
+      <div class="report-label">
+        <div class="period">📊 ${label}</div>
+        <div class="sub">สร้างเมื่อ ${new Date().toLocaleDateString("th-TH", { year:"numeric", month:"long", day:"numeric" })}</div>
+      </div>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-stats">
+      <div class="hstat"><div class="hstat-num">${jobs.length}</div><div class="hstat-label">งานทั้งหมด</div></div>
+      <div class="hstat"><div class="hstat-num">${done}</div><div class="hstat-label">Done</div></div>
+      <div class="hstat"><div class="hstat-num">${inProgress}</div><div class="hstat-label">In Progress</div></div>
+      <div class="hstat"><div class="hstat-num">${pending}</div><div class="hstat-label">Pending</div></div>
+      ${revision > 0 ? `<div class="hstat"><div class="hstat-num">${revision}</div><div class="hstat-label">Revision</div></div>` : ""}
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="cards">
+    <div class="card card-total">   <div class="card-num num-purple">${jobs.length}</div><div class="card-label">ทั้งหมด</div></div>
+    <div class="card card-pending"> <div class="card-num num-amber">${pending}</div>   <div class="card-label">Pending</div></div>
+    <div class="card card-progress"><div class="card-num num-blue">${inProgress}</div>  <div class="card-label">In Progress</div></div>
+    <div class="card card-done">    <div class="card-num num-green">${done}</div>       <div class="card-label">Done</div></div>
+  </div>
+
+  <!-- Workflow breakdown -->
+  <div class="section">
+    <div class="section-title">📋 แยกตาม Workflow</div>
+    <table>
+      <thead>
+        <tr><th>Workflow</th><th class="center">ทั้งหมด</th><th class="center">Pending</th><th class="center">In Progress</th><th class="center">Done</th></tr>
+      </thead>
+      <tbody>${wfRows}</tbody>
+    </table>
+  </div>
+
+  <!-- Job list -->
+  <div class="section">
+    <div class="section-title">📄 รายการงานทั้งหมด (${jobs.length} งาน)</div>
+    <table>
+      <thead>
+        <tr><th>Job ID</th><th>ประเภทงาน</th><th>ประเภทย่อย</th><th>Deadline</th><th class="center">สถานะ</th></tr>
+      </thead>
+      <tbody>${jobRows}</tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-brand">Support Teambon VT Market</div>
+    <div class="footer-date">พิมพ์เมื่อ ${new Date().toLocaleString("th-TH")}</div>
+  </div>
+
+</div>
+<script>window.onload = () => window.print();</script>
+</body>
+</html>`;
+}
+
 function getWorkflow(task: string): string {
   const t = (task || "").toLowerCase();
   if (t.includes("video")) return "Video";
@@ -121,6 +323,8 @@ export default function AdminPage() {
   const [countdown, setCountdown] = useState(30);
   const [activeTab, setActiveTab] = useState<"jobs" | "report">("jobs");
   const [reportMonth, setReportMonth] = useState<string>("");
+  const [reportDateFrom, setReportDateFrom] = useState<string>("");
+  const [reportDateTo, setReportDateTo] = useState<string>("");
 
   useEffect(() => {
     const s = sessionStorage.getItem("adminAuth");
@@ -270,10 +474,26 @@ export default function AdminPage() {
   });
   const allMonths = Object.keys(monthJobsMap).slice(0, 12);
   const selectedMonth = reportMonth || allMonths[0] || "";
-  const monthJobs = monthJobsMap[selectedMonth] || [];
+
+  // กรองด้วย date range (ถ้ามี) หรือใช้ month selector
+  const useDateRange = !!(reportDateFrom && reportDateTo);
+  const reportJobs = useDateRange
+    ? jobs.filter((j) => {
+        const d = parseThaiTimestamp(j.timestamp);
+        if (!d) return false;
+        const from = new Date(reportDateFrom);
+        const to   = new Date(reportDateTo);
+        to.setHours(23, 59, 59, 999);
+        return d >= from && d <= to;
+      })
+    : (monthJobsMap[selectedMonth] || []);
+
+  const reportLabel = useDateRange
+    ? `${formatDateTH(reportDateFrom)} – ${formatDateTH(reportDateTo)}`
+    : selectedMonth;
 
   const reportByWorkflow = WORKFLOWS.map((wf) => {
-    const wfJobs = monthJobs.filter((j) => getWorkflow(j.task) === wf);
+    const wfJobs = reportJobs.filter((j) => getWorkflow(j.task) === wf);
     const pending    = wfJobs.filter((j) => j.status === "Pending" || !j.status).length;
     const inProgress = wfJobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length;
     const done       = wfJobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length;
@@ -377,36 +597,95 @@ export default function AdminPage() {
               </div>
             ) : (
               <>
-                {/* Month selector */}
-                <div className="bg-white rounded-xl border border-gray-100 p-4">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">เลือกเดือน</p>
-                  <div className="flex flex-wrap gap-2">
-                    {allMonths.map((m) => (
+                {/* Date range filter */}
+                <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">🗓️ กรองช่วงวันที่</p>
+                    {useDateRange && (
                       <button
-                        key={m}
-                        onClick={() => setReportMonth(m)}
-                        className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
-                          selectedMonth === m
-                            ? "bg-purple-500 text-white border-purple-500 shadow-md"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600"
-                        }`}
+                        onClick={() => { setReportDateFrom(""); setReportDateTo(""); }}
+                        className="text-xs text-red-400 hover:text-red-600 font-semibold transition"
                       >
-                        {m}
-                        <span className={`ml-1.5 text-xs font-normal ${selectedMonth === m ? "text-purple-200" : "text-gray-400"}`}>
-                          ({monthJobsMap[m].length})
-                        </span>
+                        ✕ ล้างค่า
                       </button>
-                    ))}
+                    )}
                   </div>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                      <span className="text-xs text-gray-500 shrink-0">จาก</span>
+                      <input
+                        type="date"
+                        value={reportDateFrom}
+                        onChange={(e) => setReportDateFrom(e.target.value)}
+                        className="flex-1 p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                      <span className="text-xs text-gray-500 shrink-0">ถึง</span>
+                      <input
+                        type="date"
+                        value={reportDateTo}
+                        onChange={(e) => setReportDateTo(e.target.value)}
+                        className="flex-1 p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        const html = generateReportHTML(reportJobs, reportLabel, reportByWorkflow);
+                        const win = window.open("", "_blank");
+                        win?.document.write(html);
+                        win?.document.close();
+                      }}
+                      className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-bold shadow hover:scale-[1.02] transition flex items-center gap-2"
+                    >
+                      📄 Export PDF
+                    </button>
+                  </div>
+                  {!useDateRange && (
+                    <p className="text-xs text-gray-400">หรือเลือกเดือนด้านล่าง — ถ้าเลือกช่วงวันที่จะใช้ช่วงวันที่แทน</p>
+                  )}
+                </div>
+
+                {/* Month selector (ใช้เมื่อไม่ได้ set date range) */}
+                {!useDateRange && (
+                  <div className="bg-white rounded-xl border border-gray-100 p-4">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">เลือกเดือน</p>
+                    <div className="flex flex-wrap gap-2">
+                      {allMonths.map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setReportMonth(m)}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
+                            selectedMonth === m
+                              ? "bg-purple-500 text-white border-purple-500 shadow-md"
+                              : "bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600"
+                          }`}
+                        >
+                          {m}
+                          <span className={`ml-1.5 text-xs font-normal ${selectedMonth === m ? "text-purple-200" : "text-gray-400"}`}>
+                            ({monthJobsMap[m].length})
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active filter label */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">แสดงผล:</span>
+                  <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
+                    {reportLabel} — {reportJobs.length} งาน
+                  </span>
                 </div>
 
                 {/* Summary cards */}
                 <div className="grid grid-cols-4 gap-3">
                   {[
-                    { label: "งานทั้งหมด", count: monthJobs.length,                                                                              bg: "bg-purple-50 border-purple-200", text: "text-purple-700" },
-                    { label: "Pending",     count: monthJobs.filter((j) => j.status === "Pending" || !j.status).length,                          bg: "bg-amber-50 border-amber-200",   text: "text-amber-700"  },
-                    { label: "In Progress", count: monthJobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length,          bg: "bg-blue-50 border-blue-200",     text: "text-blue-700"   },
-                    { label: "Done",        count: monthJobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length,               bg: "bg-green-50 border-green-200",   text: "text-green-700"  },
+                    { label: "งานทั้งหมด", count: reportJobs.length,                                                                              bg: "bg-purple-50 border-purple-200", text: "text-purple-700" },
+                    { label: "Pending",     count: reportJobs.filter((j) => j.status === "Pending" || !j.status).length,                          bg: "bg-amber-50 border-amber-200",   text: "text-amber-700"  },
+                    { label: "In Progress", count: reportJobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length,          bg: "bg-blue-50 border-blue-200",     text: "text-blue-700"   },
+                    { label: "Done",        count: reportJobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length,               bg: "bg-green-50 border-green-200",   text: "text-green-700"  },
                   ].map((s) => (
                     <div key={s.label} className={`${s.bg} border rounded-xl p-4 text-center`}>
                       <p className={`text-3xl font-black ${s.text}`}>{s.count}</p>
@@ -418,7 +697,7 @@ export default function AdminPage() {
                 {/* Per-workflow breakdown */}
                 {reportByWorkflow.length === 0 ? (
                   <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
-                    <p className="text-gray-400">ไม่มีงานในเดือนนี้</p>
+                    <p className="text-gray-400">ไม่มีงานในช่วงที่เลือก</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -427,7 +706,6 @@ export default function AdminPage() {
                       const donePct = total ? Math.round((done / total) * 100) : 0;
                       return (
                         <div key={wf} className={`${ws.bg} border ${ws.border} rounded-xl overflow-hidden`}>
-                          {/* Workflow header */}
                           <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-2">
                               <span className="text-lg">{ws.icon}</span>
@@ -440,8 +718,6 @@ export default function AdminPage() {
                               {done > 0       && <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">✅ {done} Done</span>}
                             </div>
                           </div>
-
-                          {/* Progress bar */}
                           <div className="px-5 pb-3">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 bg-white/60 rounded-full h-2 overflow-hidden">
@@ -450,8 +726,6 @@ export default function AdminPage() {
                               <span className="text-xs font-bold text-green-600 w-12 text-right">{donePct}% Done</span>
                             </div>
                           </div>
-
-                          {/* Job rows */}
                           <div className="border-t border-white/40 divide-y divide-white/30">
                             {wfJobs.map((j) => {
                               const jSt = statusStyle(j.status || "Pending");
@@ -463,9 +737,7 @@ export default function AdminPage() {
                                     <span className="text-xs text-gray-500 truncate hidden sm:block">{j.task}</span>
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">
-                                    {isOverdue(j.deadline, j.status) && (
-                                      <span className="text-xs font-bold text-red-600">⚠️</span>
-                                    )}
+                                    {isOverdue(j.deadline, j.status) && <span className="text-xs font-bold text-red-600">⚠️</span>}
                                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1 ${jSt.bg} ${jSt.text} ${jSt.border}`}>
                                       <span className={`w-1.5 h-1.5 rounded-full ${jSt.dot}`} />
                                       {j.status || "Pending"}
