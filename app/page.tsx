@@ -908,9 +908,75 @@ export default function Page() {
     }
   };
 
+  // ตรวจว่าเปิดมาด้วย revision mode หรือเปล่า (จากปุ่มใน LINE card)
+  // ถ้าใช่ → ไม่บังคับ login เพราะ revision form ไม่ต้องการ LINE profile
+  const isRevisionMode =
+    (typeof window !== "undefined" &&
+      (new URLSearchParams(window.location.search).get("revision") === "1" ||
+       sessionStorage.getItem("_liff_revision") === "1")) ||
+    showRevision;
+
   // บังคับ login — แสดงหน้า loading / login ก่อนถ้ายังไม่ได้ login
-  if (!liffReady) return <LiffLoadingScreen />;
-  if (!lineProfile) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} error={liffError} />;
+  // ยกเว้นกรณี revision mode (ลูกค้ากดขอแก้ไขจาก LINE → ไม่ต้องล็อคอินซ้ำ)
+  if (!liffReady && !isRevisionMode) return <LiffLoadingScreen />;
+  if (!lineProfile && !isRevisionMode) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} error={liffError} />;
+
+  // Revision-only minimal page — แสดงเมื่อมาจาก LINE card (ไม่ต้อง login)
+  if (!lineProfile && isRevisionMode) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 flex flex-col items-center justify-center">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-red-500 to-rose-600 px-5 py-4">
+            <p className="text-white font-bold text-lg">🔄 ขอแก้ไขงาน</p>
+            <p className="text-red-100 text-sm">{trackResult?.jobId || trackingId}</p>
+          </div>
+
+          {/* Loading state */}
+          {!trackResult && (
+            <div className="px-5 py-8 text-center text-gray-400 text-sm">
+              ⏳ กำลังโหลดข้อมูลงาน...
+            </div>
+          )}
+
+          {/* Job info + revision form */}
+          {trackResult && (
+            <div className="px-5 py-4 space-y-4">
+              <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
+                <p className="font-semibold text-gray-700">{trackResult.task || "-"}</p>
+                <p className="text-gray-400 text-xs">ลูกค้า: {trackResult.customerName || "-"}</p>
+              </div>
+
+              {revisionDone ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                  <p className="text-green-600 font-semibold text-sm">✅ ส่งคำขอแก้ไขแล้ว</p>
+                  <p className="text-green-500 text-xs mt-1">ทีมงานจะดำเนินการเร็วๆ นี้</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-red-600">📝 รายละเอียดที่ต้องการแก้ไข</p>
+                  <textarea
+                    className="w-full p-3 rounded-xl border border-red-200 text-sm resize-none focus:ring-2 focus:ring-red-300 outline-none bg-red-50 text-gray-800"
+                    rows={4}
+                    placeholder="กรอกรายละเอียดที่ต้องการแก้ไข..."
+                    value={revisionNote}
+                    onChange={(e) => setRevisionNote(e.target.value)}
+                  />
+                  <button
+                    onClick={submitRevision}
+                    disabled={!revisionNote.trim() || revisionSubmitting}
+                    className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition disabled:opacity-50"
+                  >
+                    {revisionSubmitting ? "⏳ กำลังส่ง..." : "ส่งคำขอแก้ไข"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={`min-h-screen ${bg} p-4 transition-colors duration-300`}>
