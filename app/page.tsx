@@ -716,20 +716,23 @@ export default function Page() {
     try {
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           action: "revision",
           jobId: trackResult.jobId,
           revisionNote: revisionNote.trim(),
         }),
       });
-      if (!res.ok) throw new Error();
+      const text = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(text); } catch { throw new Error("Response not JSON: " + text.substring(0, 100)); }
+      if (data.error) throw new Error("GAS error: " + data.error + " — " + (data.message || ""));
       setRevisionDone(true);
       setShowRevision(false);
       setRevisionNote("");
-      // อัปเดต trackResult status เป็น Revision
       setTrackResult((prev: any) => prev ? { ...prev, status: "Revision" } : prev);
-    } catch {
-      alert("ไม่สามารถส่งคำขอแก้ไขได้ กรุณาลองใหม่");
+    } catch (err: any) {
+      alert("Error: " + (err?.message || String(err)));
     } finally {
       setRevisionSubmitting(false);
     }
