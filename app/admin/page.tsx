@@ -1474,12 +1474,12 @@ export default function AdminPage() {
                   return (
                     <div key={col} className="flex flex-col gap-2">
                       {/* Column header */}
-                      <div className={`flex items-center justify-between px-3 py-2 rounded-xl border font-semibold text-sm ${cs.header}`}>
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-xl border font-semibold text-sm text-gray-800 ${cs.header}`}>
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${cs.dot}`} />
                           {col}
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${cs.count}`}>{colJobs.length}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold text-gray-800 ${cs.count.split(" ")[0]}`}>{colJobs.length}</span>
                       </div>
                       {/* Column cards */}
                       <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-0.5">
