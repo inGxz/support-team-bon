@@ -580,6 +580,13 @@ export default function AdminPage() {
     return () => { clearInterval(interval); clearInterval(tick); };
   }, [isLoggedIn, fetchJobs]);
 
+  // Click-outside to close quick status dropdowns
+  useEffect(() => {
+    const handler = () => setQuickStatusOpen({});
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
   // Session timeout
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -1520,7 +1527,7 @@ export default function AdminPage() {
                                         const ss = statusStyle(s);
                                         return (
                                           <button key={s} onClick={() => handleQuickStatus(job.jobId, s)}
-                                            className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-gray-50 transition`}>
+                                            className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-gray-50 transition text-gray-800`}>
                                             <span className={`w-2 h-2 rounded-full ${ss.dot}`} />{s}
                                             {job.status === s && <span className="ml-auto text-purple-500">✓</span>}
                                           </button>
@@ -1597,7 +1604,7 @@ export default function AdminPage() {
                                     <button
                                       key={s}
                                       onClick={() => handleQuickStatus(job.jobId, s)}
-                                      className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-gray-50 transition ${edit.status === s ? "bg-purple-50" : ""}`}
+                                      className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-gray-50 transition text-gray-800 ${edit.status === s ? "bg-purple-50" : ""}`}
                                     >
                                       <span className={`w-2 h-2 rounded-full ${ss.dot}`} />
                                       {s}
