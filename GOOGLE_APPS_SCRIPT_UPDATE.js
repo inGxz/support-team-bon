@@ -22,7 +22,8 @@
  */
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const SHEET_NAME = "Sheet1"; // ชื่อ sheet ที่เก็บข้อมูลงาน
+const SHEET_NAME      = "Sheet1";      // ชื่อ sheet ที่เก็บข้อมูลงาน
+const LOG_SHEET_NAME  = "ActivityLog"; // ชื่อ sheet ที่เก็บ activity log
 
 // Column index (1-based) — ตรงกับ sheet จริง:
 // A=Date  B=Job ID  C=customerName  D=agent  E=Task  F=Reference  G=Detail  H=Deadline  I=Status  J=lineUserId
@@ -68,6 +69,15 @@ function doGet(e) {
       return jsonResponse({ error: "FORBIDDEN" });
     }
     return getAllJobs();
+  }
+
+  // Admin: ดึง Activity Log
+  if (action === "activityLog") {
+    const adminSecret = PropertiesService.getScriptProperties().getProperty("ADMIN_SECRET") || "";
+    if (!adminSecret || e.parameter.adminSecret !== adminSecret) {
+      return jsonResponse({ error: "FORBIDDEN" });
+    }
+    return getActivityLog(e.parameter.jobId || "", parseInt(e.parameter.limit || "200"));
   }
 
   // ถ้าไม่มี jobId แต่มี lineUserId → ดึงงานทั้งหมดของ user นี้
@@ -408,6 +418,68 @@ function notifyRevisionToAdmin(jobId, customerName, task, agent, note, count, li
   }
 }
 
+// ─── writeActivityLog: บันทึก log การเปลี่ยนแปลง ────────────────────────────
+function writeActivityLog(jobId, actor, field, oldValue, newValue) {
+  try {
+    var ss       = SpreadsheetApp.getActiveSpreadsheet();
+    var logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+    if (!logSheet) {
+      logSheet = ss.insertSheet(LOG_SHEET_NAME);
+      logSheet.appendRow(["Timestamp", "Job ID", "Actor", "Field", "Old Value", "New Value"]);
+      logSheet.setFrozenRows(1);
+      // ตั้งความกว้าง column
+      logSheet.setColumnWidth(1, 160);
+      logSheet.setColumnWidth(2, 100);
+      logSheet.setColumnWidth(3, 80);
+      logSheet.setColumnWidth(4, 120);
+      logSheet.setColumnWidth(5, 180);
+      logSheet.setColumnWidth(6, 180);
+    }
+    logSheet.appendRow([
+      new Date().toLocaleString("th-TH"),
+      jobId,
+      actor || "Admin",
+      field,
+      oldValue !== undefined && oldValue !== null ? String(oldValue) : "",
+      newValue !== undefined && newValue !== null ? String(newValue) : "",
+    ]);
+  } catch (err) {
+    console.error("writeActivityLog error:", err);
+  }
+}
+
+// ─── getActivityLog: ดึง activity log ────────────────────────────────────────
+function getActivityLog(filterJobId, limit) {
+  try {
+    var ss       = SpreadsheetApp.getActiveSpreadsheet();
+    var logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+    if (!logSheet) return jsonResponse({ logs: [] });
+
+    var data = logSheet.getDataRange().getValues();
+    var logs = [];
+
+    // วนจากท้ายสุด (ล่าสุดก่อน) ข้าม header แถวแรก
+    for (var i = data.length - 1; i >= 1; i--) {
+      var row = data[i];
+      var jId = String(row[1] || "");
+      if (filterJobId && jId !== filterJobId) continue;
+      logs.push({
+        timestamp: String(row[0] || ""),
+        jobId:     jId,
+        actor:     String(row[2] || "Admin"),
+        field:     String(row[3] || ""),
+        oldValue:  String(row[4] || ""),
+        newValue:  String(row[5] || ""),
+      });
+      if (limit && logs.length >= limit) break;
+    }
+
+    return jsonResponse({ logs });
+  } catch (err) {
+    return jsonResponse({ error: String(err), logs: [] });
+  }
+}
+
 // ─── updateJob: Admin อัปเดตสถานะ / delivery link ────────────────────────────
 function updateJob(body) {
   const adminSecret = PropertiesService.getScriptProperties().getProperty("ADMIN_SECRET") || "";
@@ -421,31 +493,38 @@ function updateJob(body) {
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][COL.JOB_ID - 1]) === String(body.jobId)) {
       var rowNum    = i + 1;
-      var oldStatus = String(data[i][COL.STATUS - 1] || "");
+      var oldStatus       = String(data[i][COL.STATUS        - 1] || "");
+      var oldDelivery     = String(data[i][COL.DELIVERY_LINK - 1] || "");
+      var oldPriority     = String(data[i][COL.PRIORITY      - 1] || "");
+      var oldInternalNote = String(data[i][COL.INTERNAL_NOTE - 1] || "");
 
-      if (body.status !== undefined) {
+      if (body.status !== undefined && body.status !== oldStatus) {
         sheet.getRange(rowNum, COL.STATUS).setValue(body.status);
+        writeActivityLog(body.jobId, "Admin", "status", oldStatus, body.status);
       }
-      if (body.deliveryLink !== undefined) {
+      if (body.deliveryLink !== undefined && body.deliveryLink !== oldDelivery) {
         sheet.getRange(rowNum, COL.DELIVERY_LINK).setValue(body.deliveryLink);
+        writeActivityLog(body.jobId, "Admin", "deliveryLink", oldDelivery, body.deliveryLink);
       }
-      if (body.priority !== undefined) {
+      if (body.priority !== undefined && body.priority !== oldPriority) {
         sheet.getRange(rowNum, COL.PRIORITY).setValue(body.priority);
+        writeActivityLog(body.jobId, "Admin", "priority", oldPriority, body.priority);
       }
-      if (body.internalNote !== undefined) {
+      if (body.internalNote !== undefined && body.internalNote !== oldInternalNote) {
         sheet.getRange(rowNum, COL.INTERNAL_NOTE).setValue(body.internalNote);
+        writeActivityLog(body.jobId, "Admin", "internalNote", oldInternalNote, body.internalNote);
       }
 
       // ส่ง LINE push ถ้าเพิ่งเปลี่ยนเป็น Done
-      var newStatus = body.status !== undefined ? body.status : oldStatus;
-      var isDone    = newStatus === "Done" || newStatus === "เสร็จแล้ว";
+      var newStatus  = body.status !== undefined ? body.status : oldStatus;
+      var isDone     = newStatus === "Done" || newStatus === "เสร็จแล้ว";
       var wasNotDone = oldStatus !== "Done" && oldStatus !== "เสร็จแล้ว";
 
       if (isDone && wasNotDone) {
-        var lineUserId    = String(data[i][COL.LINE_USER_ID  - 1] || "");
-        var customerName  = String(data[i][COL.CUSTOMER_NAME - 1] || "");
-        var task          = String(data[i][COL.TASK          - 1] || "");
-        var deliveryLink  = body.deliveryLink !== undefined
+        var lineUserId   = String(data[i][COL.LINE_USER_ID  - 1] || "");
+        var customerName = String(data[i][COL.CUSTOMER_NAME - 1] || "");
+        var task         = String(data[i][COL.TASK          - 1] || "");
+        var deliveryLink = body.deliveryLink !== undefined
           ? String(body.deliveryLink)
           : String(data[i][COL.DELIVERY_LINK - 1] || "");
 

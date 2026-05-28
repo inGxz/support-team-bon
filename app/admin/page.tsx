@@ -457,9 +457,19 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState(30);
-  const [activeTab, setActiveTab] = useState<"jobs" | "report">("jobs");
+  const [activeTab, setActiveTab] = useState<"jobs" | "report" | "log">("jobs");
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const toggleCard = (jobId: string) => setExpandedCards((p) => ({ ...p, [jobId]: !p[jobId] }));
+
+  // Pagination
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(1);
+
+  // Activity Log
+  type LogEntry = { timestamp: string; jobId: string; actor: string; field: string; oldValue: string; newValue: string };
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logSearch, setLogSearch] = useState("");
   const [reportMonth, setReportMonth] = useState<string>("");
   const [reportDateFrom, setReportDateFrom] = useState<string>("");
   const [reportDateTo, setReportDateTo] = useState<string>("");
@@ -493,9 +503,27 @@ export default function AdminPage() {
     if (!silent) setLoading(false);
   }, []);
 
+  const fetchLogs = useCallback(async () => {
+    const token = sessionStorage.getItem("adminAuth") || "";
+    setLogsLoading(true);
+    try {
+      const res  = await fetch("/api/admin/logs?limit=300", { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.logs) setLogs(data.logs);
+    } catch {}
+    setLogsLoading(false);
+  }, []);
+
   useEffect(() => {
     if (isLoggedIn) fetchJobs();
   }, [isLoggedIn, fetchJobs]);
+
+  useEffect(() => {
+    if (isLoggedIn && activeTab === "log") fetchLogs();
+  }, [isLoggedIn, activeTab, fetchLogs]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [filter, workflowFilter, search]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -602,6 +630,10 @@ export default function AdminPage() {
     const matchSearch = !q || j.jobId.toLowerCase().includes(q) || j.customerName.toLowerCase().includes(q) || j.agent.toLowerCase().includes(q);
     return matchStatus && matchWorkflow && matchSearch;
   });
+
+  const totalPages   = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage     = Math.min(page, totalPages);
+  const paginated    = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const overdueCount = jobs.filter((j) => isOverdue(j.deadline, j.status)).length;
 
@@ -752,7 +784,7 @@ export default function AdminPage() {
       {/* Tab navigation */}
       <div className="bg-white border-b border-gray-200 sticky top-[72px] z-10">
         <div className="max-w-4xl mx-auto px-4 flex gap-1 pt-2">
-          {(["jobs", "report"] as const).map((key) => (
+          {(["jobs", "report", "log"] as const).map((key) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
@@ -762,7 +794,7 @@ export default function AdminPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              {key === "jobs" ? "📋 รายการงาน" : "📊 รีพอร์ตรายเดือน"}
+              {key === "jobs" ? "📋 รายการงาน" : key === "report" ? "📊 รีพอร์ตรายเดือน" : "🕓 Activity Log"}
             </button>
           ))}
         </div>
@@ -1077,6 +1109,86 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ══════════════════════ ACTIVITY LOG TAB ══════════════════════ */}
+        {activeTab === "log" && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="font-bold text-gray-800">🕓 Activity Log</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">บันทึกการเปลี่ยนแปลงทั้งหมดโดย Admin</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-purple-300 w-44 placeholder-gray-300"
+                    placeholder="🔍 ค้นหา Job ID..."
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                  />
+                  <button
+                    onClick={fetchLogs}
+                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                  >
+                    🔄 โหลดใหม่
+                  </button>
+                </div>
+              </div>
+
+              {/* Field label helper */}
+              <div className="px-5 py-2 bg-gray-50 border-b border-gray-100 flex gap-4 flex-wrap">
+                {[["status","สถานะ"],["deliveryLink","Delivery Link"],["priority","Priority"],["internalNote","Note ภายใน"]].map(([f,l]) => (
+                  <span key={f} className="text-xs text-gray-500"><span className="font-mono bg-gray-200 px-1 rounded text-gray-700">{f}</span> = {l}</span>
+                ))}
+              </div>
+
+              {logsLoading ? (
+                <div className="p-8 text-center text-gray-400 text-sm">⏳ กำลังโหลด...</div>
+              ) : logs.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="text-3xl mb-2">📭</div>
+                  <p className="text-gray-400 text-sm">ยังไม่มี log — จะเริ่มบันทึกหลัง Deploy GAS ใหม่</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {logs
+                    .filter((l) => !logSearch || l.jobId.toLowerCase().includes(logSearch.toLowerCase()))
+                    .map((l, idx) => {
+                      const fieldLabel: Record<string, string> = {
+                        status: "สถานะ", deliveryLink: "Delivery Link",
+                        priority: "Priority", internalNote: "Note ภายใน",
+                      };
+                      const fieldColor: Record<string, string> = {
+                        status: "bg-blue-50 text-blue-700 border-blue-100",
+                        deliveryLink: "bg-teal-50 text-teal-700 border-teal-100",
+                        priority: "bg-orange-50 text-orange-700 border-orange-100",
+                        internalNote: "bg-yellow-50 text-yellow-700 border-yellow-100",
+                      };
+                      return (
+                        <div key={idx} className="px-5 py-3 flex items-start gap-4 hover:bg-gray-50 transition">
+                          <span className="text-xs text-gray-400 shrink-0 mt-0.5 w-36">{l.timestamp}</span>
+                          <span className="font-mono text-xs font-bold text-purple-600 shrink-0 w-24">{l.jobId}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${fieldColor[l.field] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                            {fieldLabel[l.field] || l.field}
+                          </span>
+                          <div className="flex items-center gap-2 flex-wrap text-xs min-w-0">
+                            {l.oldValue ? (
+                              <span className="text-gray-400 line-through truncate max-w-[140px]" title={l.oldValue}>{l.oldValue || "—"}</span>
+                            ) : (
+                              <span className="text-gray-300 italic">ว่าง</span>
+                            )}
+                            <span className="text-gray-300">→</span>
+                            <span className="text-gray-800 font-semibold truncate max-w-[160px]" title={l.newValue}>{l.newValue || "—"}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ══════════════════════ JOBS TAB ══════════════════════ */}
         {activeTab === "jobs" && (
           <div className="space-y-4">
@@ -1211,7 +1323,7 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filtered.map((job) => {
+                {paginated.map((job) => {
                   const edit = editState[job.jobId] || { status: job.status, deliveryLink: job.deliveryLink || "" };
                   const st = statusStyle(edit.status);
                   const dirty = isDirty(job.jobId);
@@ -1447,6 +1559,44 @@ export default function AdminPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Pagination controls */}
+            {!loading && filtered.length > 0 && totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 px-1">
+                <span className="text-xs text-gray-400">
+                  แสดง {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} จาก {filtered.length} งาน
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="px-3 py-1.5 rounded-lg border text-sm font-medium bg-white text-gray-600 border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    ← ก่อนหน้า
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`w-8 h-8 rounded-lg text-sm font-semibold transition ${
+                        p === safePage
+                          ? "bg-purple-600 text-white shadow"
+                          : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    className="px-3 py-1.5 rounded-lg border text-sm font-medium bg-white text-gray-600 border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
+                    ถัดไป →
+                  </button>
+                </div>
               </div>
             )}
 
