@@ -904,6 +904,48 @@ export default function AdminPage() {
                     })}
                   </div>
                 )}
+
+                {/* Customer ranking */}
+                {reportJobs.length > 0 && (() => {
+                  const custMap: Record<string, number> = {};
+                  reportJobs.forEach((j) => {
+                    const name = j.customerName || "ไม่ระบุ";
+                    custMap[name] = (custMap[name] || 0) + 1;
+                  });
+                  const ranked = Object.entries(custMap).sort((a, b) => b[1] - a[1]);
+                  const max = ranked[0]?.[1] || 1;
+                  const medals = ["🥇", "🥈", "🥉"];
+                  return (
+                    <div className="bg-white rounded-xl border border-gray-100 p-4">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">👑 ลูกค้าสั่งงานสูงสุด</p>
+                      <div className="space-y-2">
+                        {ranked.map(([name, count], idx) => {
+                          const pct = Math.round((count / max) * 100);
+                          return (
+                            <div key={name}>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="font-semibold text-gray-700 flex items-center gap-1.5">
+                                  <span>{medals[idx] ?? `#${idx + 1}`}</span>
+                                  <span className="truncate max-w-[180px]">{name}</span>
+                                </span>
+                                <span className="font-bold text-purple-700 shrink-0">{count} งาน</span>
+                              </div>
+                              <div className="w-full bg-gray-100 rounded-full h-2">
+                                <div
+                                  className="h-2 rounded-full transition-all"
+                                  style={{
+                                    width: `${pct}%`,
+                                    background: idx === 0 ? "#f59e0b" : idx === 1 ? "#94a3b8" : idx === 2 ? "#cd7f32" : "#a78bfa",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>
