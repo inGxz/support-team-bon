@@ -830,70 +830,47 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {/* Per-workflow breakdown */}
-                {reportByWorkflow.length === 0 ? (
-                  <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
-                    <p className="text-gray-400">ไม่มีงานในช่วงที่เลือก</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {reportByWorkflow.map(({ wf, total, pending, inProgress, done, jobs: wfJobs }) => {
-                      const ws = WF_STYLE[wf];
-                      const donePct = total ? Math.round((done / total) * 100) : 0;
+                {/* 2-col layout: Customer ranking (left) + Workflow breakdown (right) */}
+                <div className="grid grid-cols-3 gap-3 items-start">
+
+                  {/* LEFT — Customer ranking */}
+                  <div className="col-span-1">
+                    {reportJobs.length === 0 ? (
+                      <div className="bg-white rounded-xl border border-gray-100 p-6 text-center">
+                        <p className="text-gray-400 text-sm">ไม่มีข้อมูล</p>
+                      </div>
+                    ) : (() => {
+                      const custMap: Record<string, number> = {};
+                      reportJobs.forEach((j) => {
+                        const name = j.customerName || "ไม่ระบุ";
+                        custMap[name] = (custMap[name] || 0) + 1;
+                      });
+                      const ranked = Object.entries(custMap).sort((a, b) => b[1] - a[1]);
+                      const max = ranked[0]?.[1] || 1;
+                      const medals = ["🥇", "🥈", "🥉"];
                       return (
-                        <div key={wf} className={`${ws.bg} border ${ws.border} rounded-xl overflow-hidden`}>
-                          <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg">{ws.icon}</span>
-                              <span className={`font-black text-base ${ws.text}`}>{wf}</span>
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full bg-white/60 ${ws.text}`}>{total} งาน</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
-                              {pending > 0    && <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">⏳ {pending} Pending</span>}
-                              {inProgress > 0 && <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">🔧 {inProgress} In Progress</span>}
-                              {done > 0       && <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">✅ {done} Done</span>}
-                            </div>
-                          </div>
-                          <div className="px-5 pb-2">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="flex-1 bg-white/60 rounded-full h-2 overflow-hidden">
-                                <div className="bg-green-400 h-2 rounded-full transition-all" style={{ width: `${donePct}%` }} />
-                              </div>
-                              <span className="text-xs font-bold text-green-600 w-12 text-right">{donePct}% Done</span>
-                            </div>
-                            {/* subType chips */}
-                            {(() => {
-                              const stCount: Record<string, number> = {};
-                              wfJobs.forEach((j) => { if (j.subType) stCount[j.subType] = (stCount[j.subType] || 0) + 1; });
-                              const entries = Object.entries(stCount).sort((a, b) => b[1] - a[1]);
-                              return entries.length > 0 ? (
-                                <div className="flex flex-wrap gap-1.5 pt-1 pb-1">
-                                  {entries.map(([st, cnt]) => (
-                                    <span key={st} className={`text-xs px-2.5 py-0.5 rounded-full bg-white/70 border ${ws.border} ${ws.text} font-semibold`}>
-                                      {st} <span className="opacity-60">×{cnt}</span>
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                          <div className="border-t border-white/40 divide-y divide-white/30">
-                            {wfJobs.map((j) => {
-                              const jSt = statusStyle(j.status || "Pending");
+                        <div className="bg-white rounded-xl border border-gray-100 p-4">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">👑 ลูกค้าสั่งงานสูงสุด</p>
+                          <div className="space-y-3">
+                            {ranked.map(([name, count], idx) => {
+                              const pct = Math.round((count / max) * 100);
                               return (
-                                <div key={j.jobId} className="px-5 py-2.5 flex items-center justify-between gap-3 bg-white/30">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <span className="font-bold text-purple-700 text-sm shrink-0">{j.jobId}</span>
-                                    <span className="text-sm text-gray-700 truncate">{j.customerName || "-"}</span>
-                                    <span className="text-xs text-gray-500 truncate hidden sm:block">{j.task}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    {isOverdue(j.deadline, j.status) && <span className="text-xs font-bold text-red-600">⚠️</span>}
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1 ${jSt.bg} ${jSt.text} ${jSt.border}`}>
-                                      <span className={`w-1.5 h-1.5 rounded-full ${jSt.dot}`} />
-                                      {j.status || "Pending"}
+                                <div key={name}>
+                                  <div className="flex items-center justify-between text-xs mb-1">
+                                    <span className="font-semibold text-gray-700 flex items-center gap-1.5">
+                                      <span>{medals[idx] ?? `#${idx + 1}`}</span>
+                                      <span className="truncate max-w-[140px]">{name}</span>
                                     </span>
-                                    <span className="text-xs text-gray-400 hidden sm:block">{formatDate(j.deadline)}</span>
+                                    <span className="font-bold text-purple-700 shrink-0">{count} งาน</span>
+                                  </div>
+                                  <div className="w-full bg-gray-100 rounded-full h-2">
+                                    <div
+                                      className="h-2 rounded-full transition-all"
+                                      style={{
+                                        width: `${pct}%`,
+                                        background: idx === 0 ? "#f59e0b" : idx === 1 ? "#94a3b8" : idx === 2 ? "#cd7f32" : "#a78bfa",
+                                      }}
+                                    />
                                   </div>
                                 </div>
                               );
@@ -901,51 +878,87 @@ export default function AdminPage() {
                           </div>
                         </div>
                       );
-                    })}
+                    })()}
                   </div>
-                )}
 
-                {/* Customer ranking */}
-                {reportJobs.length > 0 && (() => {
-                  const custMap: Record<string, number> = {};
-                  reportJobs.forEach((j) => {
-                    const name = j.customerName || "ไม่ระบุ";
-                    custMap[name] = (custMap[name] || 0) + 1;
-                  });
-                  const ranked = Object.entries(custMap).sort((a, b) => b[1] - a[1]);
-                  const max = ranked[0]?.[1] || 1;
-                  const medals = ["🥇", "🥈", "🥉"];
-                  return (
-                    <div className="bg-white rounded-xl border border-gray-100 p-4">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">👑 ลูกค้าสั่งงานสูงสุด</p>
-                      <div className="space-y-2">
-                        {ranked.map(([name, count], idx) => {
-                          const pct = Math.round((count / max) * 100);
+                  {/* RIGHT — Workflow breakdown */}
+                  <div className="col-span-2">
+                    {reportByWorkflow.length === 0 ? (
+                      <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
+                        <p className="text-gray-400">ไม่มีงานในช่วงที่เลือก</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {reportByWorkflow.map(({ wf, total, pending, inProgress, done, jobs: wfJobs }) => {
+                          const ws = WF_STYLE[wf];
+                          const donePct = total ? Math.round((done / total) * 100) : 0;
                           return (
-                            <div key={name}>
-                              <div className="flex items-center justify-between text-xs mb-1">
-                                <span className="font-semibold text-gray-700 flex items-center gap-1.5">
-                                  <span>{medals[idx] ?? `#${idx + 1}`}</span>
-                                  <span className="truncate max-w-[180px]">{name}</span>
-                                </span>
-                                <span className="font-bold text-purple-700 shrink-0">{count} งาน</span>
+                            <div key={wf} className={`${ws.bg} border ${ws.border} rounded-xl overflow-hidden`}>
+                              <div className="px-5 py-3 flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{ws.icon}</span>
+                                  <span className={`font-black text-base ${ws.text}`}>{wf}</span>
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full bg-white/60 ${ws.text}`}>{total} งาน</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
+                                  {pending > 0    && <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">⏳ {pending} Pending</span>}
+                                  {inProgress > 0 && <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">🔧 {inProgress} In Progress</span>}
+                                  {done > 0       && <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">✅ {done} Done</span>}
+                                </div>
                               </div>
-                              <div className="w-full bg-gray-100 rounded-full h-2">
-                                <div
-                                  className="h-2 rounded-full transition-all"
-                                  style={{
-                                    width: `${pct}%`,
-                                    background: idx === 0 ? "#f59e0b" : idx === 1 ? "#94a3b8" : idx === 2 ? "#cd7f32" : "#a78bfa",
-                                  }}
-                                />
+                              <div className="px-5 pb-2">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="flex-1 bg-white/60 rounded-full h-2 overflow-hidden">
+                                    <div className="bg-green-400 h-2 rounded-full transition-all" style={{ width: `${donePct}%` }} />
+                                  </div>
+                                  <span className="text-xs font-bold text-green-600 w-12 text-right">{donePct}% Done</span>
+                                </div>
+                                {/* subType chips */}
+                                {(() => {
+                                  const stCount: Record<string, number> = {};
+                                  wfJobs.forEach((j) => { if (j.subType) stCount[j.subType] = (stCount[j.subType] || 0) + 1; });
+                                  const entries = Object.entries(stCount).sort((a, b) => b[1] - a[1]);
+                                  return entries.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5 pt-1 pb-1">
+                                      {entries.map(([st, cnt]) => (
+                                        <span key={st} className={`text-xs px-2.5 py-0.5 rounded-full bg-white/70 border ${ws.border} ${ws.text} font-semibold`}>
+                                          {st} <span className="opacity-60">×{cnt}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </div>
+                              <div className="border-t border-white/40 divide-y divide-white/30">
+                                {wfJobs.map((j) => {
+                                  const jSt = statusStyle(j.status || "Pending");
+                                  return (
+                                    <div key={j.jobId} className="px-5 py-2.5 flex items-center justify-between gap-3 bg-white/30">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <span className="font-bold text-purple-700 text-sm shrink-0">{j.jobId}</span>
+                                        <span className="text-sm text-gray-700 truncate">{j.customerName || "-"}</span>
+                                        <span className="text-xs text-gray-500 truncate hidden sm:block">{j.task}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        {isOverdue(j.deadline, j.status) && <span className="text-xs font-bold text-red-600">⚠️</span>}
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1 ${jSt.bg} ${jSt.text} ${jSt.border}`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${jSt.dot}`} />
+                                          {j.status || "Pending"}
+                                        </span>
+                                        <span className="text-xs text-gray-400 hidden sm:block">{formatDate(j.deadline)}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  );
-                })()}
+                    )}
+                  </div>
+
+                </div>
               </>
             )}
           </div>
