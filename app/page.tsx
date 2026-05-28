@@ -1,0 +1,1239 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+// ใช้ Vercel proxy แทน GAS โดยตรง (แก้ CORS + mobile redirect)
+const SCRIPT_URL = "/api/gas";
+
+const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "2010203041-kgA7NuVs";
+
+const TODAY = new Date().toISOString().split("T")[0];
+
+// ================= LIFF TYPES =================
+declare global {
+  interface Window {
+    liff: {
+      init: (config: { liffId: string }) => Promise<void>;
+      isLoggedIn: () => boolean;
+      login: (config?: { redirectUri?: string }) => void;
+      logout: () => void;
+      getProfile: () => Promise<{ userId: string; displayName: string; pictureUrl: string; statusMessage?: string }>;
+      isInClient: () => boolean;
+      ready: Promise<void>;
+    };
+  }
+}
+
+// ================= SOUND =================
+function playDing() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.frequency.setValueAtTime(880, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.1);
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.6);
+  } catch {}
+}
+
+// ================= DATE FORMATTER =================
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "-";
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+// ================= GRADIENT TEXT =================
+function GradText({ gradient, children }: { gradient: string; children: React.ReactNode }) {
+  return (
+    <span style={{ background: gradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+      {children}
+    </span>
+  );
+}
+
+// ================= CONFIRM MODAL =================
+function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+        <div className="px-8 py-8 space-y-4">
+          <div className="text-4xl">⚠️</div>
+          <p className="text-gray-700 font-semibold">{message}</p>
+          <div className="flex gap-3">
+            <button onClick={onCancel} className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition">ยกเลิก</button>
+            <button onClick={onConfirm} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition">ยืนยัน</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= ERROR MODAL =================
+function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+        <div className="bg-red-500 h-2" />
+        <div className="px-8 py-8 space-y-4">
+          <div className="text-4xl">❌</div>
+          <h2 className="text-lg font-bold text-gray-800">เกิดข้อผิดพลาด</h2>
+          <p className="text-gray-500 text-sm">{message}</p>
+          <button onClick={onClose} className="w-full py-3 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition">ลองใหม่อีกครั้ง</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= PREVIEW MODAL =================
+function PreviewModal({ data, onConfirm, onCancel, submitting }: { data: Record<string, string>; onConfirm: () => void; onCancel: () => void; submitting: boolean }) {
+  const rows = Object.entries(data).filter(([, v]) => v && v !== "-");
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 px-6 py-4">
+          <h2 className="text-white text-xl font-bold">📋 ตรวจสอบข้อมูลก่อนส่งงาน</h2>
+          <p className="text-purple-100 text-sm mt-0.5">กรุณาตรวจสอบให้ครบถ้วนก่อนกดยืนยัน</p>
+        </div>
+        <div className="px-6 py-4 space-y-3 max-h-[55vh] overflow-y-auto">
+          {rows.map(([key, value]) => (
+            <div key={key} className="flex gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+              <span className="text-gray-400 text-sm min-w-[120px] font-medium">{key}</span>
+              <span className="text-gray-800 text-sm font-semibold break-all">{value}</span>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 flex gap-3 bg-gray-50 border-t border-gray-100">
+          <button onClick={onCancel} disabled={submitting} className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-100 transition disabled:opacity-50">✏️ แก้ไข</button>
+          <button onClick={onConfirm} disabled={submitting} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 text-white font-semibold shadow-md hover:scale-[1.02] transition disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            {submitting ? <><span className="animate-spin">⏳</span> กำลังส่ง...</> : "🚀 ยืนยันส่งงาน"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= JOB ID MODAL =================
+function JobIdModal({ jobId, onClose }: { jobId: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(jobId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareLine = () => {
+    const msg = encodeURIComponent(`🚀 Job ID ของคุณคือ: ${jobId}\nติดตามสถานะงานได้ที่ระบบ TEAMBON VT MARKET`);
+    window.open(`https://line.me/R/msg/text/?${msg}`, "_blank");
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+        <div className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 h-2" />
+        <div className="px-8 py-8 space-y-4">
+          <div className="text-5xl">🎉</div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">ส่งงานสำเร็จแล้ว!</h2>
+            <p className="text-gray-400 text-sm mt-1">กรุณาจด Job ID ไว้สำหรับติดตามงาน</p>
+          </div>
+          <div className="bg-purple-50 border-2 border-purple-200 rounded-xl px-6 py-4">
+            <p className="text-xs text-purple-400 font-semibold uppercase tracking-widest mb-1">Job ID</p>
+            <p className="text-2xl font-bold text-purple-600 tracking-wider mb-3">{jobId}</p>
+            <button onClick={handleCopy} className={`w-full py-2 rounded-lg text-sm font-semibold transition ${copied ? "bg-green-100 text-green-600 border border-green-300" : "bg-white text-purple-600 border border-purple-300 hover:bg-purple-100"}`}>
+              {copied ? "✅ คัดลอกแล้ว!" : "📋 คัดลอก Job ID"}
+            </button>
+          </div>
+
+          {/* Share buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleShareLine}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition flex items-center justify-center gap-2"
+              style={{ backgroundColor: "#06C755" }}
+            >
+              <span>💬</span> แชร์ Line
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-2"
+            >
+              🔗 Copy Link
+            </button>
+          </div>
+
+          <button onClick={onClose} className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 text-white font-semibold shadow-md hover:scale-[1.02] transition">
+            เสร็จสิ้น
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= JOB HISTORY PANEL =================
+type JobRecord = { jobId: string; task: string; customerName: string; deadline: string; submittedAt: string };
+type MyJobItem = { jobId: string; customerName: string; task: string; deadline: string; status: string; timestamp: string; revisionCount?: string; subType?: string; workflowParams?: string };
+
+function JobHistoryPanel({ jobs, dark, onClose, onTrack }: { jobs: JobRecord[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void }) {
+  const card = dark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100";
+  const textMain = dark ? "text-white" : "text-gray-800";
+  const textSub = dark ? "text-gray-400" : "text-gray-500";
+  const bg = dark ? "bg-gray-900" : "bg-gray-50";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${dark ? "bg-gray-800" : "bg-white"}`}>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-white text-lg font-bold">📋 ประวัติงานที่ส่ง</h2>
+            <p className="text-purple-100 text-xs mt-0.5">{jobs.length} รายการล่าสุด</p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none transition">✕</button>
+        </div>
+
+        {/* List */}
+        <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+          {jobs.length === 0 ? (
+            <div className="px-6 py-10 text-center text-gray-400 text-sm">ยังไม่มีประวัติงานครับ</div>
+          ) : (
+            jobs.map((j) => {
+              const daysLeft = Math.ceil((new Date(j.deadline).getTime() - Date.now()) / 86400000);
+              const urgent = daysLeft >= 0 && daysLeft <= 2;
+              return (
+                <div key={j.jobId} className={`px-5 py-4 flex items-start justify-between gap-3 ${dark ? "hover:bg-gray-700" : "hover:bg-gray-50"} transition`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-purple-600 text-sm">{j.jobId}</span>
+                      {urgent && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">🔥 ด่วน</span>}
+                    </div>
+                    <p className={`text-sm font-medium mt-0.5 truncate ${textMain}`}>{j.customerName} — {j.task}</p>
+                    <p className={`text-xs mt-0.5 ${textSub}`}>
+                      📅 {formatDate(j.deadline)}
+                      {daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)"}
+                    </p>
+                    <p className={`text-xs ${textSub}`}>🕐 ส่งเมื่อ {j.submittedAt}</p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= MY JOBS PANEL =================
+function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobItem[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void; loading: boolean }) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ทั้งหมด");
+
+  const statusStyle = (s: string) => {
+    if (s === "Done" || s === "เสร็จแล้ว") return "bg-green-100 text-green-700 border-green-200";
+    if (s === "In Progress" || s === "กำลังทำ") return "bg-blue-100 text-blue-700 border-blue-200";
+    if (s === "Revision") return "bg-red-100 text-red-600 border-red-200";
+    return "bg-amber-100 text-amber-700 border-amber-200";
+  };
+  const statusIcon = (s: string) => {
+    if (s === "Done" || s === "เสร็จแล้ว") return "✅";
+    if (s === "In Progress" || s === "กำลังทำ") return "🔄";
+    if (s === "Revision") return "🔁";
+    return "⏳";
+  };
+
+  const filtered = jobs.filter((j) => {
+    const matchStatus =
+      statusFilter === "ทั้งหมด" ||
+      (statusFilter === "Pending"     && (j.status === "Pending" || !j.status)) ||
+      (statusFilter === "In Progress" && (j.status === "In Progress" || j.status === "กำลังทำ")) ||
+      (statusFilter === "Done"        && (j.status === "Done" || j.status === "เสร็จแล้ว")) ||
+      (statusFilter === "Revision"    && j.status === "Revision");
+    const q = search.toLowerCase();
+    const matchSearch = !q || j.jobId.toLowerCase().includes(q) || j.task.toLowerCase().includes(q) || (j.subType || "").toLowerCase().includes(q);
+    return matchStatus && matchSearch;
+  });
+
+  const FILTERS = [
+    { label: "ทั้งหมด", count: jobs.length },
+    { label: "Pending",     count: jobs.filter((j) => j.status === "Pending" || !j.status).length },
+    { label: "In Progress", count: jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length },
+    { label: "Revision",    count: jobs.filter((j) => j.status === "Revision").length },
+    { label: "Done",        count: jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${dark ? "bg-gray-800" : "bg-white"}`}>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-teal-500 to-green-500 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-white text-lg font-bold">👤 งานของฉัน</h2>
+            <p className="text-teal-100 text-xs mt-0.5">
+              {loading ? "กำลังโหลด..." : `${filtered.length} / ${jobs.length} รายการ`}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none transition">✕</button>
+        </div>
+
+        {/* Search + Filter */}
+        {!loading && jobs.length > 0 && (
+          <div className={`px-4 pt-3 pb-2 space-y-2 border-b ${dark ? "border-gray-700 bg-gray-800" : "border-gray-100 bg-white"}`}>
+            <input
+              type="text"
+              placeholder="🔍 ค้นหา Job ID, ประเภทงาน..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`w-full px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2 focus:ring-teal-300 ${dark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-gray-50 border-gray-200 text-gray-800"}`}
+            />
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {FILTERS.map(({ label, count }) => (
+                <button
+                  key={label}
+                  onClick={() => setStatusFilter(label)}
+                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition border ${
+                    statusFilter === label
+                      ? "bg-teal-500 text-white border-teal-500"
+                      : dark ? "bg-gray-700 text-gray-300 border-gray-600" : "bg-white text-gray-500 border-gray-200 hover:border-teal-300"
+                  }`}
+                >
+                  {label} {count > 0 && <span className="opacity-70">({count})</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* List */}
+        <div className="max-h-[55vh] overflow-y-auto">
+          {loading ? (
+            <div className="p-6 space-y-4 animate-pulse">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-1/3" />
+                  <div className="h-4 bg-gray-200 rounded w-2/3" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <div className="text-4xl mb-3">{jobs.length === 0 ? "📭" : "🔍"}</div>
+              <p className="text-gray-400 text-sm">{jobs.length === 0 ? "ยังไม่มีงานที่สั่งไว้" : "ไม่พบงานที่ตรงกับการค้นหา"}</p>
+              {jobs.length > 0 && <button onClick={() => { setSearch(""); setStatusFilter("ทั้งหมด"); }} className="mt-2 text-xs text-teal-500 hover:underline">ล้างการค้นหา</button>}
+            </div>
+          ) : (
+            <div className={`divide-y ${dark ? "divide-gray-700" : "divide-gray-100"}`}>
+              {filtered.map((j) => {
+                const daysLeft = Math.ceil((new Date(j.deadline).getTime() - Date.now()) / 86400000);
+                const isDone = j.status === "Done" || j.status === "เสร็จแล้ว";
+                const urgent = !isDone && daysLeft >= 0 && daysLeft <= 2;
+                return (
+                  <div key={j.jobId} className={`px-5 py-4 flex items-start justify-between gap-3 ${dark ? "hover:bg-gray-700" : "hover:bg-gray-50"} transition`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-bold text-purple-600 text-sm">{j.jobId}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${statusStyle(j.status)}`}>
+                          {statusIcon(j.status)} {j.status}
+                        </span>
+                        {urgent && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">🔥 ด่วน</span>}
+                      </div>
+                      <p className={`text-sm font-medium truncate ${dark ? "text-white" : "text-gray-800"}`}>{j.task}</p>
+                      <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                        📅 {formatDate(j.deadline)}
+                        {!isDone && (daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)")}
+                      </p>
+                      {j.timestamp && (
+                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+                          🕐 สั่งเมื่อ {String(j.timestamp)}
+                        </p>
+                      )}
+                      {j.subType && (
+                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                          📌 ประเภท: <span className="font-medium">{j.subType}</span>
+                        </p>
+                      )}
+                      {j.workflowParams && (
+                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"} break-all`}>
+                          ⚙️ {j.workflowParams}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= STEP SUMMARY =================
+function StepSummary({ items }: { items: { label: string; value: string }[] }) {
+  const filled = items.filter((i) => i.value && i.value !== i.label);
+  if (!filled.length) return null;
+  return (
+    <div className="flex flex-wrap gap-2 pb-1">
+      {filled.map((i) => (
+        <span key={i.label} className="px-3 py-1 bg-purple-50 border border-purple-200 text-purple-700 text-xs rounded-full font-medium">
+          {i.label}: <span className="font-bold">{i.value}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ================= LINE LOADING SCREEN =================
+function LiffLoadingScreen() {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center z-50" style={{ background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)" }}>
+      <div className="text-5xl mb-4 animate-bounce">💬</div>
+      <p className="text-white font-bold text-lg">กำลังโหลด...</p>
+      <p className="text-purple-200 text-sm mt-1">กรุณารอสักครู่</p>
+    </div>
+  );
+}
+
+// ================= LINE LOGIN SCREEN (fullscreen บังคับ) =================
+function LineLoginScreen({ onLogin, loading, error }: { onLogin: () => void; loading: boolean; error?: string | null }) {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center z-50 p-6" style={{ background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)" }}>
+      {/* Logo / Header */}
+      <div className="text-center mb-10">
+        <div className="text-6xl mb-3">🚀</div>
+        <h1 className="text-white text-2xl font-black tracking-widest uppercase">SUPPORT TEAMBON</h1>
+        <p className="text-purple-200 text-sm tracking-widest uppercase mt-1">VT MARKET</p>
+      </div>
+
+      {/* Card */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+        <div className="h-2" style={{ background: "#06C755" }} />
+        <div className="px-8 py-8 space-y-5">
+          <div className="text-5xl">💚</div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">เข้าสู่ระบบด้วย LINE</h2>
+            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+              กรุณา Login ด้วย LINE ของคุณก่อนใช้งาน<br />
+              ระบบจะจำ Job ID ของคุณโดยอัตโนมัติ<br />
+              และแจ้งสถานะงานผ่าน LINE
+            </p>
+          </div>
+          <button
+            onClick={onLogin}
+            disabled={loading}
+            className="w-full py-4 rounded-xl font-bold text-white text-base transition flex items-center justify-center gap-3 disabled:opacity-60 active:scale-95"
+            style={{ backgroundColor: "#06C755" }}
+          >
+            {loading ? (
+              <><span className="animate-spin">⏳</span> กำลังเชื่อมต่อ...</>
+            ) : (
+              <><span className="text-xl">💬</span> Login ด้วย LINE</>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= MAIN PAGE =================
+export default function Page() {
+  const [dark, setDark] = useState(false);
+
+  // BASE
+  const [customerName, setCustomerName] = useState("");
+  const [agent, setAgent] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [detail, setDetail] = useState("");
+  const [refLink, setRefLink] = useState("");
+  const [taskType, setTaskType] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // CUSTOMER SUGGEST
+  const [allCustomers, setAllCustomers] = useState<string[]>([]);
+  const [customerSuggestions, setCustomerSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // VIDEO
+  const [step, setStep] = useState(0);
+  const [platform, setPlatform] = useState("Platform");
+  const [goal, setGoal] = useState("Goal");
+  const [mood, setMood] = useState("Mood");
+  const [music, setMusic] = useState("Music");
+  const [voice, setVoice] = useState("Voice");
+  const [stepError, setStepError] = useState("");
+
+  // DESIGN / ADS
+  const [designStep, setDesignStep] = useState(0);
+  const [designType, setDesignType] = useState("");
+  const [designColorTheme, setDesignColorTheme] = useState("");
+  const [adsType, setAdsType] = useState("");
+  const [contentType, setContentType] = useState("");
+  const [filmingType, setFilmingType] = useState("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [recentJobs, setRecentJobs] = useState<string[]>([]);
+
+  // JOB HISTORY
+  const [jobHistory, setJobHistory] = useState<JobRecord[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // MY JOBS
+  const [showMyJobs, setShowMyJobs] = useState(false);
+  const [myJobsList, setMyJobsList] = useState<MyJobItem[]>([]);
+  const [loadingMyJobs, setLoadingMyJobs] = useState(false);
+
+  // LINE / LIFF
+  const [liffReady, setLiffReady] = useState(false);
+  const [lineProfile, setLineProfile] = useState<{ userId: string; displayName: string; pictureUrl: string } | null>(null);
+  const [liffLoading, setLiffLoading] = useState(false);
+  const [showLineLogin, setShowLineLogin] = useState(false);
+  const [liffError, setLiffError] = useState<string | null>(null);
+
+  // MODALS
+  const [showPreview, setShowPreview] = useState(false);
+  const [pendingTask, setPendingTask] = useState<{ task: string; extra: string } | null>(null);
+  const [previewData, setPreviewData] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [jobIdModal, setJobIdModal] = useState<string | null>(null);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [confirmBack, setConfirmBack] = useState<(() => void) | null>(null);
+
+  // LIFF initialization — โหลด SDK แบบ dynamic แล้วรอ onload
+  useEffect(() => {
+    let cancelled = false;
+
+    const initLiff = async () => {
+      try {
+        await window.liff.init({ liffId: LIFF_ID });
+        if (cancelled) return;
+        setLiffReady(true);
+        if (window.liff.isLoggedIn()) {
+          const profile = await window.liff.getProfile();
+          if (cancelled) return;
+          setLineProfile(profile);
+          setCustomerName((prev) => prev || profile.displayName);
+        }
+      } catch (err: any) {
+        console.error("LIFF init error:", err);
+        if (!cancelled) {
+          setLiffError(String(err?.message || err));
+          setLiffReady(true);
+        }
+      } finally {
+        if (!cancelled) setLiffLoading(false);
+      }
+    };
+
+    // ถ้า LIFF SDK โหลดไปแล้ว (เช่น หลัง redirect กลับมา)
+    if (window.liff) {
+      setLiffLoading(true);
+      initLiff();
+      return () => { cancelled = true; };
+    }
+
+    // โหลด LIFF SDK แบบ dynamic script
+    const script = document.createElement("script");
+    script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+    script.async = true;
+    script.onload = () => {
+      if (!cancelled) {
+        setLiffLoading(true);
+        initLiff();
+      }
+    };
+    script.onerror = () => {
+      console.error("LIFF SDK failed to load");
+      if (!cancelled) setLiffReady(true);
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    try {
+      const jobs = localStorage.getItem("recentJobs");
+      if (jobs) setRecentJobs(JSON.parse(jobs));
+      const customers = localStorage.getItem("allCustomers");
+      if (customers) setAllCustomers(JSON.parse(customers));
+      const history = localStorage.getItem("jobHistory");
+      if (history) setJobHistory(JSON.parse(history));
+      const savedDark = localStorage.getItem("darkMode");
+      if (savedDark) setDark(JSON.parse(savedDark));
+    } catch {}
+  }, []);
+
+
+  const handleLineLogin = () => {
+    try {
+      if (window.liff) {
+        window.liff.login();
+      } else {
+        // LIFF SDK ยังไม่โหลด → redirect ไป LIFF URL โดยตรง
+        window.location.href = `https://liff.line.me/${LIFF_ID}`;
+      }
+    } catch (err) {
+      console.error("LINE login error:", err);
+      // fallback กรณี error
+      window.location.href = `https://liff.line.me/${LIFF_ID}`;
+    }
+  };
+
+  const handleLineLogout = () => {
+    try {
+      if (window.liff) {
+        window.liff.logout();
+        setLineProfile(null);
+        setShowLineLogin(true);
+      }
+    } catch (err) {
+      console.error("LINE logout error:", err);
+    }
+  };
+
+  const fetchMyJobs = async () => {
+    if (!lineProfile) return;
+    setShowMyJobs(true);
+    setLoadingMyJobs(true);
+    setMyJobsList([]);
+    try {
+      const url = `${SCRIPT_URL}?lineUserId=${encodeURIComponent(lineProfile.userId)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.jobs) setMyJobsList(data.jobs);
+    } catch {
+      // silent fail — panel still shows with empty state
+    } finally {
+      setLoadingMyJobs(false);
+    }
+  };
+
+  const saveRecentJob = (jobId: string) => {
+    try {
+      const updated = [jobId, ...recentJobs.filter((j) => j !== jobId)].slice(0, 5);
+      setRecentJobs(updated);
+      localStorage.setItem("recentJobs", JSON.stringify(updated));
+    } catch {}
+  };
+
+  const saveJobHistory = (jobId: string, task: string) => {
+    try {
+      const record: JobRecord = {
+        jobId,
+        task,
+        customerName,
+        deadline,
+        submittedAt: new Date().toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }),
+      };
+      const updated = [record, ...jobHistory].slice(0, 50);
+      setJobHistory(updated);
+      localStorage.setItem("jobHistory", JSON.stringify(updated));
+    } catch {}
+  };
+
+  const saveCustomer = (name: string) => {
+    try {
+      const updated = [name, ...allCustomers.filter((c) => c !== name)].slice(0, 20);
+      setAllCustomers(updated);
+      localStorage.setItem("allCustomers", JSON.stringify(updated));
+    } catch {}
+  };
+
+  const toggleDark = () => {
+    setDark((d) => { localStorage.setItem("darkMode", JSON.stringify(!d)); return !d; });
+  };
+
+  // STYLES
+  const bg = dark ? "bg-gray-900" : "bg-gray-100";
+  const card = dark ? "bg-gray-800 border border-gray-700 rounded-2xl shadow-sm p-6" : "bg-white border border-gray-100 rounded-2xl shadow-sm p-6";
+  const inputCls = (hasError?: boolean) =>
+    `w-full p-3 rounded-xl border ${hasError ? "border-red-400 ring-2 ring-red-200" : dark ? "border-gray-600 bg-gray-700 text-white" : "border-gray-200 text-gray-900"} focus:ring-2 focus:ring-purple-300 outline-none transition`;
+  const labelCls = dark ? "text-sm font-semibold text-gray-300 flex items-center gap-2" : "text-sm font-semibold text-gray-700 flex items-center gap-2";
+  const btnPrimary = "w-full p-3 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 text-white font-semibold shadow-md hover:scale-[1.02] transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100";
+  const btnBack = `w-full p-3 rounded-xl border-2 ${dark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-200 text-gray-500 hover:bg-gray-50"} font-semibold transition flex items-center justify-center gap-2`;
+
+  // VALIDATION
+  const validateBase = () => {
+    const e: Record<string, string> = {};
+    if (!customerName.trim()) e.customerName = "กรุณากรอกชื่อลูกค้า";
+    if (!agent.trim()) e.agent = "กรุณากรอกชื่อเซลล์";
+    if (!deadline) e.deadline = "กรุณาเลือก Deadline";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const stepValues: Record<number, string> = { 0: platform, 1: goal, 2: mood, 3: music, 4: voice };
+  const stepDefaults: Record<number, string> = { 0: "Platform", 1: "Goal", 2: "Mood", 3: "Music", 4: "Voice" };
+
+  const handleNextStep = (next: number) => {
+    if (!stepValues[step] || stepValues[step] === stepDefaults[step]) {
+      setStepError(`กรุณาเลือก ${stepDefaults[step]} ก่อน`);
+      return;
+    }
+    setStepError("");
+    setStep(next);
+  };
+
+  const handleBackWithConfirm = (action: () => void, hasProgress: boolean) => {
+    if (hasProgress) setConfirmBack(() => action);
+    else action();
+  };
+
+  // OPEN PREVIEW
+  const openPreview = (task: string, extra: string) => {
+    if (!validateBase()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    const base: Record<string, string> = {
+      "👤 ลูกค้า": customerName,
+      "🧑‍💼 เซลล์": agent,
+      "📦 ประเภทงาน": task,
+      "📅 Deadline": deadline,
+      "📝 รายละเอียด": detail || "-",
+      "🔗 ลิ้งอ้างอิง": refLink || "-",
+    };
+    extra.split("|").map((s) => s.trim()).filter(Boolean).forEach((part) => {
+      const [key, ...rest] = part.split(":");
+      if (key && rest.length) {
+        const icons: Record<string, string> = { Platform: "📱 Platform", Goal: "🎯 Goal", Mood: "🎭 Mood", Music: "🎵 Music", Voice: "🎙️ Voice", Type: "🖼️ ประเภท Design", AdsType: "📢 ประเภท Ads", ColorTheme: "🎨 ธีมสี" };
+        const label = icons[key.trim()] ?? key.trim();
+        const value = rest.join(":").trim();
+        if (value && value !== "-") base[label] = value;
+      }
+    });
+    if (imageFiles.length > 0) base["🖼️ รูปแนบ"] = imageFiles.map(f => f.name).join(", ");
+    setPreviewData(base);
+    setPendingTask({ task, extra });
+    setShowPreview(true);
+  };
+
+  const submitTask = async (task: string, extra: string) => {
+    setSubmitting(true);
+    try {
+      const lineUserId = lineProfile?.userId || null;
+
+      // Convert images to base64 if provided
+      let imageBase64s: string[] = [];
+      let imageNames: string[] = [];
+      let imageMimes: string[] = [];
+      if (imageFiles.length > 0) {
+        setImageUploading(true);
+        for (const file of imageFiles) {
+          const b64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const result = ev.target?.result as string;
+              resolve(result.split(",")[1] || "");
+            };
+            reader.readAsDataURL(file);
+          });
+          imageBase64s.push(b64);
+          imageNames.push(file.name);
+          imageMimes.push(file.type);
+        }
+        setImageUploading(false);
+      }
+      // แยก subType กับ workflowParams ออกจาก extra
+      // extra รูปแบบ: "Platform:TikTok | Goal:Branding | Mood:Cinematic | Music:Epic | Voice:AI"
+      // หรือ "Type:Logo | Detail:..." สำหรับ Design/Ads/Content/Filming
+      let subType = "";
+      let workflowParams = "";
+      if (extra) {
+        const parts = extra.split("|").map((s) => s.trim());
+        // หา subType จาก Type: หรือ AdsType: หรือ Platform: (field แรก)
+        const typeEntry = parts.find((p) => p.startsWith("Type:") || p.startsWith("AdsType:") || p.startsWith("Platform:") || p.startsWith("ColorTheme:"));
+        if (typeEntry) {
+          subType = typeEntry.split(":").slice(1).join(":").trim();
+          workflowParams = parts.filter((p) => p !== typeEntry && !p.startsWith("Detail:")).join(" | ");
+        } else {
+          workflowParams = parts.filter((p) => !p.startsWith("Detail:")).join(" | ");
+        }
+      }
+
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          type: "create",
+          customerName,
+          agent,
+          taskType,
+          task,
+          detail,
+          reference: refLink,
+          deadline,
+          lineUserId,
+          subType,
+          workflowParams,
+          imageBase64s,
+          imageNames,
+          imageMimes,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      playDing();
+      saveRecentJob(data.jobId);
+      saveJobHistory(data.jobId, task);
+      saveCustomer(customerName);
+      setJobIdModal(data.jobId);
+
+      // Send LINE push notification if user is logged in
+      if (lineUserId) {
+        try {
+          await fetch("/api/line/push", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: lineUserId,
+              jobId: data.jobId,
+              type: "created",
+              customerName,
+              taskLabel: task,
+            }),
+          });
+        } catch {
+          // Push failure is non-critical — don't block the flow
+          console.warn("LINE push failed");
+        }
+      }
+
+      resetAll();
+    } catch {
+      setErrorModal("ไม่สามารถส่งงานได้ กรุณาตรวจสอบการเชื่อมต่ออินเตอร์เน็ตแล้วลองใหม่อีกครั้ง");
+    } finally {
+      setSubmitting(false);
+      setShowPreview(false);
+      setPendingTask(null);
+    }
+  };
+
+  const handleConfirm = () => { if (pendingTask) submitTask(pendingTask.task, pendingTask.extra); };
+
+  const resetAll = () => {
+    setTaskType(""); setStep(0);
+    setPlatform("Platform"); setGoal("Goal"); setMood("Mood"); setMusic("Music"); setVoice("Voice");
+    setDesignType(""); setDesignStep(0); setDesignColorTheme(""); setAdsType(""); setDeadline(""); setDetail(""); setRefLink(""); setErrors({});
+    setImageFiles([]); setImagePreviews([]); setContentType(""); setFilmingType("");
+  };
+
+
+  // CUSTOMER SUGGEST
+  const handleCustomerInput = (val: string) => {
+    setCustomerName(val);
+    setErrors((p) => ({ ...p, customerName: "" }));
+    if (val.length > 0) {
+      const filtered = allCustomers.filter((c) => c.toLowerCase().includes(val.toLowerCase()));
+      setCustomerSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  // บังคับ login — แสดงหน้า loading / login ก่อนถ้ายังไม่ได้ login
+  if (!liffReady) return <LiffLoadingScreen />;
+  if (!lineProfile) return <LineLoginScreen onLogin={handleLineLogin} loading={liffLoading} error={liffError} />;
+
+  return (
+    <main className={`min-h-screen ${bg} p-4 transition-colors duration-300`}>
+
+      {showPreview && <PreviewModal data={previewData} onConfirm={handleConfirm} onCancel={() => !submitting && setShowPreview(false)} submitting={submitting} />}
+      {jobIdModal && <JobIdModal jobId={jobIdModal} onClose={() => setJobIdModal(null)} />}
+      {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
+      {confirmBack && <ConfirmModal message="ข้อมูลที่กรอกไปจะหายทั้งหมด ต้องการกลับจริงไหม?" onConfirm={() => { confirmBack(); setConfirmBack(null); }} onCancel={() => setConfirmBack(null)} />}
+      {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setShowHistory(false); window.open(`/revision?jobId=${id}`, "_blank"); }} />}
+      {showMyJobs && <MyJobsPanel jobs={myJobsList} dark={dark} onClose={() => setShowMyJobs(false)} onTrack={(id) => { setShowMyJobs(false); window.open(`/revision?jobId=${id}`, "_blank"); }} loading={loadingMyJobs} />}
+
+      <div className="max-w-5xl mx-auto space-y-6">
+
+        {/* HEADER */}
+        <div className="relative">
+          <div className="relative rounded-2xl overflow-hidden shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-700" />
+            <div className="absolute -top-8 -left-8 w-40 h-40 bg-purple-400/30 rounded-full blur-2xl" />
+            <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-indigo-400/30 rounded-full blur-2xl" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+
+            <div className="relative px-8 py-8 flex flex-col items-center text-center">
+              <span className="text-4xl mb-2">🚀</span>
+              <h1 className="text-2xl font-black tracking-widest uppercase" style={{ background: "linear-gradient(90deg,#fff 0%,#e0d7ff 40%,#fff 70%,#c4b5fd 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                SUPPORT TEAMBON
+              </h1>
+              <h2 className="text-lg font-bold tracking-[0.3em] uppercase mt-1" style={{ background: "linear-gradient(90deg,#c4b5fd 0%,#fff 50%,#a5b4fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                VT MARKET
+              </h2>
+              <div className="mt-4 flex items-center gap-3 w-full justify-center">
+                <div className="h-px w-10 bg-purple-300/50" />
+                <p className="text-xs tracking-[0.2em] uppercase font-semibold" style={{ background: "linear-gradient(90deg,#b8860b 0%,#ffd700 30%,#fffacd 55%,#ffd700 75%,#b8860b 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                  Premium Workflow System
+                </p>
+                <div className="h-px w-10 bg-purple-300/50" />
+              </div>
+            </div>
+          </div>
+
+          {/* Buttons — outside overflow-hidden */}
+          <div className="absolute top-4 right-4 flex gap-2 z-10 items-center">
+            <button
+              onClick={toggleDark}
+              className="bg-white/20 hover:bg-white/30 text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm"
+            >
+              {dark ? "☀️" : "🌙"}
+            </button>
+            {/* LINE profile pill */}
+            {lineProfile ? (
+              <button
+                onClick={handleLineLogout}
+                title="Logout จาก LINE"
+                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm max-w-[140px]"
+              >
+                {lineProfile.pictureUrl && (
+                  <img src={lineProfile.pictureUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                )}
+                <span className="truncate">{lineProfile.displayName}</span>
+                <span className="opacity-60 text-[10px] shrink-0">✕</span>
+              </button>
+            ) : liffReady ? (
+              <button
+                onClick={() => setShowLineLogin(true)}
+                className="flex items-center gap-1.5 bg-[#06C755]/80 hover:bg-[#06C755] text-white rounded-xl px-3 py-1.5 text-xs font-semibold transition backdrop-blur-sm"
+              >
+                💬 LINE Login
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* CUSTOMER */}
+        <div className={card + " space-y-4"}>
+          <div className="relative">
+            <label className={labelCls}>
+              👤 ลูกค้า
+              {lineProfile
+                ? <span className="text-xs text-green-500 font-normal">✅ ล็อคจาก LINE</span>
+                : <span className="text-xs text-gray-400">(กรุณาใส่ชื่อ)</span>
+              }
+            </label>
+            <div className="relative">
+              <input
+                className={inputCls(!!errors.customerName) + (lineProfile ? (dark ? " bg-gray-700 cursor-not-allowed text-white" : " bg-green-50 cursor-not-allowed text-gray-700") : "")}
+                placeholder="Customer Name"
+                value={customerName}
+                onChange={(e) => !lineProfile && handleCustomerInput(e.target.value)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                autoComplete="off"
+                readOnly={!!lineProfile}
+              />
+              {lineProfile && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-sm">🔒</span>
+              )}
+            </div>
+            {errors.customerName && <p className="text-red-400 text-xs mt-1">⚠️ {errors.customerName}</p>}
+            {showSuggestions && (
+              <div className={`absolute z-10 w-full mt-1 rounded-xl shadow-lg border overflow-hidden ${dark ? "bg-gray-800 border-gray-600" : "bg-white border-gray-200"}`}>
+                {customerSuggestions.map((c) => (
+                  <button key={c} className={`w-full text-left px-4 py-2.5 text-sm ${dark ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-purple-50"} transition`} onClick={() => { setCustomerName(c); setShowSuggestions(false); setErrors((p) => ({ ...p, customerName: "" })); }}>
+                    👤 {c}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className={labelCls}>🧑‍💼 เซลล์ <span className="text-xs text-gray-400">(ผู้ดูแล)</span></label>
+            <input className={inputCls(!!errors.agent)} placeholder="Agent Name" value={agent} onChange={(e) => { setAgent(e.target.value); setErrors((p) => ({ ...p, agent: "" })); }} />
+            {errors.agent && <p className="text-red-400 text-xs mt-1">⚠️ {errors.agent}</p>}
+          </div>
+
+          <div>
+            <label className={labelCls}>📅 Deadline <span className="text-xs text-gray-400">(วันครบกำหนดส่งงาน)</span></label>
+            <input type="date" min={TODAY} className={inputCls(!!errors.deadline)} value={deadline} onChange={(e) => { setDeadline(e.target.value); setErrors((p) => ({ ...p, deadline: "" })); }} />
+            {errors.deadline ? <p className="text-red-400 text-xs mt-1">⚠️ {errors.deadline}</p> : <p className="text-xs text-gray-400 mt-1">⚠️ กรุณาเลือกวันที่ต้องการให้ส่งงานเสร็จ</p>}
+          </div>
+
+          <textarea className={inputCls() + " h-24 resize-none"} placeholder="Detail / กรุณากรอกรายละเอียดที่ต้องการ..." value={detail} onChange={(e) => setDetail(e.target.value)} />
+
+          <div>
+            <label className={labelCls}>🔗 ลิ้งตัวอย่าง / Google Drive <span className="text-xs text-gray-400">(ถ้ามี)</span></label>
+            <div className="relative">
+              <input className={inputCls() + " pl-10"} placeholder="https://drive.google.com/..." value={refLink} onChange={(e) => setRefLink(e.target.value)} />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔗</span>
+            </div>
+            {refLink && (
+              <a href={refLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-2 text-xs text-purple-500 hover:text-purple-700 hover:underline transition">
+                ↗ เปิดลิ้งในแท็บใหม่
+              </a>
+            )}
+          </div>
+
+          {/* IMAGE UPLOAD — max 3 */}
+          <div>
+            <label className={labelCls}>🖼️ แนบรูปภาพ <span className="text-xs text-gray-400">(ไม่บังคับ — สูงสุด 3 รูป)</span></label>
+            <div className="space-y-2">
+              {imagePreviews.map((preview, idx) => (
+                <div key={idx} className="relative rounded-xl overflow-hidden border border-purple-100 shadow-sm">
+                  <img src={preview} alt={`preview ${idx + 1}`} className="w-full max-h-40 object-contain bg-gray-50" />
+                  <button type="button"
+                    onClick={() => {
+                      setImageFiles((prev) => prev.filter((_, i) => i !== idx));
+                      setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow">✕</button>
+                  <div className="absolute bottom-2 left-2 bg-black/40 text-white text-xs px-2 py-0.5 rounded-full">{imageFiles[idx]?.name}</div>
+                </div>
+              ))}
+              {imageFiles.length < 3 && (
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div className="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-purple-200 hover:bg-purple-50/50 transition">
+                    <span className="text-lg">➕</span>
+                    <span className="text-sm text-gray-400">
+                      {imageFiles.length === 0 ? "เลือกไฟล์รูป (JPG, PNG, WEBP — ไม่เกิน 5MB)" : `เพิ่มรูปอีก (${3 - imageFiles.length} รูปที่เหลือ)`}
+                    </span>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) { alert("รูปใหญ่เกินไป — กรุณาเลือกรูปที่มีขนาดไม่เกิน 5MB"); return; }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      setImageFiles((prev) => [...prev, file]);
+                      setImagePreviews((prev) => [...prev, ev.target?.result as string]);
+                    };
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* TASK TYPE */}
+        {!taskType && (
+          <div className={card + " space-y-3"}>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#7c3aed 0%,#6366f1 50%,#8b5cf6 100%)">✦ Select Workflow</GradText></h2>
+            <button className={btnPrimary} onClick={() => setTaskType("Video")}>🎬 Video Workflow</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Design")}>🎨 Design Workflow</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Ads")}>📢 Ads Workflow</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Content")}>✍️ Content Workflow</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Filming")}>🎥 Filming Workflow</button>
+          </div>
+        )}
+
+        {/* VIDEO */}
+        {taskType === "Video" && (
+          <div className={card + " space-y-4"}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#a855f7 0%,#ec4899 60%,#f472b6 100%)">🎬 Video Workflow</GradText></h2>
+              <span className={`text-xs ${dark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-400"} px-3 py-1 rounded-full`}>Step {step + 1} / 5</span>
+            </div>
+            <div className={`w-full ${dark ? "bg-gray-700" : "bg-gray-100"} rounded-full h-2`}>
+              <div className="bg-gradient-to-r from-purple-500 to-pink-400 h-2 rounded-full transition-all duration-500" style={{ width: `${((step + 1) / 5) * 100}%` }} />
+            </div>
+            <StepSummary items={[{ label: "Platform", value: platform }, { label: "Goal", value: goal }, { label: "Mood", value: mood }, { label: "Music", value: music }]} />
+
+            {step === 0 && (<>
+              <select className={inputCls()} value={platform} onChange={(e) => { setPlatform(e.target.value); setStepError(""); }}>
+                <option value="Platform">เลือก Platform</option>
+                <option>TikTok</option><option>Facebook Reels</option><option>YouTube Shorts</option><option>YouTube Long</option>
+              </select>
+              {stepError && <p className="text-red-400 text-xs">⚠️ {stepError}</p>}
+              <button className={btnPrimary} onClick={() => handleNextStep(1)}>Next →</button>
+              <button className={btnBack} onClick={() => handleBackWithConfirm(() => { setTaskType(""); setStep(0); setStepError(""); }, false)}>← กลับเลือก Workflow</button>
+            </>)}
+
+            {step === 1 && (<>
+              <select className={inputCls()} value={goal} onChange={(e) => { setGoal(e.target.value); setStepError(""); }}>
+                <option value="Goal">เลือก Goal</option>
+                <option>Branding</option><option>Client Story</option><option>Motivation</option><option>Event Promotion</option><option>Lead Generation</option><option>Education</option><option>Lifestyle&Vlog</option>
+              </select>
+              {stepError && <p className="text-red-400 text-xs">⚠️ {stepError}</p>}
+              <button className={btnPrimary} onClick={() => handleNextStep(2)}>Next →</button>
+              <button className={btnBack} onClick={() => { setStep(0); setStepError(""); }}>← กลับ</button>
+            </>)}
+
+            {step === 2 && (<>
+              <select className={inputCls()} value={mood} onChange={(e) => { setMood(e.target.value); setStepError(""); }}>
+                <option value="Mood">เลือก Mood</option>
+                <option>Cinematic</option><option>Luxury</option><option>Vlog</option><option>Fast Cut</option><option>Documentary</option><option>Inspirational</option><option>Professional</option><option>Casual</option>
+              </select>
+              {stepError && <p className="text-red-400 text-xs">⚠️ {stepError}</p>}
+              <button className={btnPrimary} onClick={() => handleNextStep(3)}>Next →</button>
+              <button className={btnBack} onClick={() => { setStep(1); setStepError(""); }}>← กลับ</button>
+            </>)}
+
+            {step === 3 && (<>
+              <select className={inputCls()} value={music} onChange={(e) => { setMusic(e.target.value); setStepError(""); }}>
+                <option value="Music">เลือก Music</option>
+                <option>Epic</option><option>Lo-fi</option><option>Motivational</option><option>Cinematic</option><option>ไม่มีเพลง</option><option>แล้วแต่ตัดต่อ</option>
+              </select>
+              {stepError && <p className="text-red-400 text-xs">⚠️ {stepError}</p>}
+              <button className={btnPrimary} onClick={() => handleNextStep(4)}>Next →</button>
+              <button className={btnBack} onClick={() => { setStep(2); setStepError(""); }}>← กลับ</button>
+            </>)}
+
+            {step === 4 && (<>
+              <select className={inputCls()} value={voice} onChange={(e) => { setVoice(e.target.value); setStepError(""); }}>
+                <option value="Voice">เลือก Voice</option>
+                <option>AI Voice</option><option>Real Voice</option><option>ไม่มี</option><option>พากย์เสียงใหม่</option>
+              </select>
+              {stepError && <p className="text-red-400 text-xs">⚠️ {stepError}</p>}
+              <button className={btnPrimary} onClick={() => openPreview("Video", `Platform:${platform} | Goal:${goal} | Mood:${mood} | Music:${music} | Voice:${voice}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
+              <button className={btnBack} onClick={() => { setStep(3); setStepError(""); }}>← กลับ</button>
+            </>)}
+          </div>
+        )}
+
+        {/* DESIGN */}
+        {taskType === "Design" && (
+          <div className={card + " space-y-4"}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#06b6d4 0%,#3b82f6 60%,#6366f1 100%)">🎨 Design Workflow</GradText></h2>
+              <span className={`text-xs ${dark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-400"} px-3 py-1 rounded-full`}>Step {designStep + 1} / 2</span>
+            </div>
+            <div className={`w-full ${dark ? "bg-gray-700" : "bg-gray-100"} rounded-full h-2`}>
+              <div className="bg-gradient-to-r from-cyan-400 to-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${((designStep + 1) / 2) * 100}%` }} />
+            </div>
+
+            {designStep === 0 && (<>
+              <label className={labelCls}>🖼️ ประเภทงาน Design</label>
+              <select className={inputCls()} value={designType} onChange={(e) => setDesignType(e.target.value)}>
+                <option value="">เลือกประเภท Design</option>
+                <option>Poster</option>
+                <option>Banner</option>
+                <option>Infographic</option>
+                <option>EA Box</option>
+                <option>Profile</option>
+                <option>Seminar</option>
+                <option>Webinar</option>
+                <option>Company Profile</option>
+                <option>Cover</option>
+                <option>Menu</option>
+                <option>Roll-up</option>
+                <option>Ads Creative</option>
+                <option>Presentation</option>
+                <option>Calendar</option>
+              </select>
+              <button className={btnPrimary} onClick={() => { if (!designType) { return; } setDesignStep(1); }}>Next →</button>
+              <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!designType)}>← กลับเลือก Workflow</button>
+            </>)}
+
+            {designStep === 1 && (<>
+              <label className={labelCls}>🎨 ธีมสีของงาน</label>
+              <select className={inputCls()} value={designColorTheme} onChange={(e) => setDesignColorTheme(e.target.value)}>
+                <option value="">เลือกธีมสี</option>
+                <option>Minimal White — ขาว เทา เรียบสะอาด</option>
+                <option>Corporate Blue — น้ำเงิน เป็นทางการ</option>
+                <option>Luxury Gold — ทอง ดำ หรูหรา</option>
+                <option>Bold & Vibrant — สีสด จัดจ้าน</option>
+                <option>Pastel Soft — พาสเทล นุ่มนวล</option>
+                <option>Dark & Modern — ดำ โมเดิร์น</option>
+                <option>Nature Green — เขียว ธรรมชาติ</option>
+                <option>Warm Tone — แดง ส้ม โทนอุ่น</option>
+                <option>Cool Tone — ฟ้า ม่วง โทนเย็น</option>
+                <option>Custom — ระบุเองในช่อง Detail</option>
+              </select>
+              <button className={btnPrimary} onClick={() => openPreview("Design", `Type:${designType} | ColorTheme:${designColorTheme || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
+              <button className={btnBack} onClick={() => setDesignStep(0)}>← กลับ</button>
+            </>)}
+          </div>
+        )}
+
+        {/* ADS */}
+        {taskType === "Ads" && (
+          <div className={card + " space-y-4"}>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#f97316 0%,#ef4444 60%,#f43f5e 100%)">📢 Ads Workflow</GradText></h2>
+            <select className={inputCls()} value={adsType} onChange={(e) => setAdsType(e.target.value)}>
+              <option value="">เลือกประเภท Ads</option>
+              <option>Facebook Ads</option><option>Google Ads</option><option>TikTok Ads</option>
+            </select>
+            <button className={btnPrimary} onClick={() => openPreview("Ads", `AdsType:${adsType || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
+            <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!adsType)}>← กลับเลือก Workflow</button>
+          </div>
+        )}
+
+        {/* CONTENT */}
+        {taskType === "Content" && (
+          <div className={card + " space-y-4"}>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#10b981 0%,#059669 60%,#047857 100%)">✍️ Content Workflow</GradText></h2>
+            <select className={inputCls()} value={contentType} onChange={(e) => setContentType(e.target.value)}>
+              <option value="">เลือกประเภท Content</option>
+              <option>Caption / Post</option><option>Script</option><option>Blog Post</option><option>Social Media Content</option><option>Email / Newsletter</option><option>Subtitle</option>
+            </select>
+            <button className={btnPrimary} onClick={() => openPreview("Content", `Type:${contentType || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
+            <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!contentType)}>← กลับเลือก Workflow</button>
+          </div>
+        )}
+
+        {/* FILMING */}
+        {taskType === "Filming" && (
+          <div className={card + " space-y-4"}>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#6366f1 0%,#8b5cf6 60%,#a78bfa 100%)">🎥 Filming Workflow</GradText></h2>
+            <select className={inputCls()} value={filmingType} onChange={(e) => setFilmingType(e.target.value)}>
+              <option value="">เลือกประเภท Filming</option>
+              <option>ถ่ายวิดีโอ On-location</option><option>Studio Filming</option><option>Product Shoot</option><option>Interview</option><option>Event Coverage</option><option>Drone Shot</option>
+            </select>
+            <button className={btnPrimary} onClick={() => openPreview("Filming", `Type:${filmingType || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
+            <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!filmingType)}>← กลับเลือก Workflow</button>
+          </div>
+        )}
+
+        {/* MY JOBS + HISTORY */}
+        <div className={card + " space-y-3"}>
+          <h2 className="text-xl font-bold">
+            <GradText gradient="linear-gradient(90deg,#10b981 0%,#06b6d4 60%,#3b82f6 100%)">📋 ติดตามงาน</GradText>
+          </h2>
+          <p className={`text-sm ${dark ? "text-gray-400" : "text-gray-500"}`}>ดูสถานะงานทั้งหมดของคุณได้ที่นี่</p>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <button
+              onClick={fetchMyJobs}
+              className="flex flex-col items-center gap-2 py-5 rounded-2xl bg-gradient-to-br from-teal-50 to-green-50 border border-teal-200 hover:from-teal-100 hover:to-green-100 transition active:scale-95"
+            >
+              <span className="text-3xl">👤</span>
+              <span className="text-sm font-bold text-teal-700">งานของฉัน</span>
+              <span className="text-xs text-teal-500">ดูงานทั้งหมดที่สั่ง</span>
+            </button>
+            <button
+              onClick={() => setShowHistory(true)}
+              className="flex flex-col items-center gap-2 py-5 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 hover:from-purple-100 hover:to-indigo-100 transition active:scale-95 relative"
+            >
+              <span className="text-3xl">📋</span>
+              <span className="text-sm font-bold text-purple-700">ประวัติการสั่งงาน</span>
+              <span className="text-xs text-purple-500">ดูรายการที่ผ่านมา</span>
+              {jobHistory.length > 0 && (
+                <span className="absolute top-2 right-2 bg-purple-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {jobHistory.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  );
+}
