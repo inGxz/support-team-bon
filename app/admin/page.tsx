@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 type Job = {
   jobId: string;
@@ -459,7 +459,26 @@ export default function AdminPage() {
   const [countdown, setCountdown] = useState(30);
   const [activeTab, setActiveTab] = useState<"jobs" | "report" | "log">("jobs");
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-  const toggleCard = (jobId: string) => setExpandedCards((p) => ({ ...p, [jobId]: !p[jobId] }));
+  const toggleCard = (jobId: string) => {
+    setExpandedCards((p) => {
+      const next = { ...p, [jobId]: !p[jobId] };
+      // Fetch card logs when expanding (only if not already loaded)
+      if (next[jobId] && !cardLogs[jobId]) {
+        const token = sessionStorage.getItem("adminAuth") || "";
+        setCardLogsLoading((pl) => ({ ...pl, [jobId]: true }));
+        fetch(`/api/admin/logs?jobId=${encodeURIComponent(jobId)}&limit=20`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.logs) setCardLogs((cl) => ({ ...cl, [jobId]: data.logs }));
+          })
+          .catch(() => {})
+          .finally(() => setCardLogsLoading((pl) => ({ ...pl, [jobId]: false })));
+      }
+      return next;
+    });
+  };
 
   // Pagination
   const PAGE_SIZE = 20;
@@ -470,6 +489,17 @@ export default function AdminPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logSearch, setLogSearch] = useState("");
+
+  // Card-level logs (per jobId)
+  const [cardLogs, setCardLogs] = useState<Record<string, LogEntry[]>>({});
+  const [cardLogsLoading, setCardLogsLoading] = useState<Record<string, boolean>>({});
+
+  // Session Timeout (30 min idle)
+  const TIMEOUT_MS   = 30 * 60 * 1000;
+  const WARNING_MS   = 2  * 60 * 1000;
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+  const [timeoutSecondsLeft, setTimeoutSecondsLeft] = useState(120);
+  const lastActivityRef = useRef<number>(Date.now());
   const [reportMonth, setReportMonth] = useState<string>("");
   const [reportDateFrom, setReportDateFrom] = useState<string>("");
   const [reportDateTo, setReportDateTo] = useState<string>("");
@@ -531,6 +561,39 @@ export default function AdminPage() {
     const tick = setInterval(() => setCountdown((c) => (c <= 1 ? 30 : c - 1)), 1000);
     return () => { clearInterval(interval); clearInterval(tick); };
   }, [isLoggedIn, fetchJobs]);
+
+  // Session timeout
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const resetActivity = () => { lastActivityRef.current = Date.now(); setShowTimeoutWarning(false); };
+    window.addEventListener("mousemove", resetActivity);
+    window.addEventListener("keydown",   resetActivity);
+    window.addEventListener("click",     resetActivity);
+    window.addEventListener("scroll",    resetActivity);
+
+    const check = setInterval(() => {
+      const idle = Date.now() - lastActivityRef.current;
+      if (idle >= TIMEOUT_MS) {
+        sessionStorage.removeItem("adminAuth");
+        setIsLoggedIn(false);
+        setShowTimeoutWarning(false);
+      } else if (idle >= TIMEOUT_MS - WARNING_MS) {
+        const secsLeft = Math.ceil((TIMEOUT_MS - idle) / 1000);
+        setTimeoutSecondsLeft(secsLeft);
+        setShowTimeoutWarning(true);
+      } else {
+        setShowTimeoutWarning(false);
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener("mousemove", resetActivity);
+      window.removeEventListener("keydown",   resetActivity);
+      window.removeEventListener("click",     resetActivity);
+      window.removeEventListener("scroll",    resetActivity);
+      clearInterval(check);
+    };
+  }, [isLoggedIn, TIMEOUT_MS, WARNING_MS]);
 
   const handleLogin = async () => {
     if (!password) return;
@@ -749,6 +812,30 @@ export default function AdminPage() {
   // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-gray-100">
+
+      {/* Session timeout warning modal */}
+      {showTimeoutWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 text-center space-y-4">
+            <div className="text-4xl">⏰</div>
+            <h3 className="font-black text-gray-800 text-lg">ระบบจะ Logout อัตโนมัติ</h3>
+            <p className="text-gray-500 text-sm">ไม่มีการใช้งานมาสักครู่ ระบบจะออกจากระบบใน</p>
+            <div className="text-4xl font-black text-purple-600">{timeoutSecondsLeft} <span className="text-xl text-gray-400">วินาที</span></div>
+            <button
+              onClick={() => { lastActivityRef.current = Date.now(); setShowTimeoutWarning(false); }}
+              className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold py-2.5 rounded-xl hover:scale-[1.02] transition shadow-md"
+            >
+              ฉันยังอยู่นี่ — ต่อเซสชัน
+            </button>
+            <button
+              onClick={() => { sessionStorage.removeItem("adminAuth"); setIsLoggedIn(false); }}
+              className="w-full text-gray-400 text-sm hover:text-gray-600 transition"
+            >
+              ออกจากระบบเลย
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Top bar */}
       <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-700 px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-10">
@@ -1492,6 +1579,45 @@ export default function AdminPage() {
                               ))}
                             </div>
                           )}
+
+                          {/* Mini activity log */}
+                          {(() => {
+                            const jLogs = cardLogs[job.jobId];
+                            const jLoading = cardLogsLoading[job.jobId];
+                            const fieldLabel: Record<string, string> = {
+                              status: "สถานะ", deliveryLink: "Delivery Link",
+                              priority: "Priority", internalNote: "Note ภายใน",
+                            };
+                            const fieldIcon: Record<string, string> = {
+                              status: "🔄", deliveryLink: "📂", priority: "🚨", internalNote: "🔒",
+                            };
+                            if (jLoading) return (
+                              <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-400 flex items-center gap-2">
+                                <span className="animate-spin">⏳</span> กำลังโหลดประวัติ...
+                              </div>
+                            );
+                            if (!jLogs || jLogs.length === 0) return null;
+                            return (
+                              <div className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                                <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-2">
+                                  <span className="text-xs font-bold text-gray-500">🕓 ประวัติการเปลี่ยนแปลง</span>
+                                  <span className="text-xs text-gray-400">({jLogs.length} รายการ)</span>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                  {jLogs.map((l, li) => (
+                                    <div key={li} className="px-4 py-2 flex items-center gap-3 text-xs">
+                                      <span className="shrink-0">{fieldIcon[l.field] || "✏️"}</span>
+                                      <span className="text-gray-500 shrink-0 font-medium">{fieldLabel[l.field] || l.field}</span>
+                                      <span className="text-gray-400 line-through truncate max-w-[100px]" title={l.oldValue}>{l.oldValue || "—"}</span>
+                                      <span className="text-gray-300">→</span>
+                                      <span className="text-gray-800 font-semibold truncate max-w-[120px]" title={l.newValue}>{l.newValue || "—"}</span>
+                                      <span className="ml-auto text-gray-300 shrink-0 hidden sm:block">{l.timestamp}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Edit controls */}
                           <div className="space-y-2 pt-1 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
