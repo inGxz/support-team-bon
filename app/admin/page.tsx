@@ -580,12 +580,6 @@ export default function AdminPage() {
     return () => { clearInterval(interval); clearInterval(tick); };
   }, [isLoggedIn, fetchJobs]);
 
-  // Click-outside to close quick status dropdowns
-  useEffect(() => {
-    const handler = () => setQuickStatusOpen({});
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, []);
 
   // Session timeout
   useEffect(() => {
@@ -859,6 +853,11 @@ export default function AdminPage() {
   // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-gray-100">
+
+      {/* Transparent overlay — closes quick-status dropdowns on outside click */}
+      {Object.values(quickStatusOpen).some(Boolean) && (
+        <div className="fixed inset-0 z-20" onClick={() => setQuickStatusOpen({})} />
+      )}
 
       {/* Session timeout warning modal */}
       {showTimeoutWarning && (
