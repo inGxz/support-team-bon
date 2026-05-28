@@ -466,7 +466,7 @@ export default function AdminPage() {
       if (next[jobId] && !cardLogs[jobId]) {
         const token = sessionStorage.getItem("adminAuth") || "";
         setCardLogsLoading((pl) => ({ ...pl, [jobId]: true }));
-        fetch(`/api/admin/logs?jobId=${encodeURIComponent(jobId)}&limit=20`, {
+        fetch(`/api/admin/logs?jobId=${encodeURIComponent(jobId)}&limit=5`, {
           headers: { Authorization: `Bearer ${token}` },
         })
           .then((r) => r.json())
