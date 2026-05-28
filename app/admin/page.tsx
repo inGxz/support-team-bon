@@ -456,7 +456,7 @@ const WF_STYLE: Record<string, { bg: string; text: string; border: string; icon:
 const TL_DAY_NAMES = ["อา","จ","อ","พ","พฤ","ศ","ส"];
 const TL_MONTH_TH  = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
-function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.RefObject<HTMLDivElement> }) {
+function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.RefObject<HTMLDivElement | null> }) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split("T")[0];
   const DAY_MS   = 86400000;
@@ -478,7 +478,6 @@ function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.R
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-      {/* Header */}
       <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <div>
           <h3 className="font-bold text-gray-800 text-sm">📅 Timeline</h3>
@@ -489,63 +488,42 @@ function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.R
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Overdue</span>
         </div>
       </div>
-
-      {/* Scrollable timeline */}
       <div ref={timelineRef} className="overflow-x-auto">
         <div className="flex p-3 gap-1.5 min-w-max">
           {days.map((day) => {
-            const dStr     = day.toISOString().split("T")[0];
-            const isToday  = dStr === todayStr;
-            const isPast   = day < today;
+            const dStr      = day.toISOString().split("T")[0];
+            const isToday   = dStr === todayStr;
+            const isPast    = day < today;
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-            const dayJobs  = jobsByDate[dStr] || [];
-            const hasJobs  = dayJobs.length > 0;
+            const dayJobs   = jobsByDate[dStr] || [];
+            const hasJobs   = dayJobs.length > 0;
             return (
               <div
                 key={dStr}
                 data-today={isToday ? "true" : undefined}
-                className={`flex flex-col w-[88px] shrink-0 rounded-xl transition ${
-                  isToday ? "bg-purple-50 ring-2 ring-purple-300" : isWeekend ? "bg-gray-50" : ""
-                }`}
+                className={`flex flex-col w-24 shrink-0 rounded-xl transition ${isToday ? "bg-purple-50 ring-2 ring-purple-300" : isWeekend ? "bg-gray-50" : ""}`}
               >
-                {/* Date header */}
                 <div className={`px-2 py-2 text-center border-b ${isToday ? "border-purple-200" : "border-gray-100"}`}>
-                  <div className={`text-[10px] font-bold tracking-wide ${isToday ? "text-purple-500" : "text-gray-400"}`}>
-                    {TL_DAY_NAMES[day.getDay()]}
-                  </div>
-                  <div className={`text-xl font-black leading-tight ${
-                    isToday ? "text-purple-600" : isPast && !hasJobs ? "text-gray-300" : isPast ? "text-gray-500" : "text-gray-800"
-                  }`}>{day.getDate()}</div>
-                  <div className={`text-[10px] ${isToday ? "text-purple-400" : "text-gray-300"}`}>
-                    {TL_MONTH_TH[day.getMonth()]}
-                  </div>
-                  {isToday && <div className="mt-0.5 text-[9px] font-black text-purple-500 tracking-widest">TODAY</div>}
+                  <div className={`text-xs font-bold tracking-wide ${isToday ? "text-purple-500" : "text-gray-400"}`}>{TL_DAY_NAMES[day.getDay()]}</div>
+                  <div className={`text-xl font-black leading-tight ${isToday ? "text-purple-600" : isPast && !hasJobs ? "text-gray-300" : isPast ? "text-gray-500" : "text-gray-800"}`}>{day.getDate()}</div>
+                  <div className={`text-xs ${isToday ? "text-purple-400" : "text-gray-300"}`}>{TL_MONTH_TH[day.getMonth()]}</div>
+                  {isToday && <div className="mt-0.5 text-xs font-black text-purple-500 tracking-widest">TODAY</div>}
                 </div>
-
-                {/* Job chips */}
-                <div className="p-1.5 flex flex-col gap-1 min-h-[40px]">
+                <div className="p-1.5 flex flex-col gap-1 min-h-10">
                   {dayJobs.map((job) => {
                     const ov  = isOverdue(job.deadline, job.status);
                     const st  = statusStyle(job.status || "Pending");
                     const wfs = WF_STYLE[getWorkflow(job.task)] || WF_STYLE["อื่นๆ"];
                     return (
-                      <div
-                        key={job.jobId}
-                        title={`${job.jobId} — ${job.customerName} (${job.status})`}
-                        className={`rounded-lg px-1.5 py-1 border text-[10px] leading-tight ${
-                          ov ? "bg-red-50 border-red-200" :
-                          job.priority === "urgent" ? "bg-orange-50 border-orange-300" :
-                          `${wfs.bg} ${wfs.border}`
-                        }`}
+                      <div key={job.jobId}
+                        title={job.jobId + " " + (job.customerName || "") + " (" + (job.status || "") + ")"}
+                        className={`rounded-lg px-1.5 py-1 border text-xs leading-tight ${ov ? "bg-red-50 border-red-200" : job.priority === "urgent" ? "bg-orange-50 border-orange-300" : wfs.bg + " " + wfs.border}`}
                       >
                         <div className="font-black text-purple-600 truncate">{job.jobId}</div>
                         <div className="text-gray-600 truncate">{job.customerName || "-"}</div>
                         <div className="flex items-center gap-1 mt-0.5">
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
-                          <span className={`truncate ${ov ? "text-red-600 font-semibold" : "text-gray-500"}`}>
-                            {ov ? "Overdue" : (job.status || "Pending")}
-                          </span>
-                          {job.priority === "urgent" && <span>🚨</span>}
+                          <span className={`truncate ${ov ? "text-red-600 font-semibold" : "text-gray-500"}`}>{ov ? "Overdue" : (job.status || "Pending")}</span>
                         </div>
                       </div>
                     );
@@ -556,8 +534,6 @@ function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.R
           })}
         </div>
       </div>
-
-      {/* No deadline jobs */}
       {noDeadlineJobs.length > 0 && (
         <div className="border-t border-gray-100 px-5 py-3">
           <p className="text-xs font-semibold text-gray-400 mb-2">📌 ยังไม่ระบุ Deadline ({noDeadlineJobs.length} งาน)</p>
@@ -568,9 +544,7 @@ function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.R
                 <div key={job.jobId} className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs">
                   <span className="font-black text-purple-600">{job.jobId}</span>
                   <span className="text-gray-500 ml-1.5">{job.customerName}</span>
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.text} ${st.border}`}>
-                    {job.status || "Pending"}
-                  </span>
+                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-semibold border ${st.bg} ${st.text} ${st.border}`}>{job.status || "Pending"}</span>
                 </div>
               );
             })}
@@ -1552,7 +1526,8 @@ export default function AdminPage() {
                   <button
                     onClick={() => setViewMode("board")}
                     className={`px-3 py-2 text-sm font-semibold transition border-l border-gray-200 ${viewMode === "board" ? "bg-purple-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                    title="Board View">⊞</button>
+                    title="Board View"
+                  >⊞</button>
                   <button onClick={() => setViewMode("timeline")}
                     className={`px-3 py-2 text-sm font-semibold transition border-l border-gray-200 ${viewMode === "timeline" ? "bg-purple-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
                     title="Timeline View">📅</button>
@@ -1584,6 +1559,11 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
+
+            {/* TIMELINE VIEW */}
+            {!loading && viewMode === "timeline" && (
+              <TimelineView jobs={filtered} timelineRef={timelineRef} />
+            )}
 
             {/* ══ KANBAN BOARD VIEW ══ */}
             {!loading && viewMode === "board" && (
@@ -1929,9 +1909,9 @@ export default function AdminPage() {
                                     <div key={li} className="px-4 py-2 flex items-center gap-3 text-xs">
                                       <span className="shrink-0">{fieldIcon[l.field] || "✏️"}</span>
                                       <span className="text-gray-500 shrink-0 font-medium">{fieldLabel[l.field] || l.field}</span>
-                                      <span className="text-gray-400 line-through truncate w-24 max-w-xs" title={l.oldValue}>{l.oldValue || "-"}</span>
+                                      <span className="text-gray-400 line-through truncate w-24" title={l.oldValue}>{l.oldValue || "-"}</span>
                                       <span className="text-gray-300">{"->"}</span>
-                                      <span className="text-gray-800 font-semibold truncate w-28 max-w-xs" title={l.newValue}>{l.newValue || "-"}</span>
+                                      <span className="text-gray-800 font-semibold truncate w-28" title={l.newValue}>{l.newValue || "-"}</span>
                                       <span className="ml-auto text-gray-300 shrink-0 hidden sm:block">{l.timestamp}</span>
                                     </div>
                                   ))}
