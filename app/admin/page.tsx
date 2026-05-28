@@ -458,6 +458,8 @@ export default function AdminPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState(30);
   const [activeTab, setActiveTab] = useState<"jobs" | "report">("jobs");
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const toggleCard = (jobId: string) => setExpandedCards((p) => ({ ...p, [jobId]: !p[jobId] }));
   const [reportMonth, setReportMonth] = useState<string>("");
   const [reportDateFrom, setReportDateFrom] = useState<string>("");
   const [reportDateTo, setReportDateTo] = useState<string>("");
@@ -1242,7 +1244,7 @@ export default function AdminPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handlePriority(job.jobId, job.priority)}
+                            onClick={(e) => { e.stopPropagation(); handlePriority(job.jobId, job.priority); }}
                             title={job.priority === "urgent" ? "ยกเลิกงานด่วน" : "ตั้งเป็นงานด่วน"}
                             className={`text-sm px-2 py-0.5 rounded-lg border transition font-bold ${
                               job.priority === "urgent"
@@ -1256,186 +1258,192 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Card body */}
-                      <div className="px-5 py-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                          <div className="flex gap-2">
-                            <span className="text-gray-400 shrink-0">👤</span>
-                            <span className="font-medium text-gray-800">{job.customerName || "-"}</span>
-                          </div>
-                          <div className="flex gap-2">
-                            <span className="text-gray-400 shrink-0">🧑‍💼</span>
-                            <span className="font-medium text-gray-800">{job.agent || "-"}</span>
-                          </div>
-                          <div className="flex gap-2 col-span-2">
-                            <span className="text-gray-400 shrink-0">📅</span>
-                            <span className="font-medium text-gray-800">{formatDate(job.deadline)}</span>
-                          </div>
-                        </div>
+                      {/* Card summary — always visible, click to expand */}
+                      <div
+                        className="px-5 py-4 space-y-3 cursor-pointer select-none"
+                        onClick={() => toggleCard(job.jobId)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 space-y-3">
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                              <div className="flex gap-2">
+                                <span className="text-gray-400 shrink-0">👤</span>
+                                <span className="font-medium text-gray-800">{job.customerName || "-"}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <span className="text-gray-400 shrink-0">🧑‍💼</span>
+                                <span className="font-medium text-gray-800">{job.agent || "-"}</span>
+                              </div>
+                              <div className="flex gap-2 col-span-2">
+                                <span className="text-gray-400 shrink-0">📅</span>
+                                <span className={`font-medium ${overdue ? "text-red-600" : "text-gray-800"}`}>{formatDate(job.deadline)}</span>
+                              </div>
+                            </div>
 
-                        {/* Workflow badge */}
-                        {job.task && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400 font-medium">ประเภทงาน:</span>
-                            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                              getWorkflow(job.task) === "Video"  ? "bg-pink-50 text-pink-700 border-pink-200"     :
-                              getWorkflow(job.task) === "Design" ? "bg-cyan-50 text-cyan-700 border-cyan-200"     :
-                              getWorkflow(job.task) === "Ads"    ? "bg-orange-50 text-orange-700 border-orange-200" :
-                                                                   "bg-gray-100 text-gray-600 border-gray-200"
-                            }`}>
-                              {getWorkflow(job.task) === "Video"  ? "🎬" :
-                               getWorkflow(job.task) === "Design" ? "🎨" :
-                               getWorkflow(job.task) === "Ads"    ? "📢" : "📁"} {job.task}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Sub-type */}
-                        {job.subType && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400 font-medium shrink-0">ประเภทย่อย:</span>
-                            <span className="text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full">{job.subType}</span>
-                          </div>
-                        )}
-
-                        {/* Workflow params (Video: Platform/Goal/Mood etc.) */}
-                        {job.workflowParams && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {job.workflowParams.split("|").map((p) => p.trim()).filter(Boolean).map((p) => (
-                              <span key={p} className="text-xs bg-purple-50 border border-purple-100 text-purple-600 px-2 py-0.5 rounded-full">{p}</span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Detail */}
-                        {job.detail && (
-                          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                            <p className="text-xs font-bold text-blue-500 mb-1">📝 รายละเอียดงาน</p>
-                            <p className="text-xs text-blue-800 whitespace-pre-wrap">{job.detail}</p>
-                          </div>
-                        )}
-
-                        {/* Reference link */}
-                        {job.reference && (
-                          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                            <span className="text-amber-500 text-sm shrink-0 mt-0.5">🔗</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-amber-700 mb-0.5">ลิ้งอ้างอิงจากลูกค้า</p>
-                              {job.reference.startsWith("http") ? (
-                                <a href={job.reference} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline break-all hover:text-blue-800">
-                                  {job.reference}
-                                </a>
-                              ) : (
-                                <p className="text-xs text-amber-800 break-all">{job.reference}</p>
+                            {/* Workflow badge + subType + params chips */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {job.task && (
+                                <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                                  getWorkflow(job.task) === "Video"  ? "bg-pink-50 text-pink-700 border-pink-200"     :
+                                  getWorkflow(job.task) === "Design" ? "bg-cyan-50 text-cyan-700 border-cyan-200"     :
+                                  getWorkflow(job.task) === "Ads"    ? "bg-orange-50 text-orange-700 border-orange-200" :
+                                                                       "bg-gray-100 text-gray-600 border-gray-200"
+                                }`}>
+                                  {getWorkflow(job.task) === "Video"  ? "🎬" :
+                                   getWorkflow(job.task) === "Design" ? "🎨" :
+                                   getWorkflow(job.task) === "Ads"    ? "📢" : "📁"} {job.task}
+                                </span>
                               )}
+                              {job.subType && (
+                                <span className="text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full">{job.subType}</span>
+                              )}
+                              {job.workflowParams && job.workflowParams.split("|").map((p) => p.trim()).filter(Boolean).map((p) => (
+                                <span key={p} className="text-xs bg-purple-50 border border-purple-100 text-purple-600 px-2 py-0.5 rounded-full">{p}</span>
+                              ))}
                             </div>
                           </div>
-                        )}
 
-                        {/* Revision info */}
-                        {job.revisionNote && (
-                          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                            <span className="text-red-500 text-sm shrink-0 mt-0.5">🔄</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <p className="text-xs font-bold text-red-700">ขอแก้ไขงาน</p>
-                                {parseInt(job.revisionCount || "0") > 0 && (
-                                  <span className="text-xs bg-red-100 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full font-medium">
-                                    ครั้งที่ {job.revisionCount}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-red-800 whitespace-pre-wrap">{job.revisionNote}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Customer image attachments (comma-separated URLs) */}
-                        {job.imageUrl && (
-                          <div className="rounded-xl overflow-hidden border border-purple-100 shadow-sm">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border-b border-purple-100">
-                              <span className="text-purple-500 text-sm">🖼️</span>
-                              <p className="text-xs font-bold text-purple-700">รูปจากลูกค้า ({job.imageUrl.split(",").filter(Boolean).length} รูป)</p>
-                            </div>
-                            {job.imageUrl.split(",").filter(Boolean).map((url, idx) => (
-                              <div key={idx} className="border-b border-purple-50 last:border-0">
-                                <img src={url.trim()} alt={`รูปที่ ${idx + 1}`}
-                                  className="w-full max-h-56 object-contain bg-gray-50 cursor-pointer"
-                                  onClick={() => window.open(url.trim(), "_blank")} />
-                                <div className="flex items-center justify-between px-3 py-1.5 bg-white">
-                                  <span className="text-xs font-medium text-gray-800">รูปที่ {idx + 1}</span>
-                                  <a href={url.trim()} target="_blank" rel="noopener noreferrer"
-                                    className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow transition">
-                                    ↗ เปิดใน Drive
-                                  </a>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Edit controls */}
-                        <div className="space-y-2 pt-1 border-t border-gray-50">
-                          {/* Internal note */}
-                          <div>
-                            <p className="text-xs text-gray-400 mb-1 font-medium">🔒 Note ภายใน <span className="text-gray-300">(ลูกค้าไม่เห็น)</span></p>
-                            <textarea
-                              className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-yellow-300 outline-none text-gray-800 resize-none bg-yellow-50 placeholder-gray-300"
-                              placeholder="เช่น รอไฟล์จากเซลล์, ติดต่อลูกค้าอีกครั้ง..."
-                              rows={2}
-                              value={edit.internalNote ?? ""}
-                              onChange={(e) => setEditState((p) => ({ ...p, [job.jobId]: { ...edit, internalNote: e.target.value } }))}
-                            />
-                          </div>
-                          <div className="flex gap-2 items-end flex-wrap">
-                          <div className="w-36 shrink-0">
-                            <p className="text-xs text-gray-400 mb-1 font-medium">สถานะ</p>
-                            <select
-                              className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800 bg-white"
-                              value={edit.status || "Pending"}
-                              onChange={(e) => setEditState((p) => ({ ...p, [job.jobId]: { ...edit, status: e.target.value } }))}
-                            >
-                              {STATUS_OPTS.map((s) => <option key={s}>{s}</option>)}
-                            </select>
-                          </div>
-                          <div className="flex-1 min-w-[180px]">
-                            <p className="text-xs text-gray-400 mb-1 font-medium">📂 Delivery Link</p>
-                            <input
-                              className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800"
-                              placeholder="https://drive.google.com/..."
-                              value={edit.deliveryLink}
-                              onChange={(e) => setEditState((p) => ({ ...p, [job.jobId]: { ...edit, deliveryLink: e.target.value } }))}
-                            />
-                          </div>
-                          <button
-                            disabled={!dirty || isSaving}
-                            onClick={() => handleSave(job.jobId)}
-                            className={`shrink-0 px-5 py-2 rounded-lg text-sm font-bold transition ${
-                              isSaved ? "bg-green-500 text-white" :
-                              dirty   ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:scale-[1.02] shadow-md" :
-                                        "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            } disabled:opacity-60`}
-                          >
-                            {isSaving ? "⏳" : isSaved ? "✅ บันทึกแล้ว" : "💾 บันทึก"}
-                          </button>
-                          <button
-                            onClick={() => {
-                              const url = `${window.location.origin}/brief?jobId=${job.jobId}`;
-                              navigator.clipboard.writeText(url);
-                              setCopiedMap((p) => ({ ...p, [job.jobId]: true }));
-                              setTimeout(() => setCopiedMap((p) => ({ ...p, [job.jobId]: false })), 2500);
-                            }}
-                            className={`shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition border ${
-                              copiedMap[job.jobId]
-                                ? "bg-teal-500 text-white border-teal-500"
-                                : "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100"
-                            }`}
-                          >
-                            {copiedMap[job.jobId] ? "✅ คัดลอกแล้ว!" : "🔗 แชร์ฟรีแลน"}
-                          </button>
-                        </div>
+                          {/* Chevron */}
+                          <span className="text-gray-300 text-lg mt-1 shrink-0 transition-transform duration-200" style={{ transform: expandedCards[job.jobId] ? "rotate(180deg)" : "rotate(0deg)" }}>
+                            ▾
+                          </span>
                         </div>
                       </div>
+
+                      {/* Card detail — shown only when expanded */}
+                      {expandedCards[job.jobId] && (
+                        <div className="px-5 pb-4 space-y-3 border-t border-gray-50 pt-3">
+                          {/* Detail */}
+                          {job.detail && (
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                              <p className="text-xs font-bold text-blue-500 mb-1">📝 รายละเอียดงาน</p>
+                              <p className="text-xs text-blue-800 whitespace-pre-wrap">{job.detail}</p>
+                            </div>
+                          )}
+
+                          {/* Reference link */}
+                          {job.reference && (
+                            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                              <span className="text-amber-500 text-sm shrink-0 mt-0.5">🔗</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-amber-700 mb-0.5">ลิ้งอ้างอิงจากลูกค้า</p>
+                                {job.reference.startsWith("http") ? (
+                                  <a href={job.reference} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline break-all hover:text-blue-800">
+                                    {job.reference}
+                                  </a>
+                                ) : (
+                                  <p className="text-xs text-amber-800 break-all">{job.reference}</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Revision info */}
+                          {job.revisionNote && (
+                            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                              <span className="text-red-500 text-sm shrink-0 mt-0.5">🔄</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="text-xs font-bold text-red-700">ขอแก้ไขงาน</p>
+                                  {parseInt(job.revisionCount || "0") > 0 && (
+                                    <span className="text-xs bg-red-100 text-red-600 border border-red-200 px-1.5 py-0.5 rounded-full font-medium">
+                                      ครั้งที่ {job.revisionCount}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-red-800 whitespace-pre-wrap">{job.revisionNote}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Customer image attachments (comma-separated URLs) */}
+                          {job.imageUrl && (
+                            <div className="rounded-xl overflow-hidden border border-purple-100 shadow-sm">
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border-b border-purple-100">
+                                <span className="text-purple-500 text-sm">🖼️</span>
+                                <p className="text-xs font-bold text-purple-700">รูปจากลูกค้า ({job.imageUrl.split(",").filter(Boolean).length} รูป)</p>
+                              </div>
+                              {job.imageUrl.split(",").filter(Boolean).map((url, idx) => (
+                                <div key={idx} className="border-b border-purple-50 last:border-0">
+                                  <img src={url.trim()} alt={`รูปที่ ${idx + 1}`}
+                                    className="w-full max-h-56 object-contain bg-gray-50 cursor-pointer"
+                                    onClick={(e) => { e.stopPropagation(); window.open(url.trim(), "_blank"); }} />
+                                  <div className="flex items-center justify-between px-3 py-1.5 bg-white">
+                                    <span className="text-xs font-medium text-gray-800">รูปที่ {idx + 1}</span>
+                                    <a href={url.trim()} target="_blank" rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow transition">
+                                      ↗ เปิดใน Drive
+                                    </a>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Edit controls */}
+                          <div className="space-y-2 pt-1 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+                            {/* Internal note */}
+                            <div>
+                              <p className="text-xs text-gray-400 mb-1 font-medium">🔒 Note ภายใน <span className="text-gray-300">(ลูกค้าไม่เห็น)</span></p>
+                              <textarea
+                                className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-yellow-300 outline-none text-gray-800 resize-none bg-yellow-50 placeholder-gray-300"
+                                placeholder="เช่น รอไฟล์จากเซลล์, ติดต่อลูกค้าอีกครั้ง..."
+                                rows={2}
+                                value={edit.internalNote ?? ""}
+                                onChange={(e) => setEditState((p) => ({ ...p, [job.jobId]: { ...edit, internalNote: e.target.value } }))}
+                              />
+                            </div>
+                            <div className="flex gap-2 items-end flex-wrap">
+                              <div className="w-36 shrink-0">
+                                <p className="text-xs text-gray-400 mb-1 font-medium">สถานะ</p>
+                                <select
+                                  className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800 bg-white"
+                                  value={edit.status || "Pending"}
+                                  onChange={(e) => setEditState((p) => ({ ...p, [job.jobId]: { ...edit, status: e.target.value } }))}
+                                >
+                                  {STATUS_OPTS.map((s) => <option key={s}>{s}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex-1 min-w-[180px]">
+                                <p className="text-xs text-gray-400 mb-1 font-medium">📂 Delivery Link</p>
+                                <input
+                                  className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800"
+                                  placeholder="https://drive.google.com/..."
+                                  value={edit.deliveryLink}
+                                  onChange={(e) => setEditState((p) => ({ ...p, [job.jobId]: { ...edit, deliveryLink: e.target.value } }))}
+                                />
+                              </div>
+                              <button
+                                disabled={!dirty || isSaving}
+                                onClick={() => handleSave(job.jobId)}
+                                className={`shrink-0 px-5 py-2 rounded-lg text-sm font-bold transition ${
+                                  isSaved ? "bg-green-500 text-white" :
+                                  dirty   ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:scale-[1.02] shadow-md" :
+                                            "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                } disabled:opacity-60`}
+                              >
+                                {isSaving ? "⏳" : isSaved ? "✅ บันทึกแล้ว" : "💾 บันทึก"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const url = `${window.location.origin}/brief?jobId=${job.jobId}`;
+                                  navigator.clipboard.writeText(url);
+                                  setCopiedMap((p) => ({ ...p, [job.jobId]: true }));
+                                  setTimeout(() => setCopiedMap((p) => ({ ...p, [job.jobId]: false })), 2500);
+                                }}
+                                className={`shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition border ${
+                                  copiedMap[job.jobId]
+                                    ? "bg-teal-500 text-white border-teal-500"
+                                    : "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100"
+                                }`}
+                              >
+                                {copiedMap[job.jobId] ? "✅ คัดลอกแล้ว!" : "🔗 แชร์ฟรีแลน"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
