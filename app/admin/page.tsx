@@ -417,6 +417,20 @@ function formatDate(dateStr: string): string {
   }
 }
 
+function getAgingDays(timestamp: string): number {
+  const d = parseThaiTimestamp(timestamp);
+  if (!d) return 0;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function agingBadge(days: number): { label: string; cls: string } | null {
+  if (days < 1)  return null;
+  if (days <= 2) return { label: `${days}ว`, cls: "bg-green-50 text-green-600 border-green-200" };
+  if (days <= 6) return { label: `${days}ว`, cls: "bg-yellow-50 text-yellow-700 border-yellow-200" };
+  if (days <= 13)return { label: `${days}ว`, cls: "bg-orange-50 text-orange-700 border-orange-200" };
+  return          { label: `${days}ว`, cls: "bg-red-50 text-red-600 border-red-200" };
+}
+
 const STATUS_OPTS = ["Pending", "In Progress", "Done", "Revision"];
 
 const statusStyle = (s: string) => {
@@ -493,6 +507,10 @@ export default function AdminPage() {
   // Card-level logs (per jobId)
   const [cardLogs, setCardLogs] = useState<Record<string, LogEntry[]>>({});
   const [cardLogsLoading, setCardLogsLoading] = useState<Record<string, boolean>>({});
+
+  // View mode + quick status
+  const [viewMode, setViewMode] = useState<"list" | "board">("list");
+  const [quickStatusOpen, setQuickStatusOpen] = useState<Record<string, boolean>>({});
 
   // Session Timeout (30 min idle)
   const TIMEOUT_MS   = 30 * 60 * 1000;
@@ -657,6 +675,28 @@ export default function AdminPage() {
       });
       setJobs((p) => p.map((j) => j.jobId === jobId ? { ...j, priority: newPriority } : j));
     } catch {}
+  };
+
+  const handleQuickStatus = async (jobId: string, newStatus: string) => {
+    setQuickStatusOpen((p) => ({ ...p, [jobId]: false }));
+    setEditState((p) => ({ ...p, [jobId]: { ...(p[jobId] || { status: newStatus, deliveryLink: "", internalNote: "" }), status: newStatus } }));
+    const token = sessionStorage.getItem("adminAuth") || "";
+    setSaving((p) => ({ ...p, [jobId]: true }));
+    try {
+      const res = await fetch("/api/admin/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ jobId, status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setJobs((p) => p.map((j) => j.jobId === jobId ? { ...j, status: newStatus } : j));
+        setSavedMap((p) => ({ ...p, [jobId]: true }));
+        setTimeout(() => setSavedMap((p) => ({ ...p, [jobId]: false })), 2000);
+        setCardLogs((p) => { const next = { ...p }; delete next[jobId]; return next; });
+      }
+    } catch {}
+    setSaving((p) => ({ ...p, [jobId]: false }));
   };
 
   const stats = {
@@ -1359,12 +1399,27 @@ export default function AdminPage() {
 
             {/* Search + Filter */}
             <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
-              <input
-                placeholder="🔍 ค้นหา Job ID / ลูกค้า / เซลล์"
-                className="w-full p-2.5 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <input
+                  placeholder="🔍 ค้นหา Job ID / ลูกค้า / เซลล์"
+                  className="flex-1 p-2.5 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-purple-300 outline-none text-gray-800"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {/* View toggle */}
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`px-3 py-2 text-sm font-semibold transition ${viewMode === "list" ? "bg-purple-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                    title="List View"
+                  >☰</button>
+                  <button
+                    onClick={() => setViewMode("board")}
+                    className={`px-3 py-2 text-sm font-semibold transition border-l border-gray-200 ${viewMode === "board" ? "bg-purple-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                    title="Board View"
+                  >⊞</button>
+                </div>
+              </div>
               <div className="flex gap-2 flex-wrap items-center">
                 <span className="text-xs text-gray-400 font-medium">Workflow:</span>
                 {[
@@ -1392,8 +1447,101 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Job list */}
-            {loading ? (
+            {/* ══ KANBAN BOARD VIEW ══ */}
+            {!loading && viewMode === "board" && (
+              <div className="grid grid-cols-4 gap-3 items-start">
+                {(["Pending", "In Progress", "Revision", "Done"] as const).map((col) => {
+                  const colJobs = filtered.filter((j) => {
+                    const s = j.status || "Pending";
+                    if (col === "Pending")     return s === "Pending" || !j.status;
+                    if (col === "In Progress") return s === "In Progress" || s === "กำลังทำ";
+                    if (col === "Done")        return s === "Done" || s === "เสร็จแล้ว";
+                    return s === col;
+                  });
+                  const colStyle: Record<string, { header: string; dot: string; count: string }> = {
+                    "Pending":     { header: "bg-amber-50 border-amber-200",  dot: "bg-amber-400",  count: "bg-amber-100 text-amber-700" },
+                    "In Progress": { header: "bg-blue-50 border-blue-200",   dot: "bg-blue-500",   count: "bg-blue-100 text-blue-700" },
+                    "Revision":    { header: "bg-red-50 border-red-200",     dot: "bg-red-500",    count: "bg-red-100 text-red-700" },
+                    "Done":        { header: "bg-green-50 border-green-200", dot: "bg-green-500",  count: "bg-green-100 text-green-700" },
+                  };
+                  const cs = colStyle[col];
+                  return (
+                    <div key={col} className="flex flex-col gap-2">
+                      {/* Column header */}
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-xl border font-semibold text-sm ${cs.header}`}>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${cs.dot}`} />
+                          {col}
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${cs.count}`}>{colJobs.length}</span>
+                      </div>
+                      {/* Column cards */}
+                      <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-0.5">
+                        {colJobs.length === 0 ? (
+                          <div className="text-center text-gray-300 text-xs py-8 border-2 border-dashed border-gray-100 rounded-xl">ไม่มีงาน</div>
+                        ) : colJobs.map((job) => {
+                          const overdue = isOverdue(job.deadline, job.status);
+                          const aging = agingBadge(getAgingDays(job.timestamp));
+                          const wf = getWorkflow(job.task);
+                          const wfs = WF_STYLE[wf] || WF_STYLE["อื่นๆ"];
+                          return (
+                            <div
+                              key={job.jobId}
+                              className={`bg-white rounded-xl border shadow-sm p-3 space-y-2 cursor-pointer hover:shadow-md transition ${job.priority === "urgent" ? "border-orange-400 ring-1 ring-orange-200" : overdue ? "border-red-300" : "border-gray-100"}`}
+                            >
+                              {/* Top row */}
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-black text-purple-600 text-xs">{job.jobId}</span>
+                                <div className="flex items-center gap-1">
+                                  {job.priority === "urgent" && <span className="text-orange-500 text-xs">🚨</span>}
+                                  {overdue && <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full border border-red-200 font-bold">OD</span>}
+                                </div>
+                              </div>
+                              {/* Customer */}
+                              <p className="text-xs text-gray-700 font-medium truncate">{job.customerName || "-"}</p>
+                              {/* Task + aging */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${wfs.bg} ${wfs.text} ${wfs.border}`}>{wfs.icon} {job.task}</span>
+                                {aging && <span className={`text-xs px-1.5 py-0.5 rounded-full border font-semibold ${aging.cls}`}>🕰 {aging.label}</span>}
+                              </div>
+                              {/* Deadline + quick status */}
+                              <div className="flex items-center justify-between gap-2">
+                                <span className={`text-xs ${overdue ? "text-red-500 font-semibold" : "text-gray-400"}`}>📅 {formatDate(job.deadline)}</span>
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setQuickStatusOpen((p) => ({ ...p, [job.jobId]: !p[job.jobId] })); }}
+                                    className={`text-xs px-2 py-0.5 rounded-full font-semibold border cursor-pointer hover:opacity-80 transition ${statusStyle(job.status).bg} ${statusStyle(job.status).text} ${statusStyle(job.status).border}`}
+                                  >
+                                    {saving[job.jobId] ? "⏳" : (job.status || "Pending")} ▾
+                                  </button>
+                                  {quickStatusOpen[job.jobId] && (
+                                    <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                      {STATUS_OPTS.map((s) => {
+                                        const ss = statusStyle(s);
+                                        return (
+                                          <button key={s} onClick={() => handleQuickStatus(job.jobId, s)}
+                                            className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-gray-50 transition`}>
+                                            <span className={`w-2 h-2 rounded-full ${ss.dot}`} />{s}
+                                            {job.status === s && <span className="ml-auto text-purple-500">✓</span>}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Job list (list view only) */}
+            {viewMode === "list" && (loading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="bg-white rounded-xl border border-gray-100 p-5 animate-pulse space-y-3">
@@ -1430,10 +1578,36 @@ export default function AdminPage() {
                       <div className="px-5 py-3 flex items-center justify-between border-b border-black/5">
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="font-black text-purple-600">{job.jobId}</span>
-                          <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1.5 ${st.bg} ${st.text} ${st.border}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                            {job.status || "Pending"}
-                          </span>
+                          {/* Quick status badge */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setQuickStatusOpen((p) => ({ ...p, [job.jobId]: !p[job.jobId] })); }}
+                              className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition ${st.bg} ${st.text} ${st.border}`}
+                              title="คลิกเพื่อเปลี่ยนสถานะ"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                              {saving[job.jobId] ? "⏳" : (edit.status || "Pending")}
+                              <span className="opacity-50 text-[10px]">▾</span>
+                            </button>
+                            {quickStatusOpen[job.jobId] && (
+                              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                {STATUS_OPTS.map((s) => {
+                                  const ss = statusStyle(s);
+                                  return (
+                                    <button
+                                      key={s}
+                                      onClick={() => handleQuickStatus(job.jobId, s)}
+                                      className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-gray-50 transition ${edit.status === s ? "bg-purple-50" : ""}`}
+                                    >
+                                      <span className={`w-2 h-2 rounded-full ${ss.dot}`} />
+                                      {s}
+                                      {edit.status === s && <span className="ml-auto text-purple-500">✓</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                           {overdue && (
                             <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-600 border border-red-300">⚠️ Overdue</span>
                           )}
@@ -1473,9 +1647,18 @@ export default function AdminPage() {
                                 <span className="text-gray-400 shrink-0">🧑‍💼</span>
                                 <span className="font-medium text-gray-800">{job.agent || "-"}</span>
                               </div>
-                              <div className="flex gap-2 col-span-2">
+                              <div className="flex gap-2 col-span-2 items-center">
                                 <span className="text-gray-400 shrink-0">📅</span>
                                 <span className={`font-medium ${overdue ? "text-red-600" : "text-gray-800"}`}>{formatDate(job.deadline)}</span>
+                                {(() => {
+                                  const st2 = edit.status || job.status;
+                                  const isActive = st2 === "Pending" || !st2 || st2 === "In Progress" || st2 === "กำลังทำ" || st2 === "Revision";
+                                  if (!isActive) return null;
+                                  const days = getAgingDays(job.timestamp);
+                                  const badge = agingBadge(days);
+                                  if (!badge) return null;
+                                  return <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${badge.cls}`}>🕰 {badge.label}</span>;
+                                })()}
                               </div>
                             </div>
 
@@ -1686,10 +1869,10 @@ export default function AdminPage() {
                   );
                 })}
               </div>
-            )}
+            ))}
 
             {/* Pagination controls */}
-            {!loading && filtered.length > 0 && totalPages > 1 && (
+            {viewMode === "list" && !loading && filtered.length > 0 && totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 px-1">
                 <span className="text-xs text-gray-400">
                   แสดง {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} จาก {filtered.length} งาน
