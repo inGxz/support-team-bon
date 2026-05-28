@@ -246,16 +246,41 @@ function JobHistoryPanel({ jobs, dark, onClose, onTrack }: { jobs: JobRecord[]; 
 
 // ================= MY JOBS PANEL =================
 function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobItem[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void; loading: boolean }) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ทั้งหมด");
+
   const statusStyle = (s: string) => {
     if (s === "Done" || s === "เสร็จแล้ว") return "bg-green-100 text-green-700 border-green-200";
     if (s === "In Progress" || s === "กำลังทำ") return "bg-blue-100 text-blue-700 border-blue-200";
+    if (s === "Revision") return "bg-red-100 text-red-600 border-red-200";
     return "bg-amber-100 text-amber-700 border-amber-200";
   };
   const statusIcon = (s: string) => {
     if (s === "Done" || s === "เสร็จแล้ว") return "✅";
     if (s === "In Progress" || s === "กำลังทำ") return "🔄";
+    if (s === "Revision") return "🔁";
     return "⏳";
   };
+
+  const filtered = jobs.filter((j) => {
+    const matchStatus =
+      statusFilter === "ทั้งหมด" ||
+      (statusFilter === "Pending"     && (j.status === "Pending" || !j.status)) ||
+      (statusFilter === "In Progress" && (j.status === "In Progress" || j.status === "กำลังทำ")) ||
+      (statusFilter === "Done"        && (j.status === "Done" || j.status === "เสร็จแล้ว")) ||
+      (statusFilter === "Revision"    && j.status === "Revision");
+    const q = search.toLowerCase();
+    const matchSearch = !q || j.jobId.toLowerCase().includes(q) || j.task.toLowerCase().includes(q) || (j.subType || "").toLowerCase().includes(q);
+    return matchStatus && matchSearch;
+  });
+
+  const FILTERS = [
+    { label: "ทั้งหมด", count: jobs.length },
+    { label: "Pending",     count: jobs.filter((j) => j.status === "Pending" || !j.status).length },
+    { label: "In Progress", count: jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length },
+    { label: "Revision",    count: jobs.filter((j) => j.status === "Revision").length },
+    { label: "Done",        count: jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -265,14 +290,42 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobIte
           <div>
             <h2 className="text-white text-lg font-bold">👤 งานของฉัน</h2>
             <p className="text-teal-100 text-xs mt-0.5">
-              {loading ? "กำลังโหลด..." : `${jobs.length} รายการทั้งหมด`}
+              {loading ? "กำลังโหลด..." : `${filtered.length} / ${jobs.length} รายการ`}
             </p>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none transition">✕</button>
         </div>
 
+        {/* Search + Filter */}
+        {!loading && jobs.length > 0 && (
+          <div className={`px-4 pt-3 pb-2 space-y-2 border-b ${dark ? "border-gray-700 bg-gray-800" : "border-gray-100 bg-white"}`}>
+            <input
+              type="text"
+              placeholder="🔍 ค้นหา Job ID, ประเภทงาน..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`w-full px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2 focus:ring-teal-300 ${dark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-gray-50 border-gray-200 text-gray-800"}`}
+            />
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {FILTERS.map(({ label, count }) => (
+                <button
+                  key={label}
+                  onClick={() => setStatusFilter(label)}
+                  className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition border ${
+                    statusFilter === label
+                      ? "bg-teal-500 text-white border-teal-500"
+                      : dark ? "bg-gray-700 text-gray-300 border-gray-600" : "bg-white text-gray-500 border-gray-200 hover:border-teal-300"
+                  }`}
+                >
+                  {label} {count > 0 && <span className="opacity-70">({count})</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* List */}
-        <div className="max-h-[65vh] overflow-y-auto">
+        <div className="max-h-[55vh] overflow-y-auto">
           {loading ? (
             <div className="p-6 space-y-4 animate-pulse">
               {[1, 2, 3].map((i) => (
@@ -283,14 +336,15 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobIte
                 </div>
               ))}
             </div>
-          ) : jobs.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <div className="text-4xl mb-3">📭</div>
-              <p className="text-gray-400 text-sm">ยังไม่มีงานที่สั่งไว้</p>
+              <div className="text-4xl mb-3">{jobs.length === 0 ? "📭" : "🔍"}</div>
+              <p className="text-gray-400 text-sm">{jobs.length === 0 ? "ยังไม่มีงานที่สั่งไว้" : "ไม่พบงานที่ตรงกับการค้นหา"}</p>
+              {jobs.length > 0 && <button onClick={() => { setSearch(""); setStatusFilter("ทั้งหมด"); }} className="mt-2 text-xs text-teal-500 hover:underline">ล้างการค้นหา</button>}
             </div>
           ) : (
             <div className={`divide-y ${dark ? "divide-gray-700" : "divide-gray-100"}`}>
-              {jobs.map((j) => {
+              {filtered.map((j) => {
                 const daysLeft = Math.ceil((new Date(j.deadline).getTime() - Date.now()) / 86400000);
                 const isDone = j.status === "Done" || j.status === "เสร็จแล้ว";
                 const urgent = !isDone && daysLeft >= 0 && daysLeft <= 2;

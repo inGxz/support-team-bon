@@ -35,14 +35,16 @@ const COL = {
   REFERENCE:     6,   // F - Reference
   DETAIL:        7,   // G - Detail
   DEADLINE:      8,   // H - Deadline
-  STATUS:          9,   // I - Status  ← สถานะงาน (Pending / In Progress / Done)
+  STATUS:          9,   // I - Status
   LINE_USER_ID:   10,  // J - lineUserId
-  DELIVERY_LINK:  11,  // K - delivery link (admin ใส่ลิ้งไฟล์ก่อน mark Done)
+  DELIVERY_LINK:  11,  // K - delivery link
   SUB_TYPE:       12,  // L - subType
   WORKFLOW_PARAMS:13,  // M - workflowParams
   IMAGE_URL:      14,  // N - imageUrl (Google Drive link)
   REVISION_NOTE:  15,  // O - revisionNote
   REVISION_COUNT: 16,  // P - revisionCount
+  PRIORITY:       17,  // Q - priority flag ("urgent" หรือ "")
+  INTERNAL_NOTE:  18,  // R - internalNote (Admin only, ไม่แสดงให้ลูกค้า)
 };
 
 // ─── LINE Channel Access Token ────────────────────────────────────────────────
@@ -209,6 +211,10 @@ function createJob(body) {
       body.subType         || "",  // L: subType
       body.workflowParams  || "",  // M: workflowParams
       imageUrl,                    // N: imageUrl (Drive)
+      "",                          // O: revisionNote
+      "0",                         // P: revisionCount
+      "",                          // Q: priority
+      "",                          // R: internalNote
     ]);
 
     // แจ้งเตือน admin group
@@ -423,6 +429,12 @@ function updateJob(body) {
       if (body.deliveryLink !== undefined) {
         sheet.getRange(rowNum, COL.DELIVERY_LINK).setValue(body.deliveryLink);
       }
+      if (body.priority !== undefined) {
+        sheet.getRange(rowNum, COL.PRIORITY).setValue(body.priority);
+      }
+      if (body.internalNote !== undefined) {
+        sheet.getRange(rowNum, COL.INTERNAL_NOTE).setValue(body.internalNote);
+      }
 
       // ส่ง LINE push ถ้าเพิ่งเปลี่ยนเป็น Done
       var newStatus = body.status !== undefined ? body.status : oldStatus;
@@ -476,6 +488,8 @@ function getAllJobs() {
       revisionNote:   String(row[COL.REVISION_NOTE    - 1] || ""),
       revisionCount:  String(row[COL.REVISION_COUNT   - 1] || "0"),
       timestamp:      String(row[COL.TIMESTAMP        - 1] || ""),
+      priority:       String(row[COL.PRIORITY         - 1] || ""),
+      internalNote:   String(row[COL.INTERNAL_NOTE    - 1] || ""),
     });
   }
 

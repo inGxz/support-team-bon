@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
         jobId: body.jobId,
         status: body.status,
         deliveryLink: body.deliveryLink,
+        priority: body.priority,
+        internalNote: body.internalNote,
       }),
     });
     const data = await res.json();

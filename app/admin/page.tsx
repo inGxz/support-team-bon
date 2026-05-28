@@ -19,9 +19,11 @@ type Job = {
   revisionNote: string;
   revisionCount: string;
   timestamp: string;
+  priority: string;
+  internalNote: string;
 };
 
-type EditState = { status: string; deliveryLink: string };
+type EditState = { status: string; deliveryLink: string; internalNote: string };
 
 // แปลง timestamp ไทย "26/5/2569 22:35:56" → "พ.ค. 2026"
 function parseMonthYear(timestamp: string): string {
@@ -478,7 +480,7 @@ export default function AdminPage() {
         setEditState((prev) => {
           const next: Record<string, EditState> = {};
           data.jobs.forEach((j: Job) => {
-            next[j.jobId] = prev[j.jobId] ?? { status: j.status || "Pending", deliveryLink: j.deliveryLink || "" };
+            next[j.jobId] = prev[j.jobId] ?? { status: j.status || "Pending", deliveryLink: j.deliveryLink || "", internalNote: j.internalNote || "" };
           });
           return next;
         });
@@ -532,7 +534,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/update", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ jobId, status: edit.status, deliveryLink: edit.deliveryLink }),
+        body: JSON.stringify({ jobId, status: edit.status, deliveryLink: edit.deliveryLink, internalNote: edit.internalNote }),
       });
       const data = await res.json();
       if (data.success) {
@@ -548,7 +550,20 @@ export default function AdminPage() {
     const job = jobs.find((j) => j.jobId === jobId);
     const edit = editState[jobId];
     if (!job || !edit) return false;
-    return edit.status !== (job.status || "Pending") || edit.deliveryLink !== (job.deliveryLink || "");
+    return edit.status !== (job.status || "Pending") || edit.deliveryLink !== (job.deliveryLink || "") || edit.internalNote !== (job.internalNote || "");
+  };
+
+  const handlePriority = async (jobId: string, current: string) => {
+    const newPriority = current === "urgent" ? "" : "urgent";
+    const token = sessionStorage.getItem("adminAuth") || "";
+    try {
+      await fetch("/api/admin/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ jobId, priority: newPriority }),
+      });
+      setJobs((p) => p.map((j) => j.jobId === jobId ? { ...j, priority: newPriority } : j));
+    } catch {}
   };
 
   const stats = {
@@ -589,8 +604,8 @@ export default function AdminPage() {
   const overdueCount = jobs.filter((j) => isOverdue(j.deadline, j.status)).length;
 
   const exportCSV = () => {
-    const headers = ["Job ID", "ลูกค้า", "เซลล์", "ประเภทงาน", "Deadline", "สถานะ", "Delivery Link", "วันที่สั่ง"];
-    const rows = filtered.map((j) => [j.jobId, j.customerName, j.agent, j.task, formatDate(j.deadline), j.status, j.deliveryLink, j.timestamp]);
+    const headers = ["Job ID", "ลูกค้า", "เซลล์", "ประเภทงาน", "ประเภทย่อย", "Deadline", "สถานะ", "Delivery Link", "วันที่สั่ง", "Priority", "Note ภายใน"];
+    const rows = filtered.map((j) => [j.jobId, j.customerName, j.agent, j.task, j.subType, formatDate(j.deadline), j.status, j.deliveryLink, j.timestamp, j.priority === "urgent" ? "ด่วน" : "", j.internalNote]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -599,6 +614,33 @@ export default function AdminPage() {
     a.download = `teambon-jobs-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportExcel = () => {
+    const doExport = (XLSX: any) => {
+      const data = [
+        ["Job ID", "ลูกค้า", "เซลล์", "ประเภทงาน", "ประเภทย่อย", "Deadline", "สถานะ", "Delivery Link", "วันที่สั่ง", "Priority", "Note ภายใน"],
+        ...filtered.map((j) => [
+          j.jobId, j.customerName, j.agent, j.task, j.subType,
+          formatDate(j.deadline), j.status, j.deliveryLink, j.timestamp,
+          j.priority === "urgent" ? "ด่วน" : "", j.internalNote,
+        ]),
+      ];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      // Column widths
+      ws["!cols"] = [12, 20, 15, 15, 15, 15, 14, 30, 22, 8, 30].map((w) => ({ wch: w }));
+      XLSX.utils.book_append_sheet(wb, ws, "Jobs");
+      XLSX.writeFile(wb, `teambon-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+    if ((window as any).XLSX) {
+      doExport((window as any).XLSX);
+    } else {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = () => doExport((window as any).XLSX);
+      document.head.appendChild(s);
+    }
   };
 
   // ─── REPORT DATA ─────────────────────────────────────────────────────────────
@@ -688,7 +730,10 @@ export default function AdminPage() {
             </div>
           )}
           <button onClick={exportCSV} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
-            📥 Export CSV
+            📥 CSV
+          </button>
+          <button onClick={exportExcel} className="bg-emerald-500/80 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+            📊 Excel
           </button>
           <button onClick={() => fetchJobs()} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
             <span className={loading ? "animate-spin" : ""}>🔄</span> Refresh
@@ -828,6 +873,72 @@ export default function AdminPage() {
                       <p className="text-xs text-gray-500 mt-1">{s.label}</p>
                     </div>
                   ))}
+                </div>
+
+                {/* Trend + SLA row */}
+                <div className="grid grid-cols-2 gap-3">
+
+                  {/* Trend chart — job volume per month (all data) */}
+                  {(() => {
+                    const trendMonths = Object.keys(monthJobsMap).slice(-8).reverse();
+                    const maxVal = Math.max(...trendMonths.map((m) => monthJobsMap[m].length), 1);
+                    return (
+                      <div className="bg-white rounded-xl border border-gray-100 p-4">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">📈 Trend งานรายเดือน</p>
+                        {trendMonths.length < 2 ? (
+                          <p className="text-xs text-gray-400 text-center py-4">ต้องการข้อมูลอย่างน้อย 2 เดือน</p>
+                        ) : (
+                          <div className="flex items-end gap-1.5 h-28 px-1">
+                            {trendMonths.map((m) => {
+                              const cnt = monthJobsMap[m].length;
+                              const pct = Math.round((cnt / maxVal) * 100);
+                              const isSelected = m === selectedMonth && !useDateRange;
+                              return (
+                                <div key={m} className="flex-1 flex flex-col items-center gap-1">
+                                  <span className="text-xs font-bold text-gray-700">{cnt}</span>
+                                  <div className="w-full rounded-t-md transition-all" style={{ height: `${Math.max(pct, 8)}%`, background: isSelected ? "#7c3aed" : "#c4b5fd" }} />
+                                  <span className="text-[9px] text-gray-400 text-center leading-tight">{m.replace(" ", "\n")}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* SLA per workflow */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-4">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🎯 SLA — ส่งงานทันเวลา</p>
+                    {reportByWorkflow.length === 0 ? (
+                      <p className="text-xs text-gray-400 text-center py-4">ไม่มีข้อมูล</p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {reportByWorkflow.map(({ wf, total, jobs: wfJobs }) => {
+                          const ws = WF_STYLE[wf];
+                          const overdueInWf = wfJobs.filter((j) => isOverdue(j.deadline, j.status)).length;
+                          const sla = total ? Math.round(((total - overdueInWf) / total) * 100) : 100;
+                          const slaColor = sla >= 80 ? "bg-green-400" : sla >= 50 ? "bg-amber-400" : "bg-red-400";
+                          const slaText  = sla >= 80 ? "text-green-600" : sla >= 50 ? "text-amber-600" : "text-red-500";
+                          return (
+                            <div key={wf}>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className={`font-semibold flex items-center gap-1 ${ws.text}`}>
+                                  {ws.icon} {wf}
+                                </span>
+                                <span className={`font-bold ${slaText}`}>{sla}%</span>
+                              </div>
+                              <div className="w-full bg-gray-100 rounded-full h-2">
+                                <div className={`${slaColor} h-2 rounded-full transition-all`} style={{ width: `${sla}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <p className="text-[10px] text-gray-400 pt-1">* SLA = % งานที่ยังไม่เกินกำหนด</p>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
 
                 {/* 2-col layout: Customer ranking (left) + Workflow breakdown (right) */}
@@ -1107,7 +1218,13 @@ export default function AdminPage() {
                   const overdue = isOverdue(job.deadline, edit.status);
 
                   return (
-                    <div key={job.jobId} className={`rounded-xl border shadow-sm overflow-hidden transition-colors ${cardBg(edit.status, overdue)}`}>
+                    <div key={job.jobId} className={`rounded-xl border shadow-sm overflow-hidden transition-colors ${job.priority === "urgent" ? "border-orange-400 ring-2 ring-orange-200" : cardBg(edit.status, overdue)}`}>
+                      {/* Priority banner */}
+                      {job.priority === "urgent" && (
+                        <div className="bg-orange-500 px-4 py-1 flex items-center gap-2">
+                          <span className="text-white text-xs font-black tracking-widest uppercase">🚨 งานด่วน — Priority</span>
+                        </div>
+                      )}
                       {/* Card header */}
                       <div className="px-5 py-3 flex items-center justify-between border-b border-black/5">
                         <div className="flex items-center gap-3 flex-wrap">
@@ -1123,7 +1240,20 @@ export default function AdminPage() {
                             <span className="text-xs text-green-500 font-semibold">💬 LINE</span>
                           )}
                         </div>
-                        <span className="text-xs text-gray-400 shrink-0">{job.timestamp}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handlePriority(job.jobId, job.priority)}
+                            title={job.priority === "urgent" ? "ยกเลิกงานด่วน" : "ตั้งเป็นงานด่วน"}
+                            className={`text-sm px-2 py-0.5 rounded-lg border transition font-bold ${
+                              job.priority === "urgent"
+                                ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
+                                : "bg-white text-gray-400 border-gray-200 hover:border-orange-400 hover:text-orange-500"
+                            }`}
+                          >
+                            🚨
+                          </button>
+                          <span className="text-xs text-gray-400 shrink-0">{job.timestamp}</span>
+                        </div>
                       </div>
 
                       {/* Card body */}
@@ -1245,7 +1375,19 @@ export default function AdminPage() {
                         )}
 
                         {/* Edit controls */}
-                        <div className="flex gap-2 items-end flex-wrap pt-1 border-t border-gray-50">
+                        <div className="space-y-2 pt-1 border-t border-gray-50">
+                          {/* Internal note */}
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1 font-medium">🔒 Note ภายใน <span className="text-gray-300">(ลูกค้าไม่เห็น)</span></p>
+                            <textarea
+                              className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-yellow-300 outline-none text-gray-800 resize-none bg-yellow-50 placeholder-gray-300"
+                              placeholder="เช่น รอไฟล์จากเซลล์, ติดต่อลูกค้าอีกครั้ง..."
+                              rows={2}
+                              value={edit.internalNote ?? ""}
+                              onChange={(e) => setEditState((p) => ({ ...p, [job.jobId]: { ...edit, internalNote: e.target.value } }))}
+                            />
+                          </div>
+                          <div className="flex gap-2 items-end flex-wrap">
                           <div className="w-36 shrink-0">
                             <p className="text-xs text-gray-400 mb-1 font-medium">สถานะ</p>
                             <select
@@ -1291,6 +1433,7 @@ export default function AdminPage() {
                           >
                             {copiedMap[job.jobId] ? "✅ คัดลอกแล้ว!" : "🔗 แชร์ฟรีแลน"}
                           </button>
+                        </div>
                         </div>
                       </div>
                     </div>
