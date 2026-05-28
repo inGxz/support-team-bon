@@ -1072,7 +1072,7 @@ export default function Page() {
                 <option>Poster</option>
                 <option>Banner</option>
                 <option>Infographic</option>
-                <option>PDF</option>
+                <option>EA Box</option>
                 <option>Profile</option>
                 <option>Seminar</option>
                 <option>Webinar</option>

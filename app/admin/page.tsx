@@ -136,6 +136,33 @@ function generateReportHTML(
     </tr>`;
   }).join("");
 
+  // subType breakdown (across all workflows)
+  const subTypeMap: Record<string, { total: number; done: number; inProgress: number; pending: number; wf: string }> = {};
+  jobs.forEach((j) => {
+    const st = j.subType || "—";
+    const wf = getWorkflow(j.task);
+    if (!subTypeMap[st]) subTypeMap[st] = { total: 0, done: 0, inProgress: 0, pending: 0, wf };
+    subTypeMap[st].total++;
+    if (j.status === "Done" || j.status === "เสร็จแล้ว")         subTypeMap[st].done++;
+    else if (j.status === "In Progress" || j.status === "กำลังทำ") subTypeMap[st].inProgress++;
+    else                                                            subTypeMap[st].pending++;
+  });
+  const subTypeRows = Object.entries(subTypeMap)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([st, v], i) => {
+      const pct = v.total ? Math.round((v.done / v.total) * 100) : 0;
+      const pctStyle = pct >= 60 ? "background:#dcfce7;color:#15803d" : pct >= 30 ? "background:#fef9c3;color:#92400e" : "background:#fee2e2;color:#b91c1c";
+      return `<tr style="${i % 2 === 1 ? "background:#fafaf8;" : ""}border-bottom:0.5px solid #ebe9e1">
+        <td style="padding:8px 10px;font-weight:500;color:#1e1b2e">${st}</td>
+        <td style="padding:8px 10px;color:#888780;font-size:11px">${wfIcon(v.wf)} ${v.wf}</td>
+        <td style="padding:8px 10px;text-align:center;font-weight:500;color:#1e1b2e">${v.total}</td>
+        <td style="padding:8px 10px;text-align:center;color:#15803d;font-weight:500">${v.done}</td>
+        <td style="padding:8px 10px;text-align:center;color:#1d4ed8">${v.inProgress}</td>
+        <td style="padding:8px 10px;text-align:center;color:#b45309">${v.pending}</td>
+        <td style="padding:8px 10px;text-align:center"><span style="${pctStyle};border-radius:999px;padding:2px 8px;font-size:10px;font-weight:500">${pct}%</span></td>
+      </tr>`;
+    }).join("");
+
   const jobRows = jobs.map((j, i) => {
     const ss =
       j.status === "Done" || j.status === "เสร็จแล้ว" ? "background:#dcfce7;color:#15803d" :
@@ -287,6 +314,27 @@ function generateReportHTML(
       </tr>
     </thead>
     <tbody>${wfTableRows}</tbody>
+  </table>
+</div>
+
+<div style="padding:20px 28px;border-bottom:0.5px solid #ebe9e1">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="width:3px;height:16px;background:#a78bfa;border-radius:2px"></div>
+    <div style="font-size:11px;font-weight:500;color:#1e1b2e;text-transform:uppercase;letter-spacing:1px">ประเภทงานย่อย (SubType)</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+    <thead>
+      <tr style="background:#f9f8f5">
+        <th style="padding:8px 10px;text-align:left;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:24%">ประเภทย่อย</th>
+        <th style="padding:8px 10px;text-align:left;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;width:18%">Workflow</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">ทั้งหมด</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Done</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">In Progress</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Pending</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:500;color:#888780;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">% Done</th>
+      </tr>
+    </thead>
+    <tbody>${subTypeRows}</tbody>
   </table>
 </div>
 
@@ -804,13 +852,28 @@ export default function AdminPage() {
                               {done > 0       && <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">✅ {done} Done</span>}
                             </div>
                           </div>
-                          <div className="px-5 pb-3">
-                            <div className="flex items-center gap-2">
+                          <div className="px-5 pb-2">
+                            <div className="flex items-center gap-2 mb-2">
                               <div className="flex-1 bg-white/60 rounded-full h-2 overflow-hidden">
                                 <div className="bg-green-400 h-2 rounded-full transition-all" style={{ width: `${donePct}%` }} />
                               </div>
                               <span className="text-xs font-bold text-green-600 w-12 text-right">{donePct}% Done</span>
                             </div>
+                            {/* subType chips */}
+                            {(() => {
+                              const stCount: Record<string, number> = {};
+                              wfJobs.forEach((j) => { if (j.subType) stCount[j.subType] = (stCount[j.subType] || 0) + 1; });
+                              const entries = Object.entries(stCount).sort((a, b) => b[1] - a[1]);
+                              return entries.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5 pt-1 pb-1">
+                                  {entries.map(([st, cnt]) => (
+                                    <span key={st} className={`text-xs px-2.5 py-0.5 rounded-full bg-white/70 border ${ws.border} ${ws.text} font-semibold`}>
+                                      {st} <span className="opacity-60">×{cnt}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
                           <div className="border-t border-white/40 divide-y divide-white/30">
                             {wfJobs.map((j) => {
