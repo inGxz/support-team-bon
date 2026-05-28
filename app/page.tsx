@@ -245,15 +245,34 @@ function JobHistoryPanel({ jobs, dark, onClose, onTrack }: { jobs: JobRecord[]; 
 }
 
 // ================= MY JOBS PANEL =================
-function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobItem[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void; loading: boolean }) {
+function MyJobsPanel({ jobs, dark, onClose, onTrack, loading, lineUserId }: { jobs: MyJobItem[]; dark: boolean; onClose: () => void; onTrack: (id: string) => void; loading: boolean; lineUserId?: string }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ทั้งหมด");
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
 
   const statusStyle = (s: string) => {
-    if (s === "Done" || s === "เสร็จแล้ว") return "bg-green-100 text-green-700 border-green-200";
-    if (s === "In Progress" || s === "กำลังทำ") return "bg-blue-100 text-blue-700 border-blue-200";
-    if (s === "Revision") return "bg-red-100 text-red-600 border-red-200";
+    if (s === "Approved")                                        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    if (s === "Done" || s === "เสร็จแล้ว")                      return "bg-green-100 text-green-700 border-green-200";
+    if (s === "In Progress" || s === "กำลังทำ")                 return "bg-blue-100 text-blue-700 border-blue-200";
+    if (s === "Revision")                                        return "bg-red-100 text-red-600 border-red-200";
     return "bg-amber-100 text-amber-700 border-amber-200";
+  };
+
+  const handleApprove = async (jobId: string) => {
+    setApprovingId(jobId);
+    try {
+      const res  = await fetch("/api/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, lineUserId: lineUserId || "" }),
+      });
+      const data = await res.json();
+      if (data.success || data.alreadyApproved) {
+        setApprovedIds((prev) => new Set([...prev, jobId]));
+      }
+    } catch { /* silent */ }
+    setApprovingId(null);
   };
   const statusIcon = (s: string) => {
     if (s === "Done" || s === "เสร็จแล้ว") return "✅";
@@ -268,6 +287,7 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobIte
       (statusFilter === "Pending"     && (j.status === "Pending" || !j.status)) ||
       (statusFilter === "In Progress" && (j.status === "In Progress" || j.status === "กำลังทำ")) ||
       (statusFilter === "Done"        && (j.status === "Done" || j.status === "เสร็จแล้ว")) ||
+      (statusFilter === "Approved"    && j.status === "Approved") ||
       (statusFilter === "Revision"    && j.status === "Revision");
     const q = search.toLowerCase();
     const matchSearch = !q || j.jobId.toLowerCase().includes(q) || j.task.toLowerCase().includes(q) || (j.subType || "").toLowerCase().includes(q);
@@ -280,6 +300,7 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobIte
     { label: "In Progress", count: jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length },
     { label: "Revision",    count: jobs.filter((j) => j.status === "Revision").length },
     { label: "Done",        count: jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length },
+    { label: "Approved",    count: jobs.filter((j) => j.status === "Approved").length },
   ];
 
   return (
@@ -346,39 +367,65 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading }: { jobs: MyJobIte
             <div className={`divide-y ${dark ? "divide-gray-700" : "divide-gray-100"}`}>
               {filtered.map((j) => {
                 const daysLeft = Math.ceil((new Date(j.deadline).getTime() - Date.now()) / 86400000);
-                const isDone = j.status === "Done" || j.status === "เสร็จแล้ว";
-                const urgent = !isDone && daysLeft >= 0 && daysLeft <= 2;
+                const isDone     = j.status === "Done" || j.status === "เสร็จแล้ว";
+                const isApproved = j.status === "Approved" || approvedIds.has(j.jobId);
+                const urgent     = !isDone && !isApproved && daysLeft >= 0 && daysLeft <= 2;
+                const effectiveStatus = isApproved ? "Approved" : j.status;
                 return (
-                  <div key={j.jobId} className={`px-5 py-4 flex items-start justify-between gap-3 ${dark ? "hover:bg-gray-700" : "hover:bg-gray-50"} transition`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="font-bold text-purple-600 text-sm">{j.jobId}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${statusStyle(j.status)}`}>
-                          {statusIcon(j.status)} {j.status}
-                        </span>
-                        {urgent && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">🔥 ด่วน</span>}
-                      </div>
-                      <p className={`text-sm font-medium truncate ${dark ? "text-white" : "text-gray-800"}`}>{j.task}</p>
-                      <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                        📅 {formatDate(j.deadline)}
-                        {!isDone && (daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)")}
-                      </p>
-                      {j.timestamp && (
-                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-500" : "text-gray-400"}`}>
-                          🕐 สั่งเมื่อ {String(j.timestamp)}
-                        </p>
-                      )}
-                      {j.subType && (
+                  <div key={j.jobId} className={`px-5 py-4 ${dark ? "hover:bg-gray-700" : "hover:bg-gray-50"} transition`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-bold text-purple-600 text-sm">{j.jobId}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${statusStyle(effectiveStatus)}`}>
+                            {statusIcon(effectiveStatus)} {effectiveStatus}
+                          </span>
+                          {urgent && <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">🔥 ด่วน</span>}
+                        </div>
+                        <p className={`text-sm font-medium truncate ${dark ? "text-white" : "text-gray-800"}`}>{j.task}</p>
                         <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
-                          📌 ประเภท: <span className="font-medium">{j.subType}</span>
+                          📅 {formatDate(j.deadline)}
+                          {!isDone && !isApproved && (daysLeft >= 0 ? ` (อีก ${daysLeft} วัน)` : " (เกินกำหนด)")}
                         </p>
-                      )}
-                      {j.workflowParams && (
-                        <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"} break-all`}>
-                          ⚙️ {j.workflowParams}
-                        </p>
-                      )}
+                        {j.timestamp && (
+                          <p className={`text-xs mt-0.5 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+                            🕐 สั่งเมื่อ {String(j.timestamp)}
+                          </p>
+                        )}
+                        {j.subType && (
+                          <p className={`text-xs mt-0.5 ${dark ? "text-gray-400" : "text-gray-500"}`}>
+                            📌 ประเภท: <span className="font-medium">{j.subType}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Action buttons — แสดงเมื่อ Done หรือ Approved */}
+                    {(isDone || isApproved) && (
+                      <div className="mt-3 flex gap-2">
+                        {isApproved ? (
+                          <div className="flex-1 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold text-center">
+                            ✅ Approved แล้ว
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleApprove(j.jobId)}
+                              disabled={approvingId === j.jobId}
+                              className="flex-1 py-2 rounded-xl bg-green-500 text-white text-xs font-bold hover:bg-green-600 transition disabled:opacity-60"
+                            >
+                              {approvingId === j.jobId ? "⏳ กำลัง Approve..." : "✅ Approve"}
+                            </button>
+                            <button
+                              onClick={() => onTrack(j.jobId)}
+                              className="flex-1 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 text-xs font-semibold hover:bg-gray-50 transition"
+                            >
+                              🔄 ขอแก้ไขงาน
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -866,7 +913,7 @@ export default function Page() {
       {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
       {confirmBack && <ConfirmModal message="ข้อมูลที่กรอกไปจะหายทั้งหมด ต้องการกลับจริงไหม?" onConfirm={() => { confirmBack(); setConfirmBack(null); }} onCancel={() => setConfirmBack(null)} />}
       {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setShowHistory(false); window.open(`/revision?jobId=${id}`, "_blank"); }} />}
-      {showMyJobs && <MyJobsPanel jobs={myJobsList} dark={dark} onClose={() => setShowMyJobs(false)} onTrack={(id) => { setShowMyJobs(false); window.open(`/revision?jobId=${id}`, "_blank"); }} loading={loadingMyJobs} />}
+      {showMyJobs && <MyJobsPanel jobs={myJobsList} dark={dark} onClose={() => setShowMyJobs(false)} onTrack={(id) => { setShowMyJobs(false); window.open(`/revision?jobId=${id}`, "_blank"); }} loading={loadingMyJobs} lineUserId={lineProfile?.userId} />}
 
       <div className="max-w-5xl mx-auto space-y-6">
 

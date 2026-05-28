@@ -159,8 +159,9 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
 
-    if (body.action === "update")   return updateJob(body);
-    if (body.action === "revision") return submitRevision(body);
+    if (body.action === "update")    return updateJob(body);
+    if (body.action === "revision")  return submitRevision(body);
+    if (body.action === "approveJob") return approveJob(body);
     return createJob(body);
   } catch (err) {
     return jsonResponse({ error: "FAILED", message: String(err) });
@@ -336,6 +337,11 @@ function submitRevision(body) {
         var rowNum = i + 1;
         var currentStatus = String(data[i][COL.STATUS - 1] || "");
         var currentCount  = parseInt(data[i][COL.REVISION_COUNT - 1] || "0") || 0;
+
+        // ป้องกัน: ถ้างาน Approved แล้ว ไม่อนุญาตให้ขอแก้ไข
+        if (currentStatus === "Approved") {
+          return jsonResponse({ error: "JOB_ALREADY_APPROVED", message: "งานนี้ได้รับการ Approve ไปแล้ว ไม่สามารถขอแก้ไขได้" });
+        }
 
         // เปลี่ยนสถานะเป็น Revision
         sheet.getRange(rowNum, COL.STATUS).setValue("Revision");
@@ -678,130 +684,213 @@ function notifyRevisionToCustomer(lineUserId, jobId, task, note, count) {
 function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink, revisionCount) {
   revisionCount = revisionCount || 0;
   const token = getLineToken();
+  if (!token || !lineUserId) return;
 
-  // สร้าง body contents
+  var approveUrl  = "https://support-team-bon.vercel.app/approve?jobId=" + jobId + "&lineUserId=" + lineUserId;
+  var revisionUrl = "https://support-team-bon.vercel.app/revision?jobId=" + jobId;
+
   var bodyContents = [
-    {
-      type: "text",
-      text: "📋 Job ID: " + jobId,
-      size: "sm",
-      color: "#333333",
-      weight: "bold"
-    }
+    { type: "box", layout: "horizontal", contents: [
+      { type: "text", text: "Job ID",  size: "xs", color: "#6B7280", flex: 2 },
+      { type: "text", text: jobId || "-", size: "xs", color: "#111827", weight: "bold", flex: 3, wrap: true }
+    ]},
+    { type: "box", layout: "horizontal", contents: [
+      { type: "text", text: "ลูกค้า",  size: "xs", color: "#6B7280", flex: 2 },
+      { type: "text", text: customerName || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+    ]},
+    { type: "box", layout: "horizontal", contents: [
+      { type: "text", text: "งาน",     size: "xs", color: "#6B7280", flex: 2 },
+      { type: "text", text: task || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+    ]},
+    { type: "separator", margin: "sm" },
+    { type: "box", layout: "vertical", margin: "sm", paddingAll: "sm",
+      backgroundColor: "#F0FDF4", cornerRadius: "md",
+      contents: [{
+        type: "text",
+        text: "ตรวจสอบงานแล้ว ถ้าผ่านให้กด Approve หากต้องการแก้ไขกดขอแก้ไขงาน",
+        size: "xs", color: "#166534", wrap: true
+      }]
+    },
+    { type: "text", text: "ระบบ SUPPORT TEAMBON VT MARKET",
+      size: "xxs", color: "#9CA3AF", margin: "md", align: "center" }
   ];
 
-  if (customerName) {
-    bodyContents.push({
-      type: "text",
-      text: "👤 ลูกค้า: " + customerName,
-      size: "sm",
-      color: "#555555"
-    });
-  }
-
-  if (task) {
-    bodyContents.push({
-      type: "text",
-      text: "📦 งาน: " + task,
-      size: "sm",
-      color: "#555555",
-      wrap: true
-    });
-  }
-
-  bodyContents.push({ type: "separator", margin: "md" });
-  bodyContents.push({
-    type: "text",
-    text: deliveryLink ? "กดปุ่มด้านล่างเพื่อรับไฟล์งาน" : "กรุณาติดต่อทีมงานเพื่อรับงาน",
-    size: "xs",
-    color: "#aaaaaa",
-    margin: "md",
-    wrap: true
-  });
-  bodyContents.push({
-    type: "text",
-    text: "ระบบ SUPPORT TEAMBON VT MARKET",
-    size: "xs",
-    color: "#aaaaaa",
-    wrap: true
-  });
-
-  // footer: ปุ่มเปิดไฟล์งาน + ปุ่มขอ revision (ซ่อนถ้าแก้ครบ 3 ครั้งแล้ว)
-  var revisionUrl = "https://support-team-bon.vercel.app/revision?jobId=" + jobId;
   var footerContents = [];
   if (deliveryLink) {
     footerContents.push({
       type: "button",
       action: { type: "uri", label: "📂 เปิดไฟล์งาน", uri: deliveryLink },
-      style: "primary", color: "#22c55e", height: "sm"
+      style: "primary", color: "#F59E0B", height: "sm"
     });
   }
+
+  var bottomButtons = [{
+    type: "button", flex: 1,
+    action: { type: "uri", label: "✅ Approve", uri: approveUrl },
+    style: "primary", color: "#22C55E", height: "sm"
+  }];
   if (revisionCount < 3) {
-    footerContents.push({
-      type: "button",
+    bottomButtons.push({
+      type: "button", flex: 1,
       action: { type: "uri", label: "🔄 ขอแก้ไขงาน", uri: revisionUrl },
-      style: "secondary", height: "sm",
-      margin: deliveryLink ? "sm" : "none"
+      style: "secondary", height: "sm"
     });
   }
-  // ถ้าไม่มีปุ่มเลย ใส่ placeholder text แทน
-  if (footerContents.length === 0) {
-    footerContents.push({
-      type: "text", text: "✅ งานนี้ขอแก้ไขครบ 3 ครั้งแล้ว",
-      size: "xs", color: "#9ca3af", align: "center"
-    });
-  }
-  var footer = { type: "box", layout: "vertical", contents: footerContents };
+  footerContents.push({
+    type: "box", layout: "horizontal", spacing: "sm",
+    margin: deliveryLink ? "sm" : "none",
+    contents: bottomButtons
+  });
 
   var bubble = {
     type: "bubble",
     header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: "#22c55e",
-      contents: [
-        {
-          type: "text",
-          text: "✅ งานของคุณเสร็จแล้ว!",
-          weight: "bold",
-          size: "xl",
-          color: "#ffffff"
-        }
-      ]
+      type: "box", layout: "vertical", paddingAll: "md",
+      backgroundColor: "#22C55E",
+      contents: [{ type: "text", text: "✅ งานของคุณเสร็จแล้ว!", color: "#FFFFFF", weight: "bold", size: "xl" }]
     },
-    body: {
-      type: "box",
-      layout: "vertical",
-      spacing: "md",
-      contents: bodyContents
-    }
+    body:   { type: "box", layout: "vertical", spacing: "sm", paddingAll: "md", contents: bodyContents },
+    footer: { type: "box", layout: "vertical", paddingAll: "md", contents: footerContents }
   };
 
-  if (footer) bubble.footer = footer;
-
-  const payload = JSON.stringify({
-    to: lineUserId,
-    messages: [
-      {
-        type: "flex",
-        altText: "✅ งานของคุณเสร็จแล้ว! Job ID: " + jobId,
-        contents: bubble
-      }
-    ]
-  });
-
-  const options = {
+  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + token
-    },
-    payload: payload,
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+    payload: JSON.stringify({ to: lineUserId, messages: [{ type: "flex", altText: "✅ งานของคุณเสร็จแล้ว! Job ID: " + jobId, contents: bubble }] }),
     muteHttpExceptions: true
-  };
+  });
+}
 
-  const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", options);
-  console.log("LINE push response:", res.getContentText());
+// ─── approveJob: ลูกค้า Approve งาน ──────────────────────────────────────────
+function approveJob(body) {
+  try {
+    var jobId      = String(body.jobId      || "");
+    var lineUserId = String(body.lineUserId || "");
+    if (!jobId) return jsonResponse({ error: "MISSING_JOB_ID" });
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    const data  = sheet.getDataRange().getValues();
+
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][COL.JOB_ID - 1]) !== jobId) continue;
+
+      var rowNum        = i + 1;
+      var currentStatus = String(data[i][COL.STATUS      - 1] || "");
+      var storedUserId  = String(data[i][COL.LINE_USER_ID - 1] || "");
+
+      // ตรวจสอบสิทธิ์
+      if (storedUserId && lineUserId && storedUserId !== lineUserId) {
+        return jsonResponse({ error: "FORBIDDEN" });
+      }
+      // Approved ไปแล้ว → return success ปกติ (idempotent)
+      if (currentStatus === "Approved") {
+        return jsonResponse({ success: true, alreadyApproved: true });
+      }
+
+      // เปลี่ยนสถานะ
+      sheet.getRange(rowNum, COL.STATUS).setValue("Approved");
+      writeActivityLog(jobId, "Customer", "status", currentStatus, "Approved");
+
+      var customerName = String(data[i][COL.CUSTOMER_NAME - 1] || "");
+      var task         = String(data[i][COL.TASK          - 1] || "");
+      var agent        = String(data[i][COL.AGENT         - 1] || "");
+
+      if (storedUserId) notifyApproveToCustomer(storedUserId, jobId, task);
+      notifyApproveToAdmin(jobId, customerName, task, agent, storedUserId);
+
+      return jsonResponse({ success: true });
+    }
+    return jsonResponse({ error: "NOT_FOUND" });
+  } catch(err) {
+    return jsonResponse({ error: "APPROVE_FAILED", message: String(err) });
+  }
+}
+
+// ─── notifyApproveToCustomer: ยืนยัน Approve กลับหาลูกค้า ────────────────────
+function notifyApproveToCustomer(lineUserId, jobId, task) {
+  try {
+    const token = getLineToken();
+    if (!token || !lineUserId) return;
+    var bubble = {
+      type: "bubble", size: "kilo",
+      header: {
+        type: "box", layout: "vertical", paddingAll: "md",
+        backgroundColor: "#22C55E",
+        contents: [
+          { type: "text", text: "🎉 Approved เรียบร้อย!", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: "SUPPORT TEAMBON VT MARKET", color: "#DCFCE7", size: "xs" }
+        ]
+      },
+      body: {
+        type: "box", layout: "vertical", spacing: "sm", paddingAll: "md",
+        contents: [
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "Job ID", size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: jobId || "-", size: "xs", color: "#111827", weight: "bold", flex: 3 }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "งาน",   size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: task || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "separator", margin: "sm" },
+          { type: "text", text: "ขอบคุณที่ใช้บริการ TEAMBON นะคะ ยินดีให้บริการเสมอ 🙏",
+            size: "xs", color: "#4B5563", wrap: true, margin: "sm" }
+        ]
+      }
+    };
+    UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      payload: JSON.stringify({ to: lineUserId, messages: [{ type: "flex", altText: "Approved Job " + jobId + " เรียบร้อยแล้ว ขอบคุณที่ใช้บริการ", contents: bubble }] }),
+      muteHttpExceptions: true
+    });
+  } catch(err) { console.error("notifyApproveToCustomer error:", err); }
+}
+
+// ─── notifyApproveToAdmin: แจ้ง admin group เมื่อลูกค้า Approve ──────────────
+function notifyApproveToAdmin(jobId, customerName, task, agent, lineUserId) {
+  try {
+    const token   = getLineToken();
+    const groupId = PropertiesService.getScriptProperties().getProperty("ADMIN_GROUP_ID");
+    if (!token || !groupId) return;
+    var bubble = {
+      type: "bubble", size: "kilo",
+      header: {
+        type: "box", layout: "vertical", paddingAll: "md",
+        backgroundColor: "#22C55E",
+        contents: [
+          { type: "text", text: "✅ ลูกค้า Approve งานแล้ว!", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: customerName || "-", color: "#DCFCE7", size: "sm" }
+        ]
+      },
+      body: {
+        type: "box", layout: "vertical", spacing: "sm", paddingAll: "md",
+        contents: [
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "Job ID",  size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: jobId || "-", size: "xs", color: "#111827", weight: "bold", flex: 3 }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "งาน",    size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: task || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "เซลล์",  size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: agent || "-", size: "xs", color: "#111827", flex: 3 }
+          ]},
+          { type: "separator", margin: "sm" },
+          { type: "text", text: "งานนี้ปิดเรียบร้อยแล้ว ✅",
+            size: "xs", color: "#059669", wrap: true, margin: "sm" }
+        ]
+      }
+    };
+    UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      payload: JSON.stringify({ to: groupId, messages: [{ type: "flex", altText: "✅ " + customerName + " Approve งาน " + jobId + " แล้ว", contents: bubble }] }),
+      muteHttpExceptions: true
+    });
+  } catch(err) { console.error("notifyApproveToAdmin error:", err); }
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────

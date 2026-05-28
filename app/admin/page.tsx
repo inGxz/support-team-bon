@@ -395,6 +395,7 @@ function isOverdue(deadline: string, status: string): boolean {
 
 function cardBg(status: string, overdue: boolean): string {
   if (overdue) return "bg-red-50 border-red-300";
+  if (status === "Approved") return "bg-emerald-50 border-emerald-200";
   if (status === "Done" || status === "เสร็จแล้ว") return "bg-green-50 border-green-200";
   if (status === "In Progress" || status === "กำลังทำ") return "bg-blue-50 border-blue-200";
   if (status === "Revision") return "bg-red-50 border-red-300";
@@ -431,7 +432,7 @@ function agingBadge(days: number): { label: string; cls: string } | null {
   return          { label: `${days}ว`, cls: "bg-red-50 text-red-600 border-red-200" };
 }
 
-const STATUS_OPTS = ["Pending", "In Progress", "Done", "Revision"];
+const STATUS_OPTS = ["Pending", "In Progress", "Done", "Revision", "Approved"];
 
 const statusStyle = (s: string) => {
   if (s === "Done" || s === "เสร็จแล้ว")
@@ -440,6 +441,8 @@ const statusStyle = (s: string) => {
     return { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-300", dot: "bg-blue-500" };
   if (s === "Revision")
     return { bg: "bg-red-100", text: "text-red-700", border: "border-red-300", dot: "bg-red-500" };
+  if (s === "Approved")
+    return { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-300", dot: "bg-emerald-500" };
   return { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-300", dot: "bg-amber-400" };
 };
 
@@ -1568,7 +1571,7 @@ export default function AdminPage() {
             {/* ══ KANBAN BOARD VIEW ══ */}
             {!loading && viewMode === "board" && (
               <div className="grid grid-cols-4 gap-3 items-start">
-                {(["Pending", "In Progress", "Revision", "Done"] as const).map((col) => {
+                {(["Pending", "In Progress", "Revision", "Done", "Approved"] as const).map((col) => {
                   const colJobs = filtered.filter((j) => {
                     const s = j.status || "Pending";
                     if (col === "Pending")     return s === "Pending" || !j.status;
@@ -1580,7 +1583,8 @@ export default function AdminPage() {
                     "Pending":     { header: "bg-amber-50 border-amber-200",  dot: "bg-amber-400",  count: "bg-amber-100 text-amber-700" },
                     "In Progress": { header: "bg-blue-50 border-blue-200",   dot: "bg-blue-500",   count: "bg-blue-100 text-blue-700" },
                     "Revision":    { header: "bg-red-50 border-red-200",     dot: "bg-red-500",    count: "bg-red-100 text-red-700" },
-                    "Done":        { header: "bg-green-50 border-green-200", dot: "bg-green-500",  count: "bg-green-100 text-green-700" },
+                    "Done":        { header: "bg-green-50 border-green-200",   dot: "bg-green-500",   count: "bg-green-100 text-green-700" },
+                    "Approved":    { header: "bg-emerald-50 border-emerald-200", dot: "bg-emerald-500", count: "bg-emerald-100 text-emerald-700" },
                   };
                   const cs = colStyle[col];
                   return (
