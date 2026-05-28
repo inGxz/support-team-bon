@@ -556,6 +556,7 @@ export default function AdminPage() {
     pending: jobs.filter((j) => j.status === "Pending" || !j.status).length,
     inProgress: jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length,
     done: jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length,
+    revision: jobs.filter((j) => j.status === "Revision").length,
   };
 
   const workflowCount: Record<string, number> = {};
@@ -577,6 +578,7 @@ export default function AdminPage() {
       (filter === "Pending" && (j.status === "Pending" || !j.status)) ||
       (filter === "In Progress" && (j.status === "In Progress" || j.status === "กำลังทำ")) ||
       (filter === "Done" && (j.status === "Done" || j.status === "เสร็จแล้ว")) ||
+      (filter === "Revision" && j.status === "Revision") ||
       (filter === "Overdue" && isOverdue(j.deadline, j.status));
     const matchWorkflow = workflowFilter === "ทั้งหมด" || getWorkflow(j.task) === workflowFilter;
     const q = search.toLowerCase();
@@ -912,13 +914,14 @@ export default function AdminPage() {
           <div className="space-y-4">
 
             {/* Stats */}
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-6 gap-3">
               {[
-                { label: "ทั้งหมด",    count: stats.total,      bg: "bg-white border-gray-200",       text: "text-gray-700"  },
-                { label: "Pending",    count: stats.pending,    bg: "bg-amber-50 border-amber-200",   text: "text-amber-700" },
-                { label: "In Progress",count: stats.inProgress, bg: "bg-blue-50 border-blue-200",     text: "text-blue-700"  },
-                { label: "Done",       count: stats.done,       bg: "bg-green-50 border-green-200",   text: "text-green-700" },
-                { label: "Overdue",    count: overdueCount,     bg: "bg-red-50 border-red-200",        text: "text-red-700"   },
+                { label: "ทั้งหมด",    count: stats.total,       bg: "bg-white border-gray-200",         text: "text-gray-700"   },
+                { label: "Pending",    count: stats.pending,     bg: "bg-amber-50 border-amber-200",     text: "text-amber-700"  },
+                { label: "In Progress",count: stats.inProgress,  bg: "bg-blue-50 border-blue-200",       text: "text-blue-700"   },
+                { label: "Done",       count: stats.done,        bg: "bg-green-50 border-green-200",     text: "text-green-700"  },
+                { label: "Revision",   count: stats.revision,    bg: "bg-orange-50 border-orange-200",   text: "text-orange-700" },
+                { label: "Overdue",    count: overdueCount,      bg: "bg-red-50 border-red-200",         text: "text-red-700"    },
               ].map((s) => (
                 <div
                   key={s.label}
