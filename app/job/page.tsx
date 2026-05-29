@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-// ─── LIFF ────────────────────────────────────────────────────────────────────
 const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "";
 
 type LiffWindow = Window & {
@@ -15,7 +14,6 @@ type LiffWindow = Window & {
   };
 };
 
-// ─── TYPES ───────────────────────────────────────────────────────────────────
 type JobDetail = {
   jobId: string;
   customerName: string;
@@ -39,38 +37,6 @@ type LogEntry = {
   newValue: string;
 };
 
-// ─── STATUS CONFIG ────────────────────────────────────────────────────────────
-const STATUS_STEPS = ["Pending", "In Progress", "Done", "Approved"];
-
-const STATUS_LABEL: Record<string, string> = {
-  Pending:     "รอดำเนินการ",
-  "In Progress": "กำลังทำ",
-  Done:        "เสร็จแล้ว",
-  เสร็จแล้ว:   "เสร็จแล้ว",
-  Approved:    "อนุมัติแล้ว",
-  Revision:    "ขอแก้ไข",
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  Pending:       "bg-amber-100 text-amber-700 border border-amber-200",
-  "In Progress": "bg-blue-100 text-blue-700 border border-blue-200",
-  Done:          "bg-green-100 text-green-700 border border-green-200",
-  เสร็จแล้ว:     "bg-green-100 text-green-700 border border-green-200",
-  Approved:      "bg-purple-100 text-purple-700 border border-purple-200",
-  Revision:      "bg-red-100 text-red-700 border border-red-200",
-};
-
-const FIELD_LABEL: Record<string, string> = {
-  status:       "สถานะ",
-  deliveryLink: "ลิงก์งาน",
-  revisionNote: "หมายเหตุแก้ไข",
-  priority:     "ความด่วน",
-  created:      "สร้างงาน",
-  approved:     "อนุมัติ",
-  revision:     "ขอแก้ไข",
-};
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
 function fmtDate(raw: string): string {
   if (!raw) return "–";
   const d = new Date(raw);
@@ -86,90 +52,103 @@ function fmtDateTime(raw: string): string {
 }
 
 function getStepIndex(status: string): number {
-  const norm = status === "เสร็จแล้ว" ? "Done" : status;
-  const idx  = STATUS_STEPS.indexOf(norm);
-  return idx >= 0 ? idx : 0;
+  if (status === "Pending") return 0;
+  if (status === "In Progress" || status === "กำลังทำ") return 1;
+  if (status === "Done" || status === "เสร็จแล้ว") return 2;
+  if (status === "Approved") return 3;
+  return 0;
 }
 
-// ─── MAIN COMPONENT (wrapped for Suspense) ────────────────────────────────────
+function tlDotColor(field: string, newValue: string): string {
+  if (field === "created") return "#888780";
+  if (newValue === "Approved") return "#7c3aed";
+  if (newValue === "Done" || newValue === "เสร็จแล้ว") return "#15803d";
+  if (newValue === "In Progress" || newValue === "กำลังทำ") return "#60a5fa";
+  if (newValue === "Revision" || field === "revision") return "#f87171";
+  if (field === "deliveryLink") return "#4ade80";
+  return "#888780";
+}
+
+function tlEventText(log: LogEntry): string {
+  if (log.field === "created") return "รับงานเข้าระบบ";
+  if (log.field === "deliveryLink") return "อัปโหลดไฟล์งานแล้ว";
+  if (log.field === "status") {
+    const v = log.newValue;
+    if (v === "Done" || v === "เสร็จแล้ว") return "งานเสร็จแล้ว (Done)";
+    if (v === "In Progress" || v === "กำลังทำ") return "เริ่มดำเนินการ (In Progress)";
+    if (v === "Approved") return "อนุมัติงานแล้ว ✅";
+    if (v === "Revision") return "ขอแก้ไขงาน";
+    return `เปลี่ยนสถานะ → ${v}`;
+  }
+  if (log.field === "revision") return `ขอแก้ไข: ${log.newValue}`;
+  if (log.field === "revisionNote") return `หมายเหตุ: ${log.newValue}`;
+  return `${log.field}: ${log.newValue}`;
+}
+
 function JobPageContent() {
-  const params = useSearchParams();
-  const jobId  = params.get("jobId") || "";
+  const params  = useSearchParams();
+  const jobId   = params.get("jobId") || "";
 
-  // LIFF / LINE
-  const [lineUserId,  setLineUserId]  = useState("");
-  const [liffReady,   setLiffReady]   = useState(false);
-  const [liffError,   setLiffError]   = useState<string | null>(null);
-
-  // Data
-  const [job,         setJob]         = useState<JobDetail | null>(null);
-  const [logs,        setLogs]        = useState<LogEntry[]>([]);
+  const [lineUserId,   setLineUserId]   = useState("");
+  const [liffReady,    setLiffReady]    = useState(false);
+  const [job,          setJob]          = useState<JobDetail | null>(null);
+  const [logs,         setLogs]         = useState<LogEntry[]>([]);
   const [deliveryLink, setDeliveryLink] = useState("");
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState<string | null>(null);
-
-  // Actions
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
   const [revisionNote, setRevisionNote] = useState("");
   const [showRevision, setShowRevision] = useState(false);
   const [submitting,   setSubmitting]   = useState(false);
   const [actionMsg,    setActionMsg]    = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [approved,     setApproved]     = useState(false);
 
-  // ── init LIFF ──────────────────────────────────────────────────────────────
+  // init LIFF
   useEffect(() => {
     if (!LIFF_ID) { setLiffReady(true); return; }
-    const script = document.createElement("script");
-    script.src   = "https://static.line-scdn.net/liff/edge/2/sdk.js";
-    script.onload = async () => {
+    const script    = document.createElement("script");
+    script.src      = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+    script.onload   = async () => {
       try {
-        const liffWin = window as unknown as LiffWindow;
-        await liffWin.liff.init({ liffId: LIFF_ID });
-        if (liffWin.liff.isLoggedIn()) {
+        const w = window as unknown as LiffWindow;
+        await w.liff.init({ liffId: LIFF_ID });
+        if (w.liff.isLoggedIn()) {
           try {
-            const profile = await liffWin.liff.getProfile();
-            setLineUserId(profile.userId);
-          } catch {
-            // getProfile ล้มเหลว — ข้ามไปได้ หน้าจะโหลดโดยไม่มี userId
-          }
+            const p = await w.liff.getProfile();
+            setLineUserId(p.userId);
+          } catch { /* ข้าม */ }
         }
-        // ไม่ login อัตโนมัติ — เปิดหน้าต่อเลย
-        setLiffReady(true);
-      } catch {
-        // LIFF init ล้มเหลวทุกกรณี — โหลดหน้าต่อโดยไม่มี userId
-        setLiffReady(true);
-      }
+      } catch { /* ข้าม */ }
+      setLiffReady(true);
     };
+    script.onerror  = () => setLiffReady(true);
     document.head.appendChild(script);
   }, []);
 
-  // ── fetch job detail + log ─────────────────────────────────────────────────
+  // fetch data
   useEffect(() => {
     if (!liffReady || !jobId) return;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const uidParam = lineUserId ? `&lineUserId=${encodeURIComponent(lineUserId)}` : "";
-
-        // Parallel fetch — source=customer เพื่อดูรายละเอียดงานโดยไม่ต้องมี userId
-        const [jobRes, logRes] = await Promise.all([
-          fetch(`/api/gas?jobId=${encodeURIComponent(jobId)}${uidParam}&source=customer`),
-          fetch(`/api/gas?action=jobLog&jobId=${encodeURIComponent(jobId)}${uidParam}&source=customer`),
+        const uid = lineUserId ? `&lineUserId=${encodeURIComponent(lineUserId)}` : "";
+        const [jr, lr] = await Promise.all([
+          fetch(`/api/gas?jobId=${encodeURIComponent(jobId)}${uid}&source=customer`),
+          fetch(`/api/gas?action=jobLog&jobId=${encodeURIComponent(jobId)}${uid}&source=customer`),
         ]);
-
-        const jobData = await jobRes.json();
-        const logData = await logRes.json();
-
-        if (jobData.error) {
-          setError(jobData.error === "FORBIDDEN" ? "คุณไม่มีสิทธิ์ดูงานนี้" : "ไม่พบงานนี้ในระบบ");
+        const jd = await jr.json();
+        const ld = await lr.json();
+        if (jd.error) {
+          setError(jd.error === "FORBIDDEN" ? "คุณไม่มีสิทธิ์ดูงานนี้" : "ไม่พบงานนี้ในระบบ");
         } else {
-          setJob(jobData);
+          setJob(jd);
+          if (jd.status === "Approved") setApproved(true);
         }
-
-        if (!logData.error) {
-          setLogs(logData.logs || []);
-          if (logData.deliveryLink) setDeliveryLink(logData.deliveryLink);
+        if (!ld.error) {
+          setLogs(ld.logs || []);
+          if (ld.deliveryLink) setDeliveryLink(ld.deliveryLink);
         }
-      } catch (e: any) {
+      } catch {
         setError("เชื่อมต่อระบบไม่ได้ กรุณาลองใหม่");
       } finally {
         setLoading(false);
@@ -177,7 +156,6 @@ function JobPageContent() {
     })();
   }, [liffReady, jobId, lineUserId]);
 
-  // ── approve ────────────────────────────────────────────────────────────────
   async function handleApprove() {
     if (!job || submitting) return;
     setSubmitting(true);
@@ -189,9 +167,10 @@ function JobPageContent() {
         body: JSON.stringify({ jobId: job.jobId, lineUserId }),
       });
       const d = await res.json();
-      if (d.ok || d.success) {
+      if (d.ok || d.success || d.alreadyApproved) {
+        setApproved(true);
         setJob(prev => prev ? { ...prev, status: "Approved" } : prev);
-        setActionMsg({ type: "ok", text: "✅ อนุมัติงานเรียบร้อยแล้ว" });
+        setActionMsg({ type: "ok", text: "✅ Approve งานเรียบร้อยแล้ว" });
       } else {
         setActionMsg({ type: "err", text: d.message || "เกิดข้อผิดพลาด" });
       }
@@ -202,7 +181,6 @@ function JobPageContent() {
     }
   }
 
-  // ── revision ───────────────────────────────────────────────────────────────
   async function handleRevision() {
     if (!job || submitting || !revisionNote.trim()) return;
     setSubmitting(true);
@@ -229,240 +207,284 @@ function JobPageContent() {
     }
   }
 
-  // ── render ─────────────────────────────────────────────────────────────────
+  // ── loading / error ────────────────────────────────────────────────────────
   if (!liffReady || loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#f7f6f2" }}>
-        <div className="w-10 h-10 rounded-full border-4 border-indigo-300 border-t-indigo-600 animate-spin mb-4" />
-        <p className="text-sm text-gray-500">กำลังโหลดข้อมูลงาน…</p>
-      </div>
-    );
-  }
-
-  if (liffError) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: "#f7f6f2" }}>
-        <div className="text-4xl mb-3">⚠️</div>
-        <p className="text-sm text-gray-600 text-center">LINE login error: {liffError}</p>
+      <div style={{ minHeight: "100vh", background: "#F8F7F4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid #c4b5fd", borderTopColor: "#7c3aed", animation: "spin 0.8s linear infinite" }} />
+        <p style={{ marginTop: 12, fontSize: 13, color: "#888780" }}>กำลังโหลดข้อมูลงาน…</p>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: "#f7f6f2" }}>
-        <div className="text-5xl mb-4">🔒</div>
-        <p className="font-semibold text-gray-800 mb-1">ไม่พบข้อมูล</p>
-        <p className="text-sm text-gray-500 text-center">{error}</p>
+      <div style={{ minHeight: "100vh", background: "#F8F7F4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+        <p style={{ fontWeight: 600, color: "#1e1b2e", marginBottom: 4 }}>ไม่พบข้อมูล</p>
+        <p style={{ fontSize: 13, color: "#888780", textAlign: "center" }}>{error}</p>
       </div>
     );
   }
 
   if (!job) return null;
 
-  const stepIdx    = getStepIndex(job.status);
-  const isDone     = job.status === "Done" || job.status === "เสร็จแล้ว" || job.status === "Approved";
-  const canApprove = job.status === "Done" || job.status === "เสร็จแล้ว";
-  const canRevise  = job.status === "Done" || job.status === "เสร็จแล้ว" || job.status === "In Progress";
-  const dl         = deliveryLink || job.imageUrl || "";
+  const stepIdx   = getStepIndex(job.status);
+  const isRevision = job.status === "Revision";
+  const isDone    = job.status === "Done" || job.status === "เสร็จแล้ว";
+  const isApproved = approved || job.status === "Approved";
+  const canApprove = isDone && !isApproved;
+  const canRevise  = (isDone || job.status === "In Progress") && !isApproved;
+  const dl        = deliveryLink || job.imageUrl || "";
+
+  const STEPS = [
+    { label: "รับงาน" },
+    { label: "กำลังทำ" },
+    { label: "Done" },
+    { label: "Approve" },
+  ];
 
   return (
-    <div className="min-h-screen pb-10" style={{ background: "#f7f6f2", fontFamily: "'Noto Sans Thai', sans-serif" }}>
-      {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #1e1b2e 0%, #2d2657 100%)" }} className="px-4 pt-10 pb-6">
-        <p className="text-xs text-indigo-300 mb-1">Job #{job.jobId}</p>
-        <h1 className="text-white text-xl font-bold leading-snug">{job.task}</h1>
-        {job.subType && <p className="text-indigo-200 text-sm mt-1">{job.subType}</p>}
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_COLOR[job.status] || "bg-gray-100 text-gray-600"}`}>
-            {STATUS_LABEL[job.status] || job.status}
-          </span>
-          {job.deadline && (
-            <span className="text-xs text-indigo-200">📅 {fmtDate(job.deadline)}</span>
-          )}
+    <div style={{ minHeight: "100vh", background: "#F8F7F4", fontFamily: "'Noto Sans Thai', sans-serif", maxWidth: 480, margin: "0 auto" }}>
+
+      {/* Top Bar */}
+      <div style={{ background: "#1e1b2e", padding: "44px 16px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={() => window.history.back()}
+          style={{ width: 32, height: 32, borderRadius: 8, background: "#2d2a3e", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <svg width="16" height="16" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#a78bfa", fontSize: 11, fontWeight: 500, letterSpacing: 1 }}>{job.jobId}</div>
+          <div style={{ color: "#fff", fontSize: 13, fontWeight: 500, marginTop: 1 }}>{job.task}</div>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mx-4 -mt-3 bg-white rounded-2xl shadow-sm p-4 mb-4">
-        <div className="flex items-center justify-between">
-          {STATUS_STEPS.map((step, idx) => {
-            const active  = idx === stepIdx;
-            const past    = idx < stepIdx;
-            const isRevision = job.status === "Revision";
-            return (
-              <div key={step} className="flex-1 flex flex-col items-center">
-                {/* connector line */}
-                <div className="flex items-center w-full">
-                  {idx > 0 && (
-                    <div className={`flex-1 h-1 rounded-full ${past || active ? "bg-indigo-500" : "bg-gray-200"}`} />
-                  )}
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all
-                    ${active && isRevision ? "border-red-400 bg-red-50 text-red-500" :
-                      active ? "border-indigo-600 bg-indigo-600 text-white" :
-                      past   ? "border-indigo-400 bg-indigo-50 text-indigo-600" :
-                               "border-gray-200 bg-white text-gray-400"}`}>
-                    {past ? "✓" : isRevision && active ? "!" : idx + 1}
+      <div style={{ background: "#fff", margin: "0 0 8px" }}>
+
+        {/* Status Hero */}
+        <div style={{ padding: "14px 16px", borderBottom: "0.5px solid #ebe9e1", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "#888780", marginBottom: 4 }}>สถานะปัจจุบัน</div>
+            <StatusBadge status={isApproved ? "Approved" : job.status} />
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: "#888780" }}>Deadline</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: "#1e1b2e", marginTop: 2 }}>{fmtDate(job.deadline)}</div>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div style={{ padding: "14px 16px", borderBottom: "0.5px solid #ebe9e1" }}>
+          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "#888780", marginBottom: 10 }}>ความคืบหน้า</div>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {STEPS.map((s, idx) => {
+              const past   = idx < stepIdx;
+              const active = idx === stepIdx;
+              return (
+                <div key={s.label} style={{ display: "flex", alignItems: "center", flex: idx < STEPS.length - 1 ? "1" : "unset" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 11, fontWeight: 500,
+                      background: past ? "#15803d" : active ? "#4f46e5" : "#f1f0ed",
+                      color: past || active ? "#fff" : "#888780",
+                      border: past || active ? "none" : "0.5px solid #ebe9e1",
+                    }}>
+                      {past ? <svg width="11" height="11" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                           : active ? <svg width="11" height="11" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                           : null}
+                    </div>
+                    <div style={{ fontSize: 9, marginTop: 4, color: past ? "#15803d" : active ? "#4f46e5" : "#888780", fontWeight: active ? 500 : 400 }}>
+                      {s.label}
+                    </div>
                   </div>
-                  {idx < STATUS_STEPS.length - 1 && (
-                    <div className={`flex-1 h-1 rounded-full ${past ? "bg-indigo-500" : "bg-gray-200"}`} />
+                  {idx < STEPS.length - 1 && (
+                    <div style={{ flex: 1, height: 1.5, background: past ? "#15803d" : "#ebe9e1", marginBottom: 14 }} />
                   )}
                 </div>
-                <span className={`text-xs mt-1 text-center leading-tight
-                  ${active ? "text-indigo-700 font-semibold" : past ? "text-indigo-400" : "text-gray-300"}`}>
-                  {step === "In Progress" ? "กำลังทำ" : step === "Pending" ? "รอ" : step === "Done" ? "เสร็จ" : "อนุมัติ"}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
+
+        {/* Detail */}
+        <div style={{ padding: "14px 16px", borderBottom: "0.5px solid #ebe9e1" }}>
+          <SectionHeader label="รายละเอียดงาน" color="#a78bfa" />
+          <InfoRow label="ประเภท" value={[job.task, job.subType].filter(Boolean).join(" · ")} />
+          <InfoRow label="เซลล์" value={job.agent} />
+          {job.reference && <InfoRow label="Reference" value={job.reference} link />}
+          {job.detail && (
+            <div style={{ marginTop: 8, background: "#fafaf8", border: "0.5px solid #ebe9e1", borderRadius: 8, padding: "10px 12px", fontSize: 12, lineHeight: 1.6, color: "#444441" }}>
+              {job.detail}
+            </div>
+          )}
+          {job.revisionNote && (
+            <div style={{ marginTop: 8, background: "#fff5f5", border: "0.5px solid #fca5a5", borderRadius: 8, padding: "10px 12px", fontSize: 12, lineHeight: 1.6, color: "#b91c1c" }}>
+              📝 {job.revisionNote}
+            </div>
+          )}
+        </div>
+
+        {/* Delivery */}
+        {dl && (
+          <div style={{ padding: "14px 16px", borderBottom: "0.5px solid #ebe9e1" }}>
+            <SectionHeader label="ไฟล์งาน" color="#4ade80" />
+            <div style={{ background: "#f0fdf4", border: "0.5px solid #bbf7d0", borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 32, height: 32, background: "#dcfce7", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 500, color: "#15803d" }}>งานเสร็จแล้ว — เปิดดูได้เลย</div>
+                <div style={{ fontSize: 10, color: "#4ade80", marginTop: 1 }}>Google Drive · คลิกเพื่อเปิด</div>
+              </div>
+              <a href={dl} target="_blank" rel="noopener noreferrer"
+                style={{ background: "#15803d", color: "#fff", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 500, textDecoration: "none", whiteSpace: "nowrap" }}>
+                เปิดไฟล์
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Timeline */}
+        {logs.length > 0 && (
+          <div style={{ padding: "14px 16px", borderBottom: "0.5px solid #ebe9e1" }}>
+            <SectionHeader label="ประวัติงาน" color="#fbbf24" />
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {logs.map((log, i) => (
+                <li key={i} style={{ display: "flex", gap: 10, marginBottom: i < logs.length - 1 ? 12 : 0 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 20 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: tlDotColor(log.field, log.newValue), flexShrink: 0, marginTop: 3 }} />
+                    {i < logs.length - 1 && <div style={{ flex: 1, width: 1, background: "#ebe9e1", marginTop: 3 }} />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#1e1b2e", fontWeight: 500 }}>{tlEventText(log)}</div>
+                    <div style={{ fontSize: 10, color: "#888780", marginTop: 1 }}>{fmtDateTime(log.timestamp)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Action Message */}
       {actionMsg && (
-        <div className={`mx-4 mb-4 rounded-xl p-3 text-sm text-center font-medium
-          ${actionMsg.type === "ok" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>
+        <div style={{
+          margin: "0 12px 8px",
+          padding: "10px 14px",
+          borderRadius: 10,
+          fontSize: 13,
+          fontWeight: 500,
+          textAlign: "center",
+          background: actionMsg.type === "ok" ? "#f0fdf4" : "#fff5f5",
+          color:      actionMsg.type === "ok" ? "#15803d"  : "#b91c1c",
+          border:     actionMsg.type === "ok" ? "0.5px solid #bbf7d0" : "0.5px solid #fca5a5",
+        }}>
           {actionMsg.text}
         </div>
       )}
 
-      {/* Delivery Link */}
-      {dl && (
-        <div className="mx-4 mb-4">
-          <a href={dl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-white font-semibold text-sm shadow"
-            style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}>
-            <span>📦</span> ดูผลงาน / ดาวน์โหลด
-          </a>
-        </div>
-      )}
-
-      {/* Job Details Card */}
-      <div className="mx-4 mb-4 bg-white rounded-2xl shadow-sm p-4">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">รายละเอียดงาน</h2>
-        <div className="space-y-3">
-          <Row label="ชื่อลูกค้า" value={job.customerName} />
-          <Row label="ผู้รับผิดชอบ" value={job.agent} />
-          {job.detail && <Row label="รายละเอียด" value={job.detail} />}
-          {job.reference && <Row label="อ้างอิง" value={job.reference} />}
-          {job.revisionNote && (
-            <Row label="หมายเหตุแก้ไข" value={job.revisionNote} highlight />
-          )}
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      {(canApprove || canRevise) && (
-        <div className="mx-4 mb-4 bg-white rounded-2xl shadow-sm p-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">การดำเนินการ</h2>
-
-          {canApprove && (
-            <button onClick={handleApprove} disabled={submitting}
-              className="w-full mb-2 py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-              style={{ background: "#7c3aed" }}>
-              {submitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "✅"}
-              อนุมัติงาน
+      {/* Revision textarea */}
+      {showRevision && (
+        <div style={{ background: "#fff", margin: "0 0 8px", padding: "14px 16px" }}>
+          <div style={{ fontSize: 12, color: "#888780", marginBottom: 8 }}>ระบุรายละเอียดที่ต้องการแก้ไข</div>
+          <textarea
+            value={revisionNote}
+            onChange={e => setRevisionNote(e.target.value)}
+            placeholder="เช่น เปลี่ยนสีพื้นหลัง, ปรับขนาดตัวอักษร…"
+            rows={3}
+            style={{ width: "100%", border: "0.5px solid #ebe9e1", borderRadius: 8, padding: "10px 12px", fontSize: 12, resize: "none", outline: "none", background: "#fafaf8", color: "#1e1b2e" }}
+          />
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button onClick={() => { setShowRevision(false); setRevisionNote(""); }}
+              style={{ flex: 1, padding: "10px", borderRadius: 10, border: "0.5px solid #ebe9e1", background: "#fff", color: "#888780", fontSize: 13, cursor: "pointer" }}>
+              ยกเลิก
             </button>
-          )}
-
-          {canRevise && !showRevision && (
-            <button onClick={() => setShowRevision(true)}
-              className="w-full py-3 rounded-xl text-red-600 font-semibold text-sm border border-red-200 bg-red-50 flex items-center justify-center gap-2">
-              ✏️ ขอแก้ไขงาน
+            <button onClick={handleRevision} disabled={!revisionNote.trim() || submitting}
+              style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "#b91c1c", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", opacity: (!revisionNote.trim() || submitting) ? 0.6 : 1 }}>
+              {submitting ? "กำลังส่ง…" : "ส่งคำขอ"}
             </button>
-          )}
-
-          {showRevision && (
-            <div className="mt-2">
-              <textarea
-                value={revisionNote}
-                onChange={e => setRevisionNote(e.target.value)}
-                placeholder="ระบุรายละเอียดที่ต้องการแก้ไข…"
-                rows={3}
-                className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-              <div className="flex gap-2 mt-2">
-                <button onClick={() => { setShowRevision(false); setRevisionNote(""); }}
-                  className="flex-1 py-2 rounded-xl text-gray-500 text-sm border border-gray-200">
-                  ยกเลิก
-                </button>
-                <button onClick={handleRevision} disabled={!revisionNote.trim() || submitting}
-                  className="flex-1 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
-                  style={{ background: "#ef4444" }}>
-                  {submitting ? "กำลังส่ง…" : "ส่งคำขอ"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Activity Timeline */}
-      {logs.length > 0 && (
-        <div className="mx-4 mb-4 bg-white rounded-2xl shadow-sm p-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">ความเคลื่อนไหว</h2>
-          <div className="relative">
-            <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-100" />
-            <div className="space-y-4">
-              {logs.map((log, i) => (
-                <div key={i} className="flex gap-3 pl-8 relative">
-                  <div className="absolute left-2 top-1 w-2.5 h-2.5 rounded-full bg-indigo-200 border-2 border-indigo-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400">{fmtDateTime(log.timestamp)}</p>
-                    <p className="text-sm text-gray-700 mt-0.5">
-                      {log.field === "status" ? (
-                        <>
-                          <span className="font-medium">{log.actor}</span>
-                          {" เปลี่ยนสถานะ "}
-                          <span className="text-gray-400">{log.oldValue || "–"}</span>
-                          {" → "}
-                          <span className="font-semibold text-indigo-600">{log.newValue}</span>
-                        </>
-                      ) : log.field === "deliveryLink" ? (
-                        <>
-                          <span className="font-medium">{log.actor}</span>
-                          {" อัปโหลดผลงานแล้ว 📦"}
-                        </>
-                      ) : log.field === "created" ? (
-                        <><span className="font-medium">สร้างงาน</span> เรียบร้อย</>
-                      ) : (
-                        <>
-                          <span className="font-medium">{log.actor}</span>
-                          {` อัปเดต ${FIELD_LABEL[log.field] || log.field}: `}
-                          <span className="text-gray-500">{log.newValue}</span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       )}
 
-      {/* Footer */}
-      <p className="text-center text-xs text-gray-400 mt-4">SUPPORT TEAMBON VT MARKET</p>
+      {/* Action Buttons */}
+      <div style={{ padding: "14px 16px 32px", display: "flex", gap: 8 }}>
+        {isApproved ? (
+          <div style={{ flex: 1, background: "#f0fdf4", color: "#15803d", border: "0.5px solid #bbf7d0", borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 500, textAlign: "center" }}>
+            ✅ Approved แล้ว
+          </div>
+        ) : (canApprove || canRevise) ? (
+          <>
+            {canApprove && (
+              <button onClick={handleApprove} disabled={submitting}
+                style={{ flex: 1, background: "#15803d", color: "#fff", border: "none", borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, cursor: "pointer", opacity: submitting ? 0.6 : 1 }}>
+                {submitting ? <span style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", animation: "spin 0.8s linear infinite", display: "inline-block" }} /> : (
+                  <svg width="16" height="16" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                )}
+                Approve งาน
+              </button>
+            )}
+            {canRevise && !showRevision && (
+              <button onClick={() => setShowRevision(true)}
+                style={{ flex: 1, background: "#fff", color: "#b91c1c", border: "0.5px solid #fca5a5", borderRadius: 10, padding: 12, fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, cursor: "pointer" }}>
+                <svg width="16" height="16" fill="none" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.07-4.27"/></svg>
+                ขอแก้ไข
+              </button>
+            )}
+          </>
+        ) : null}
+      </div>
+
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
 
-// ─── Row helper ───────────────────────────────────────────────────────────────
-function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function StatusBadge({ status }: { status: string }) {
+  const cfg: Record<string, { bg: string; color: string; dot: string; label: string }> = {
+    "Approved":    { bg: "#ede9fe", color: "#5b21b6", dot: "#7c3aed",  label: "Approved ✅" },
+    "Done":        { bg: "#dcfce7", color: "#15803d", dot: "#15803d",  label: "Done — รอ Approve" },
+    "เสร็จแล้ว":  { bg: "#dcfce7", color: "#15803d", dot: "#15803d",  label: "Done — รอ Approve" },
+    "In Progress": { bg: "#dbeafe", color: "#1e40af", dot: "#3b82f6",  label: "In Progress" },
+    "กำลังทำ":    { bg: "#dbeafe", color: "#1e40af", dot: "#3b82f6",  label: "In Progress" },
+    "Revision":    { bg: "#fee2e2", color: "#b91c1c", dot: "#ef4444",  label: "ขอแก้ไข" },
+    "Pending":     { bg: "#fef9c3", color: "#854d0e", dot: "#f59e0b",  label: "รอดำเนินการ" },
+  };
+  const c = cfg[status] || cfg["Pending"];
   return (
-    <div>
-      <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className={`text-sm leading-snug ${highlight ? "text-red-600 font-medium" : "text-gray-800"}`}>{value || "–"}</p>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, background: c.bg }}>
+      <div style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot }} />
+      <span style={{ fontSize: 12, fontWeight: 500, color: c.color }}>{c.label}</span>
     </div>
   );
 }
 
-// ─── Export with Suspense (for useSearchParams) ───────────────────────────────
+function SectionHeader({ label, color }: { label: string; color: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+      <div style={{ width: 3, height: 12, background: color, borderRadius: 0 }} />
+      <div style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "1.5px", color: "#888780" }}>{label}</div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value, link }: { label: string; value: string; link?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+      <span style={{ fontSize: 12, color: "#888780", flexShrink: 0, width: 72 }}>{label}</span>
+      <span style={{ fontSize: 12, color: link ? "#4f46e5" : "#1e1b2e", textAlign: "right", flex: 1 }}>{value || "–"}</span>
+    </div>
+  );
+}
+
 export default function JobPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#f7f6f2" }}>
-        <div className="w-10 h-10 rounded-full border-4 border-indigo-300 border-t-indigo-600 animate-spin" />
+      <div style={{ minHeight: "100vh", background: "#F8F7F4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid #c4b5fd", borderTopColor: "#7c3aed", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     }>
       <JobPageContent />
