@@ -400,9 +400,21 @@ function MyJobsPanel({ jobs, dark, onClose, onTrack, loading, lineUserId }: { jo
                       </div>
                     </div>
 
+                    {/* Detail link — แสดงทุก card */}
+                    <div className="mt-2">
+                      <a
+                        href={`/job?jobId=${encodeURIComponent(j.jobId)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-indigo-600 font-semibold hover:underline"
+                      >
+                        🔍 ดูรายละเอียด
+                      </a>
+                    </div>
+
                     {/* Action buttons — แสดงเมื่อ Done หรือ Approved */}
                     {(isDone || isApproved) && (
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-2 flex gap-2">
                         {isApproved ? (
                           <div className="flex-1 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold text-center">
                             ✅ Approved แล้ว

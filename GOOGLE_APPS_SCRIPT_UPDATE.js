@@ -80,6 +80,11 @@ function doGet(e) {
     return getActivityLog(e.parameter.jobId || "", parseInt(e.parameter.limit || "200"));
   }
 
+  // Customer: ดึง activity log ของ job ตัวเอง (ต้อง lineUserId ตรงกัน)
+  if (action === "jobLog") {
+    return getJobLogForCustomer(jobId, lineUserId);
+  }
+
   // ถ้าไม่มี jobId แต่มี lineUserId → ดึงงานทั้งหมดของ user นี้
   if (!jobId && lineUserId) {
     return getMyJobs(lineUserId);
@@ -484,6 +489,54 @@ function getActivityLog(filterJobId, limit) {
   } catch (err) {
     return jsonResponse({ error: String(err), logs: [] });
   }
+}
+
+// ─── getJobLogForCustomer: ลูกค้าดู activity log ของงานตัวเอง ────────────────
+function getJobLogForCustomer(jobId, lineUserId) {
+  if (!jobId) return jsonResponse({ error: "jobId is required" });
+
+  // ตรวจสอบ lineUserId กับ job นี้
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data  = sheet.getDataRange().getValues();
+  var found = false;
+  var deliveryLink = "";
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][COL.JOB_ID - 1]) === jobId) {
+      var storedUserId = String(data[i][COL.LINE_USER_ID - 1] || "");
+      // ถ้า job ผูก userId ต้องตรงกัน
+      if (storedUserId && storedUserId !== lineUserId) {
+        return jsonResponse({ error: "FORBIDDEN" });
+      }
+      deliveryLink = String(data[i][COL.DELIVERY_LINK - 1] || "");
+      found = true;
+      break;
+    }
+  }
+  if (!found) return jsonResponse({ error: "NOT_FOUND" });
+
+  // ดึง log ของ job นี้
+  var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(LOG_SHEET_NAME);
+  var logs = [];
+  if (logSheet) {
+    var logData = logSheet.getDataRange().getValues();
+    for (var j = logData.length - 1; j >= 1; j--) {
+      var row = logData[j];
+      if (String(row[1] || "") !== jobId) continue;
+      var field = String(row[3] || "");
+      // ซ่อน internalNote จากลูกค้า
+      if (field === "internalNote") continue;
+      logs.push({
+        timestamp: String(row[0] || ""),
+        actor:     String(row[2] || "Admin"),
+        field:     field,
+        oldValue:  String(row[4] || ""),
+        newValue:  String(row[5] || ""),
+      });
+      if (logs.length >= 50) break;
+    }
+  }
+
+  return jsonResponse({ logs, deliveryLink });
 }
 
 // ─── updateJob: Admin อัปเดตสถานะ / delivery link ────────────────────────────
