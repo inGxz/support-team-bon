@@ -6,16 +6,14 @@ import { useSearchParams } from "next/navigation";
 // ─── LIFF ────────────────────────────────────────────────────────────────────
 const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "";
 
-declare global {
-  interface Window {
-    liff: {
-      init: (config: { liffId: string }) => Promise<void>;
-      isLoggedIn: () => boolean;
-      login: (config?: { redirectUri?: string }) => void;
-      getProfile: () => Promise<{ userId: string; displayName: string; pictureUrl: string }>;
-    };
-  }
-}
+type LiffWindow = Window & {
+  liff: {
+    init: (config: { liffId: string }) => Promise<void>;
+    isLoggedIn: () => boolean;
+    login: (config?: { redirectUri?: string }) => void;
+    getProfile: () => Promise<{ userId: string; displayName: string; pictureUrl: string }>;
+  };
+};
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 type JobDetail = {
@@ -123,12 +121,13 @@ function JobPageContent() {
     script.src   = "https://static.line-scdn.net/liff/edge/2/sdk.js";
     script.onload = async () => {
       try {
-        await window.liff.init({ liffId: LIFF_ID });
-        if (!window.liff.isLoggedIn()) {
-          window.liff.login({ redirectUri: window.location.href });
+        const liffWin = window as unknown as LiffWindow;
+        await liffWin.liff.init({ liffId: LIFF_ID });
+        if (!liffWin.liff.isLoggedIn()) {
+          liffWin.liff.login({ redirectUri: window.location.href });
           return;
         }
-        const profile = await window.liff.getProfile();
+        const profile = await liffWin.liff.getProfile();
         setLineUserId(profile.userId);
         setLiffReady(true);
       } catch (e: any) {
