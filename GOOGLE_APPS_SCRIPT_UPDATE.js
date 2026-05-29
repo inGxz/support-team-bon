@@ -80,9 +80,9 @@ function doGet(e) {
     return getActivityLog(e.parameter.jobId || "", parseInt(e.parameter.limit || "200"));
   }
 
-  // Customer: ดึง activity log ของ job ตัวเอง (ต้อง lineUserId ตรงกัน)
+  // Customer: ดึง activity log ของ job ตัวเอง
   if (action === "jobLog") {
-    return getJobLogForCustomer(jobId, lineUserId);
+    return getJobLogForCustomer(jobId, lineUserId, e.parameter.source || "");
   }
 
   // ถ้าไม่มี jobId แต่มี lineUserId → ดึงงานทั้งหมดของ user นี้
@@ -106,7 +106,7 @@ function doGet(e) {
 
       // ถ้า job นี้ผูก lineUserId ไว้ → ต้องส่ง userId มาตรงกัน
       // ยกเว้น source=revision (หน้าขอแก้ไขงาน ไม่มี LIFF จึงไม่รู้ userId)
-      if (storedUserId && storedUserId !== lineUserId && source !== "revision" && source !== "brief") {
+      if (storedUserId && storedUserId !== lineUserId && source !== "revision" && source !== "brief" && source !== "customer") {
         return jsonResponse({ error: "FORBIDDEN" });
       }
 
@@ -492,7 +492,7 @@ function getActivityLog(filterJobId, limit) {
 }
 
 // ─── getJobLogForCustomer: ลูกค้าดู activity log ของงานตัวเอง ────────────────
-function getJobLogForCustomer(jobId, lineUserId) {
+function getJobLogForCustomer(jobId, lineUserId, source) {
   if (!jobId) return jsonResponse({ error: "jobId is required" });
 
   // ตรวจสอบ lineUserId กับ job นี้
@@ -503,8 +503,8 @@ function getJobLogForCustomer(jobId, lineUserId) {
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][COL.JOB_ID - 1]) === jobId) {
       var storedUserId = String(data[i][COL.LINE_USER_ID - 1] || "");
-      // ถ้า job ผูก userId ต้องตรงกัน
-      if (storedUserId && storedUserId !== lineUserId) {
+      // source=customer ข้าม userId check ได้
+      if (storedUserId && storedUserId !== lineUserId && source !== "customer") {
         return jsonResponse({ error: "FORBIDDEN" });
       }
       deliveryLink = String(data[i][COL.DELIVERY_LINK - 1] || "");

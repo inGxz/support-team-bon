@@ -150,10 +150,10 @@ function JobPageContent() {
       try {
         const uidParam = lineUserId ? `&lineUserId=${encodeURIComponent(lineUserId)}` : "";
 
-        // Parallel fetch
+        // Parallel fetch — source=customer เพื่อดูรายละเอียดงานโดยไม่ต้องมี userId
         const [jobRes, logRes] = await Promise.all([
-          fetch(`/api/gas?jobId=${encodeURIComponent(jobId)}${uidParam}`),
-          fetch(`/api/gas?action=jobLog&jobId=${encodeURIComponent(jobId)}${uidParam}`),
+          fetch(`/api/gas?jobId=${encodeURIComponent(jobId)}${uidParam}&source=customer`),
+          fetch(`/api/gas?action=jobLog&jobId=${encodeURIComponent(jobId)}${uidParam}&source=customer`),
         ]);
 
         const jobData = await jobRes.json();
