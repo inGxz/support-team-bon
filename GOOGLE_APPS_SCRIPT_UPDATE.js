@@ -1133,6 +1133,139 @@ function debugDiagnose() {
   Logger.log("=====================");
 }
 
+// ─── checkDeadlines: รันทุกวันเวลา 9:00 น. ผ่าน Time trigger ────────────────
+// วิธีตั้ง Trigger:
+//   GAS → Triggers (นาฬิกา) → + Add Trigger
+//   Function: checkDeadlines | Event source: Time-driven
+//   Type: Day timer | Time: 9am to 10am → Save
+function checkDeadlines() {
+  try {
+    var token   = getLineToken();
+    var groupId = PropertiesService.getScriptProperties().getProperty("ADMIN_GROUP_ID");
+    if (!token || !groupId) {
+      console.log("checkDeadlines: ไม่มี token หรือ groupId");
+      return;
+    }
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    var data  = sheet.getDataRange().getValues();
+
+    // หางานที่ deadline = พรุ่งนี้ และยังไม่เสร็จ
+    var today    = new Date();
+    today.setHours(0, 0, 0, 0);
+    var tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var tomorrowEnd = new Date(tomorrow);
+    tomorrowEnd.setHours(23, 59, 59, 999);
+
+    var dueJobs = [];
+    for (var i = 1; i < data.length; i++) {
+      var row    = data[i];
+      var jobId  = String(row[COL.JOB_ID - 1] || "");
+      if (!jobId) continue;
+
+      var status = String(row[COL.STATUS - 1] || "");
+      // ข้ามงานที่เสร็จแล้ว
+      if (status === "Done" || status === "เสร็จแล้ว" || status === "Approved") continue;
+
+      var deadlineRaw = row[COL.DEADLINE - 1];
+      if (!deadlineRaw) continue;
+      var deadline = new Date(deadlineRaw);
+      deadline.setHours(0, 0, 0, 0);
+
+      // ตรวจว่า deadline ตรงกับพรุ่งนี้พอดี
+      if (deadline.getTime() !== tomorrow.getTime()) continue;
+
+      dueJobs.push({
+        jobId:        jobId,
+        customerName: String(row[COL.CUSTOMER_NAME - 1] || "-"),
+        agent:        String(row[COL.AGENT         - 1] || "-"),
+        task:         String(row[COL.TASK          - 1] || "-"),
+        status:       status,
+        priority:     String(row[COL.PRIORITY      - 1] || ""),
+      });
+    }
+
+    if (dueJobs.length === 0) {
+      console.log("checkDeadlines: ไม่มีงานที่ครบ deadline พรุ่งนี้");
+      return;
+    }
+
+    // สร้าง body contents แสดงทุกงาน
+    var bodyContents = [
+      { type: "text",
+        text: "มีงาน " + dueJobs.length + " รายการที่ครบกำหนดพรุ่งนี้",
+        size: "sm", color: "#374151", weight: "bold", wrap: true
+      },
+      { type: "separator", margin: "md" }
+    ];
+
+    dueJobs.forEach(function(j, idx) {
+      var priorityTag = j.priority === "urgent" ? " 🚨" : "";
+      bodyContents.push({
+        type: "box", layout: "vertical", margin: "md",
+        paddingAll: "sm", backgroundColor: "#FFF7ED",
+        cornerRadius: "md",
+        contents: [
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: j.jobId + priorityTag, size: "xs", color: "#C2410C", weight: "bold", flex: 3 },
+            { type: "text", text: j.status, size: "xs", color: "#6B7280", flex: 2, align: "end" }
+          ]},
+          { type: "text", text: j.task, size: "xs", color: "#111827", wrap: true, margin: "xs" },
+          { type: "box", layout: "horizontal", margin: "xs", contents: [
+            { type: "text", text: "ลูกค้า: " + j.customerName, size: "xxs", color: "#6B7280", flex: 3 },
+            { type: "text", text: "เซลล์: " + j.agent, size: "xxs", color: "#6B7280", flex: 2, align: "end" }
+          ]}
+        ]
+      });
+    });
+
+    bodyContents.push({
+      type: "text",
+      text: "กรุณาดำเนินการให้เสร็จก่อนหมดเวลา",
+      size: "xs", color: "#9CA3AF", margin: "md", wrap: true, align: "center"
+    });
+
+    var bubble = {
+      type: "bubble",
+      header: {
+        type: "box", layout: "vertical", paddingAll: "md",
+        backgroundColor: "#F59E0B",
+        contents: [
+          { type: "text", text: "⏰ แจ้งเตือน Deadline พรุ่งนี้!", color: "#FFFFFF", weight: "bold", size: "md" },
+          { type: "text", text: "SUPPORT TEAMBON VT MARKET", color: "#FEF3C7", size: "xs" }
+        ]
+      },
+      body: {
+        type: "box", layout: "vertical", spacing: "none",
+        paddingAll: "md", contents: bodyContents
+      }
+    };
+
+    var resp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      payload: JSON.stringify({
+        to: groupId,
+        messages: [{ type: "flex", altText: "⏰ มีงาน " + dueJobs.length + " รายการครบ deadline พรุ่งนี้!", contents: bubble }]
+      }),
+      muteHttpExceptions: true
+    });
+
+    console.log("checkDeadlines: ส่งแจ้งเตือน " + dueJobs.length + " งาน → HTTP " + resp.getResponseCode());
+  } catch(err) {
+    console.error("checkDeadlines error:", String(err));
+  }
+}
+
+// ─── testCheckDeadlines: ทดสอบ checkDeadlines โดยไม่ต้องรอ trigger ───────────
+// แก้ FORCE_DATE เป็นวันพรุ่งนี้ของงานที่อยากเทสก่อน แล้วกด Run
+function testCheckDeadlines() {
+  console.log("=== testCheckDeadlines ===");
+  checkDeadlines();
+  console.log("=== done ===");
+}
+
 function generateJobId() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   const lastRow = sheet.getLastRow();
