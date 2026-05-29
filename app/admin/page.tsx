@@ -386,7 +386,7 @@ function getWorkflow(task: string): string {
 }
 
 function isOverdue(deadline: string, status: string): boolean {
-  if (status === "Done" || status === "เสร็จแล้ว") return false;
+  if (status === "Done" || status === "เสร็จแล้ว" || status === "Approved") return false;
   if (!deadline) return false;
   try {
     return new Date(deadline) < new Date();

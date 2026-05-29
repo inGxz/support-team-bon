@@ -521,15 +521,18 @@ function updateJob(body) {
         writeActivityLog(body.jobId, "Admin", "internalNote", oldInternalNote, body.internalNote);
       }
 
-      // ส่ง LINE push ถ้าเพิ่งเปลี่ยนเป็น Done
+      // ส่ง LINE push ตามสถานะที่เปลี่ยน
       var newStatus  = body.status !== undefined ? body.status : oldStatus;
-      var isDone     = newStatus === "Done" || newStatus === "เสร็จแล้ว";
-      var wasNotDone = oldStatus !== "Done" && oldStatus !== "เสร็จแล้ว";
+      var isDone        = newStatus === "Done" || newStatus === "เสร็จแล้ว";
+      var wasNotDone    = oldStatus !== "Done" && oldStatus !== "เสร็จแล้ว";
+      var isInProgress  = newStatus === "In Progress";
+      var wasNotInProg  = oldStatus !== "In Progress";
+
+      var lineUserId   = String(data[i][COL.LINE_USER_ID  - 1] || "");
+      var customerName = String(data[i][COL.CUSTOMER_NAME - 1] || "");
+      var task         = String(data[i][COL.TASK          - 1] || "");
 
       if (isDone && wasNotDone) {
-        var lineUserId   = String(data[i][COL.LINE_USER_ID  - 1] || "");
-        var customerName = String(data[i][COL.CUSTOMER_NAME - 1] || "");
-        var task         = String(data[i][COL.TASK          - 1] || "");
         var deliveryLink = body.deliveryLink !== undefined
           ? String(body.deliveryLink)
           : String(data[i][COL.DELIVERY_LINK - 1] || "");
@@ -537,6 +540,12 @@ function updateJob(body) {
         if (lineUserId) {
           var revCount = parseInt(data[i][COL.REVISION_COUNT - 1] || "0") || 0;
           sendLinePush(lineUserId, body.jobId, customerName, task, deliveryLink, revCount);
+        }
+      }
+
+      if (isInProgress && wasNotInProg) {
+        if (lineUserId) {
+          sendInProgressPush(lineUserId, body.jobId, customerName, task);
         }
       }
 
@@ -595,21 +604,27 @@ function onStatusChange(e) {
     if (range.getColumn() !== COL.STATUS) return;
 
     const newStatus = String(e.value || "").trim();
-    if (newStatus !== "Done" && newStatus !== "เสร็จแล้ว") return;
+    var isDone       = newStatus === "Done" || newStatus === "เสร็จแล้ว";
+    var isInProgress = newStatus === "In Progress";
+    if (!isDone && !isInProgress) return;
 
     const row          = range.getRow();
     const jobId        = sheet.getRange(row, COL.JOB_ID).getValue();
     const lineUserId   = sheet.getRange(row, COL.LINE_USER_ID).getValue();
     const customerName = sheet.getRange(row, COL.CUSTOMER_NAME).getValue();
     const task         = sheet.getRange(row, COL.TASK).getValue();
-    const deliveryLink = COL.DELIVERY_LINK
-      ? String(sheet.getRange(row, COL.DELIVERY_LINK).getValue() || "")
-      : "";
 
     if (!lineUserId) return; // ไม่มี userId → ไม่ส่ง push
 
-    const revCount = parseInt(sheet.getRange(row, COL.REVISION_COUNT).getValue() || "0") || 0;
-    sendLinePush(lineUserId, jobId, customerName, task, deliveryLink, revCount);
+    if (isDone) {
+      const deliveryLink = String(sheet.getRange(row, COL.DELIVERY_LINK).getValue() || "");
+      const revCount = parseInt(sheet.getRange(row, COL.REVISION_COUNT).getValue() || "0") || 0;
+      sendLinePush(lineUserId, jobId, customerName, task, deliveryLink, revCount);
+    }
+
+    if (isInProgress) {
+      sendInProgressPush(lineUserId, jobId, customerName, task);
+    }
   } catch (err) {
     console.error("onStatusChange error:", err);
   }
@@ -759,6 +774,65 @@ function sendLinePush(lineUserId, jobId, customerName, task, deliveryLink, revis
     payload: JSON.stringify({ to: lineUserId, messages: [{ type: "flex", altText: "✅ งานของคุณเสร็จแล้ว! Job ID: " + jobId, contents: bubble }] }),
     muteHttpExceptions: true
   });
+}
+
+// ─── sendInProgressPush: ส่ง LINE Flex Message เมื่องาน In Progress ────────────
+function sendInProgressPush(lineUserId, jobId, customerName, task) {
+  try {
+    const token = getLineToken();
+    if (!token || !lineUserId) return;
+
+    var bubble = {
+      type: "bubble",
+      header: {
+        type: "box", layout: "vertical", paddingAll: "md",
+        backgroundColor: "#3B82F6",
+        contents: [
+          { type: "text", text: "⏳ เริ่มดำเนินการงานของคุณแล้ว!", color: "#FFFFFF", weight: "bold", size: "lg" },
+          { type: "text", text: "SUPPORT TEAMBON VT MARKET", color: "#BFDBFE", size: "xs" }
+        ]
+      },
+      body: {
+        type: "box", layout: "vertical", spacing: "sm", paddingAll: "md",
+        contents: [
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "Job ID",  size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: jobId || "-", size: "xs", color: "#111827", weight: "bold", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "ลูกค้า",  size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: customerName || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "งาน",     size: "xs", color: "#6B7280", flex: 2 },
+            { type: "text", text: task || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+          ]},
+          { type: "separator", margin: "sm" },
+          { type: "box", layout: "vertical", margin: "sm", paddingAll: "sm",
+            backgroundColor: "#EFF6FF", cornerRadius: "md",
+            contents: [{
+              type: "text",
+              text: "ทีมงานกำลังดำเนินการงานของคุณอยู่นะคะ เมื่อเสร็จแล้วจะแจ้งให้ทราบอีกครั้ง \u{1F44D}",
+              size: "xs", color: "#1D4ED8", wrap: true
+            }]
+          },
+          { type: "text", text: "ระบบ SUPPORT TEAMBON VT MARKET",
+            size: "xxs", color: "#9CA3AF", margin: "md", align: "center" }
+        ]
+      }
+    };
+
+    var resp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      payload: JSON.stringify({
+        to: lineUserId,
+        messages: [{ type: "flex", altText: "⏳ ทีมงานเริ่มดำเนินการงาน " + jobId + " แล้ว!", contents: bubble }]
+      }),
+      muteHttpExceptions: true
+    });
+    console.log("sendInProgressPush [" + jobId + "] HTTP " + resp.getResponseCode() + " → " + resp.getContentText().substring(0, 200));
+  } catch(err) { console.error("sendInProgressPush error:", String(err)); }
 }
 
 // ─── approveJob: ลูกค้า Approve งาน ──────────────────────────────────────────
@@ -941,6 +1015,122 @@ function testAdminNotify() {
 
   Logger.log("Status: " + res.getResponseCode());
   Logger.log("Response: " + res.getContentText());
+}
+
+// ─── debugDiagnose: รันใน GAS editor เพื่อเช็คปัญหาการส่ง LINE ──────────────
+// วิธีใช้: เลือก debugDiagnose ใน dropdown แล้วกด Run → ดู Logs
+// ─── testPushNow: รันตรงจาก editor เพื่อทดสอบส่ง push ──────────────────────
+// วิธีใช้: เลือก testPushNow → Run → ดู Execution log
+function testPushNow() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data  = sheet.getDataRange().getValues();
+
+  // หา row แรกที่มี lineUserId
+  var testRow = null;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][COL.LINE_USER_ID - 1]) { testRow = data[i]; break; }
+  }
+  if (!testRow) { Logger.log("❌ ไม่พบแถวที่มี lineUserId"); return; }
+
+  var userId       = String(testRow[COL.LINE_USER_ID  - 1]);
+  var jobId        = String(testRow[COL.JOB_ID        - 1]);
+  var customerName = String(testRow[COL.CUSTOMER_NAME - 1] || "");
+  var task         = String(testRow[COL.TASK          - 1] || "");
+
+  Logger.log("🧪 ทดสอบส่ง In Progress push → " + userId + " (Job: " + jobId + ")");
+
+  var token = getLineToken();
+  var bubble = {
+    type: "bubble",
+    header: {
+      type: "box", layout: "vertical", paddingAll: "md",
+      backgroundColor: "#3B82F6",
+      contents: [
+        { type: "text", text: "⏳ ทดสอบ: เริ่มดำเนินการงานแล้ว!", color: "#FFFFFF", weight: "bold", size: "lg" },
+        { type: "text", text: "SUPPORT TEAMBON VT MARKET", color: "#BFDBFE", size: "xs" }
+      ]
+    },
+    body: {
+      type: "box", layout: "vertical", spacing: "sm", paddingAll: "md",
+      contents: [
+        { type: "box", layout: "horizontal", contents: [
+          { type: "text", text: "Job ID", size: "xs", color: "#6B7280", flex: 2 },
+          { type: "text", text: jobId, size: "xs", color: "#111827", weight: "bold", flex: 3 }
+        ]},
+        { type: "box", layout: "horizontal", contents: [
+          { type: "text", text: "งาน", size: "xs", color: "#6B7280", flex: 2 },
+          { type: "text", text: task || "-", size: "xs", color: "#111827", flex: 3, wrap: true }
+        ]},
+        { type: "separator", margin: "sm" },
+        { type: "box", layout: "vertical", margin: "sm", paddingAll: "sm",
+          backgroundColor: "#EFF6FF", cornerRadius: "md",
+          contents: [{ type: "text",
+            text: "ทีมงานกำลังดำเนินการงานของคุณอยู่นะคะ เมื่อเสร็จแล้วจะแจ้งให้ทราบอีกครั้ง",
+            size: "xs", color: "#1D4ED8", wrap: true }]
+        }
+      ]
+    }
+  };
+
+  var resp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+    payload: JSON.stringify({ to: userId, messages: [{ type: "flex", altText: "⏳ ทดสอบ In Progress push", contents: bubble }] }),
+    muteHttpExceptions: true
+  });
+
+  Logger.log("HTTP Status: " + resp.getResponseCode());
+  Logger.log("Response: " + resp.getContentText());
+
+  if (resp.getResponseCode() === 200) {
+    Logger.log("✅ ส่งสำเร็จ! เช็ค LINE ได้เลย");
+  } else {
+    Logger.log("❌ LINE API ปฏิเสธ — ดู Response ด้านบน");
+  }
+}
+
+function debugDiagnose() {
+  var results = [];
+
+  // 1. ตรวจ LINE token
+  var token = getLineToken();
+  results.push("1. LINE Token: " + (token ? "✅ มี (" + token.substring(0, 20) + "...)" : "❌ ไม่มี! ต้องตั้งใน Script Properties"));
+
+  // 2. ตรวจ ADMIN_SECRET
+  var secret = PropertiesService.getScriptProperties().getProperty("ADMIN_SECRET");
+  results.push("2. ADMIN_SECRET: " + (secret ? "✅ มี" : "❌ ไม่มี!"));
+
+  // 3. ตรวจ ADMIN_GROUP_ID
+  var groupId = PropertiesService.getScriptProperties().getProperty("ADMIN_GROUP_ID");
+  results.push("3. ADMIN_GROUP_ID: " + (groupId ? "✅ มี (" + groupId + ")" : "❌ ไม่มี!"));
+
+  // 4. ตรวจ Sheet
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  results.push("4. Sheet '" + SHEET_NAME + "': " + (sheet ? "✅ พบ" : "❌ ไม่พบ!"));
+
+  // 5. ตรวจ column J (lineUserId) ใน 5 แถวแรก
+  if (sheet) {
+    var data = sheet.getDataRange().getValues();
+    var filled = 0, empty = 0;
+    for (var i = 1; i < Math.min(data.length, 20); i++) {
+      if (data[i][COL.LINE_USER_ID - 1]) filled++;
+      else empty++;
+    }
+    results.push("5. lineUserId (col J) ใน 19 แถวแรก: " + filled + " มีค่า / " + empty + " ว่าง" +
+      (empty > 0 ? " ⚠️ แถวว่างจะไม่ได้รับ push" : " ✅"));
+  }
+
+  // 6. ทดสอบส่ง LINE push ไปหาตัวเอง (ต้องใส่ userId ของตัวเองก่อน)
+  // แก้บรรทัดข้างล่างนี้เป็น lineUserId ของตัวเอง แล้ว uncomment
+  // var testUserId = "Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+  // if (testUserId && token) {
+  //   var res = sendInProgressPush(testUserId, "STM-TEST", "ทดสอบ", "Debug Test");
+  //   results.push("6. Test push ส่งแล้ว — ตรวจใน LINE");
+  // }
+
+  Logger.log("=== DEBUG DIAGNOSE ===");
+  results.forEach(function(r) { Logger.log(r); });
+  Logger.log("=====================");
 }
 
 function generateJobId() {
