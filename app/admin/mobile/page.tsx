@@ -150,8 +150,9 @@ export default function MobileAdmin() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (Array.isArray(data)) {
-        setJobs(data);
+      const list = Array.isArray(data) ? data : Array.isArray(data?.jobs) ? data.jobs : null;
+      if (list) {
+        setJobs(list);
       } else {
         setFetchError(`API error: ${JSON.stringify(data).substring(0, 120)}`);
       }
