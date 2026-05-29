@@ -131,6 +131,7 @@ export default function MobileAdmin() {
   const [saving, setSaving] = useState(false);
   const [deliveryInput, setDeliveryInput] = useState("");
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [fetchError, setFetchError] = useState("");
 
   useEffect(() => {
     const saved = sessionStorage.getItem("adminAuth");
@@ -143,14 +144,20 @@ export default function MobileAdmin() {
 
   const fetchJobs = async () => {
     if (!token) return;
-    setLoading(true);
+    setLoading(true); setFetchError("");
     try {
       const res = await fetch("/api/admin/jobs", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (Array.isArray(data)) setJobs(data);
-    } catch { /* silent */ }
+      if (Array.isArray(data)) {
+        setJobs(data);
+      } else {
+        setFetchError(`API error: ${JSON.stringify(data).substring(0, 120)}`);
+      }
+    } catch (err) {
+      setFetchError(`Fetch failed: ${String(err)}`);
+    }
     finally { setLoading(false); }
   };
 
@@ -376,6 +383,14 @@ export default function MobileAdmin() {
       {loading && (
         <div className="flex items-center justify-center py-6">
           <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#4f46e5", borderTopColor: "transparent" }} />
+        </div>
+      )}
+
+      {fetchError && (
+        <div className="mx-3 mt-3 rounded-xl border px-3 py-2.5" style={{ background: "#fff7f7", borderColor: "#fca5a5" }}>
+          <p className="text-xs font-medium mb-1" style={{ color: "#dc2626" }}>⚠️ ดึงข้อมูลไม่ได้</p>
+          <p className="text-xs break-all" style={{ color: "#b91c1c" }}>{fetchError}</p>
+          <button onClick={fetchJobs} className="mt-2 text-xs font-medium" style={{ color: "#4f46e5" }}>🔄 ลองใหม่</button>
         </div>
       )}
 
