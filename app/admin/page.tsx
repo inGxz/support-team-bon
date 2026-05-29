@@ -68,7 +68,7 @@ function generateReportHTML(
   byWorkflow: { wf: string; total: number; pending: number; inProgress: number; done: number }[]
 ): string {
   const total      = jobs.length;
-  const done       = jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length;
+  const done       = jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved").length;
   const inProgress = jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length;
   const pending    = jobs.filter((j) => j.status === "Pending" || !j.status).length;
   const revision   = jobs.filter((j) => j.status === "Revision").length;
@@ -78,7 +78,7 @@ function generateReportHTML(
   const revisionRate   = total ? Math.round((revisedJobs / total) * 100) : 0;
 
   // Avg turnaround: mean (deadline − orderDate) for Done jobs
-  const doneJobs = jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว");
+  const doneJobs = jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved");
   let avgDays = 0;
   if (doneJobs.length > 0) {
     const totalDays = doneJobs.reduce((sum, j) => {
@@ -145,9 +145,9 @@ function generateReportHTML(
     const wf = getWorkflow(j.task);
     if (!subTypeMap[st]) subTypeMap[st] = { total: 0, done: 0, inProgress: 0, pending: 0, wf };
     subTypeMap[st].total++;
-    if (j.status === "Done" || j.status === "เสร็จแล้ว")         subTypeMap[st].done++;
-    else if (j.status === "In Progress" || j.status === "กำลังทำ") subTypeMap[st].inProgress++;
-    else                                                            subTypeMap[st].pending++;
+    if (j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved") subTypeMap[st].done++;
+    else if (j.status === "In Progress" || j.status === "กำลังทำ")                  subTypeMap[st].inProgress++;
+    else                                                                              subTypeMap[st].pending++;
   });
   const subTypeRows = Object.entries(subTypeMap)
     .sort((a, b) => b[1].total - a[1].total)
@@ -167,7 +167,7 @@ function generateReportHTML(
 
   const jobRows = jobs.map((j, i) => {
     const ss =
-      j.status === "Done" || j.status === "เสร็จแล้ว" ? "background:#dcfce7;color:#15803d" :
+      j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved" ? "background:#dcfce7;color:#15803d" :
       j.status === "In Progress" || j.status === "กำลังทำ" ? "background:#dbeafe;color:#1d4ed8" :
       j.status === "Revision" ? "background:#fee2e2;color:#b91c1c" : "background:#fef9c3;color:#92400e";
     const od = isOverdue(j.deadline, j.status);
@@ -811,7 +811,7 @@ export default function AdminPage() {
     total: jobs.length,
     pending: jobs.filter((j) => j.status === "Pending" || !j.status).length,
     inProgress: jobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length,
-    done: jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length,
+    done: jobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved").length,
     revision: jobs.filter((j) => j.status === "Revision").length,
   };
 
@@ -919,7 +919,7 @@ export default function AdminPage() {
     const wfJobs = reportJobs.filter((j) => getWorkflow(j.task) === wf);
     const pending    = wfJobs.filter((j) => j.status === "Pending" || !j.status).length;
     const inProgress = wfJobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length;
-    const done       = wfJobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length;
+    const done       = wfJobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved").length;
     return { wf, total: wfJobs.length, pending, inProgress, done, jobs: wfJobs };
   }).filter((r) => r.total > 0);
 
@@ -1140,7 +1140,7 @@ export default function AdminPage() {
                     { label: "งานทั้งหมด", count: reportJobs.length,                                                                              bg: "bg-purple-50 border-purple-200", text: "text-purple-700" },
                     { label: "Pending",     count: reportJobs.filter((j) => j.status === "Pending" || !j.status).length,                          bg: "bg-amber-50 border-amber-200",   text: "text-amber-700"  },
                     { label: "In Progress", count: reportJobs.filter((j) => j.status === "In Progress" || j.status === "กำลังทำ").length,          bg: "bg-blue-50 border-blue-200",     text: "text-blue-700"   },
-                    { label: "Done",        count: reportJobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว").length,               bg: "bg-green-50 border-green-200",   text: "text-green-700"  },
+                    { label: "Done",        count: reportJobs.filter((j) => j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved").length, bg: "bg-green-50 border-green-200",   text: "text-green-700"  },
                   ].map((s) => (
                     <div key={s.label} className={`${s.bg} border rounded-xl p-4 text-center`}>
                       <p className={`text-3xl font-black ${s.text}`}>{s.count}</p>
