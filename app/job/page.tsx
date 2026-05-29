@@ -123,34 +123,18 @@ function JobPageContent() {
       try {
         const liffWin = window as unknown as LiffWindow;
         await liffWin.liff.init({ liffId: LIFF_ID });
-        if (!liffWin.liff.isLoggedIn()) {
-          liffWin.liff.login({ redirectUri: window.location.href });
-          return;
-        }
-        try {
-          const profile = await liffWin.liff.getProfile();
-          setLineUserId(profile.userId);
-        } catch (profileErr: any) {
-          // token หมดอายุ → login ใหม่
-          const msg = String(profileErr).toLowerCase();
-          if (msg.includes("expired") || msg.includes("token") || msg.includes("401")) {
-            liffWin.liff.login({ redirectUri: window.location.href });
-            return;
-          }
-          // ถ้า error อื่น ก็ยังใช้งานได้โดยไม่มี userId
-        }
-        setLiffReady(true);
-      } catch (e: any) {
-        const msg = String(e).toLowerCase();
-        if (msg.includes("expired") || msg.includes("token") || msg.includes("401")) {
-          // token หมดอายุ → login ใหม่
+        if (liffWin.liff.isLoggedIn()) {
           try {
-            const liffWin = window as unknown as LiffWindow;
-            liffWin.liff.login({ redirectUri: window.location.href });
-          } catch { /* ignore */ }
-          return;
+            const profile = await liffWin.liff.getProfile();
+            setLineUserId(profile.userId);
+          } catch {
+            // getProfile ล้มเหลว — ข้ามไปได้ หน้าจะโหลดโดยไม่มี userId
+          }
         }
-        setLiffError(String(e));
+        // ไม่ login อัตโนมัติ — เปิดหน้าต่อเลย
+        setLiffReady(true);
+      } catch {
+        // LIFF init ล้มเหลวทุกกรณี — โหลดหน้าต่อโดยไม่มี userId
         setLiffReady(true);
       }
     };
