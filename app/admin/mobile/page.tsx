@@ -12,6 +12,10 @@ type Job = {
   deliveryLink: string;
   priority: string;
   revisionCount: string;
+  detail: string;
+  reference: string;
+  subType: string;
+  internalNote: string;
 };
 
 type Tab = "home" | "search" | "report" | "settings";
@@ -485,9 +489,33 @@ export default function MobileAdmin() {
             </button>
           </div>
           <div className="px-3 py-3 space-y-3">
-            <div>
-              <p className="text-sm font-medium mb-0.5" style={{ color: "#1e1b2e" }}>{selectedJob.task}</p>
-              <p className="text-xs" style={{ color: "#888780" }}>{selectedJob.customerName} · {selectedJob.agent} · <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge(selectedJob.status)}`}>{selectedJob.status}</span></p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium" style={{ color: "#1e1b2e" }}>{selectedJob.task}</p>
+              {selectedJob.subType && <p className="text-xs" style={{ color: "#a78bfa" }}>{selectedJob.subType}</p>}
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs" style={{ color: "#888780" }}>
+                <span>👤 {selectedJob.customerName}</span>
+                <span>🔧 {selectedJob.agent || "-"}</span>
+                {selectedJob.deadline && <span>📅 {selectedJob.deadline}</span>}
+              </div>
+              {selectedJob.detail && (
+                <p className="text-xs leading-relaxed pt-1" style={{ color: "#444441", background: "#f1f0ed", borderRadius: 6, padding: "6px 8px" }}>
+                  {selectedJob.detail}
+                </p>
+              )}
+              {selectedJob.reference && (
+                <p className="text-xs" style={{ color: "#888780" }}>🔗 Ref: {selectedJob.reference}</p>
+              )}
+              {selectedJob.internalNote && (
+                <p className="text-xs leading-relaxed" style={{ color: "#b45309", background: "#fefce8", borderRadius: 6, padding: "5px 8px" }}>
+                  📝 Note: {selectedJob.internalNote}
+                </p>
+              )}
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge(selectedJob.status)}`}>{selectedJob.status}</span>
+                {parseInt(selectedJob.revisionCount || "0") > 0 && (
+                  <span className="text-xs" style={{ color: "#b91c1c" }}>🔄 แก้ {selectedJob.revisionCount} ครั้ง</span>
+                )}
+              </div>
             </div>
             <div>
               <p className="text-xs mb-2" style={{ color: "#888780", textTransform: "uppercase", letterSpacing: "0.8px" }}>เปลี่ยนสถานะ</p>
@@ -572,10 +600,20 @@ export default function MobileAdmin() {
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(j.status)}`}>{j.status}</span>
               </div>
-              <p className="text-sm mb-1.5 leading-snug" style={{ color: "#1e1b2e" }}>{j.task}</p>
-              <div className="flex items-center gap-3 text-xs" style={{ color: "#888780" }}>
+              <p className="text-sm mb-1 leading-snug font-medium" style={{ color: "#1e1b2e" }}>{j.task}</p>
+              {j.subType && <p className="text-xs mb-1" style={{ color: "#a78bfa" }}>{j.subType}</p>}
+              {j.detail && (
+                <p className="text-xs mb-1.5 leading-relaxed" style={{ color: "#444441" }}>
+                  {j.detail.length > 80 ? j.detail.substring(0, 80) + "..." : j.detail}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: "#888780" }}>
                 <span>👤 {j.customerName}</span>
                 <span>🔧 {j.agent || "-"}</span>
+                {j.deadline && <span>📅 {j.deadline}</span>}
+                {parseInt(j.revisionCount || "0") > 0 && (
+                  <span style={{ color: "#b91c1c" }}>🔄 แก้ {j.revisionCount} ครั้ง</span>
+                )}
               </div>
               {over && (
                 <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: "#dc2626" }}>
