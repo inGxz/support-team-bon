@@ -25,28 +25,51 @@ type Job = {
 
 type EditState = { status: string; deliveryLink: string; internalNote: string };
 
-// แปลง timestamp ไทย "26/5/2569 22:35:56" → "พ.ค. 2026"
+// แปลง timestamp → "พ.ค. 2026"
+// รองรับหลาย format: "26/5/2569", "2026-06-02T...", Date object
 function parseMonthYear(timestamp: string): string {
+  const monthNames = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
   try {
-    const parts = timestamp.split("/");
-    if (parts.length >= 3) {
-      const month = parseInt(parts[1]);
-      const yearCE = parseInt(parts[2]) - 543;
-      const monthNames = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-      return `${monthNames[month - 1] ?? "?"} ${yearCE}`;
+    if (!timestamp) return "ไม่ระบุ";
+
+    // format Thai: "26/5/2569" หรือ "26/5/2569, 22:35:56"
+    const slashParts = String(timestamp).split("/");
+    if (slashParts.length >= 3) {
+      const month  = parseInt(slashParts[1]);
+      const yearRaw = parseInt(slashParts[2]);
+      // ถ้า year > 2500 แสดงว่าเป็น พ.ศ. ต้องลบ 543
+      const yearCE = yearRaw > 2500 ? yearRaw - 543 : yearRaw;
+      if (month >= 1 && month <= 12) return `${monthNames[month - 1]} ${yearCE}`;
+    }
+
+    // format ISO: "2026-06-02T..." หรือ "2026-06-02"
+    const d = new Date(timestamp);
+    if (!isNaN(d.getTime())) {
+      return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
     }
   } catch {}
   return "ไม่ระบุ";
 }
 
-// แปลง timestamp ไทย "27/5/2569, 13:26:32" → Date object (CE)
+// แปลง timestamp → Date object (CE)
+// รองรับ: "27/5/2569, 13:26:32", "2026-06-02T..."
 function parseThaiTimestamp(timestamp: string): Date | null {
   try {
-    const clean = timestamp.replace(",", "").trim();
+    if (!timestamp) return null;
+
+    // ISO format
+    if (String(timestamp).includes("-") || String(timestamp).includes("T")) {
+      const d = new Date(timestamp);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Thai slash format: "27/5/2569, 13:26:32"
+    const clean = String(timestamp).replace(",", "").trim();
     const parts = clean.split(/[\s/]+/);
-    const day   = parseInt(parts[0]);
-    const month = parseInt(parts[1]) - 1;
-    const yearCE = parseInt(parts[2]) - 543;
+    const day    = parseInt(parts[0]);
+    const month  = parseInt(parts[1]) - 1;
+    const yearRaw = parseInt(parts[2]);
+    const yearCE  = yearRaw > 2500 ? yearRaw - 543 : yearRaw;
     return new Date(yearCE, month, day);
   } catch { return null; }
 }
