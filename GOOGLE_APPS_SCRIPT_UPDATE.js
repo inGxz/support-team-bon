@@ -468,14 +468,17 @@ function writeActivityLog(jobId, actor, field, oldValue, newValue) {
       logSheet.setColumnWidth(5, 180);
       logSheet.setColumnWidth(6, 180);
     }
+    var logRow = logSheet.getLastRow() + 1;
     logSheet.appendRow([
-      new Date().toLocaleString("th-TH"),
+      formatTs(new Date()),
       jobId,
       actor || "Admin",
       field,
       oldValue !== undefined && oldValue !== null ? String(oldValue) : "",
       newValue !== undefined && newValue !== null ? String(newValue) : "",
     ]);
+    // บังคับ column A เป็น plain text ป้องกัน Sheets แปลงวันที่เป็น Date cell
+    logSheet.getRange(logRow, 1).setNumberFormat("@");
   } catch (err) {
     console.error("writeActivityLog error:", err);
   }
@@ -497,7 +500,7 @@ function getActivityLog(filterJobId, limit) {
       var jId = String(row[1] || "");
       if (filterJobId && jId !== filterJobId) continue;
       logs.push({
-        timestamp: String(row[0] || ""),
+        timestamp: String(row[0] instanceof Date ? formatTs(row[0]) : (row[0] || "")),
         jobId:     jId,
         actor:     String(row[2] || "Admin"),
         field:     String(row[3] || ""),
@@ -548,7 +551,7 @@ function getJobLogForCustomer(jobId, lineUserId, source) {
       // ซ่อน internalNote จากลูกค้า
       if (field === "internalNote") continue;
       logs.push({
-        timestamp: String(row[0] || ""),
+        timestamp: String(row[0] instanceof Date ? formatTs(row[0]) : (row[0] || "")),
         actor:     String(row[2] || "Admin"),
         field:     field,
         oldValue:  String(row[4] || ""),

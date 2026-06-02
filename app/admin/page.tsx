@@ -98,10 +98,15 @@ function parseThaiTimestamp(timestamp: string): Date | null {
 
 // แสดง timestamp สวยงาม: "2 มิ.ย. 2026 12:19"
 const MONTH_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+function fixDoubleBE(ts: string): string {
+  // ถ้า year > 2700 แสดงว่าบวก 543 ซ้ำ → ลบออก
+  return ts.replace(/\b(2[7-9]\d\d|[3-9]\d{3})\b/, (y) => String(parseInt(y) - 543));
+}
 function fmtTimestamp(timestamp: string): string {
   if (!timestamp) return "–";
-  const d = parseThaiTimestamp(timestamp);
-  if (!d) return timestamp;
+  const fixed = fixDoubleBE(timestamp);
+  const d = parseThaiTimestamp(fixed);
+  if (!d) return fixed;
   const day  = d.getDate();
   const mon  = MONTH_SHORT[d.getMonth()];
   const year = d.getFullYear();
@@ -1513,7 +1518,10 @@ export default function AdminPage() {
                       };
                       return (
                         <div key={idx} className="px-5 py-3 flex items-start gap-4 hover:bg-gray-50 transition">
-                          <span className="text-xs text-gray-400 shrink-0 mt-0.5 w-36">{l.timestamp}</span>
+                          <div className="text-xs text-gray-400 shrink-0 mt-0.5 w-40 leading-tight">
+                            <div>{l.timestamp.split(" ")[0]}</div>
+                            <div className="text-gray-500 font-medium">{l.timestamp.split(" ")[1] || ""}</div>
+                          </div>
                           <span className="font-mono text-xs font-bold text-purple-600 shrink-0 w-24">{l.jobId}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${fieldColor[l.field] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
                             {fieldLabel[l.field] || l.field}
@@ -2023,7 +2031,10 @@ export default function AdminPage() {
                                       <span className="text-gray-400 line-through truncate w-24" title={l.oldValue}>{l.oldValue || "-"}</span>
                                       <span className="text-gray-300">{"->"}</span>
                                       <span className="text-gray-800 font-semibold truncate w-28" title={l.newValue}>{l.newValue || "-"}</span>
-                                      <span className="ml-auto text-gray-300 shrink-0 hidden sm:block">{l.timestamp}</span>
+                                      <div className="ml-auto text-right shrink-0 hidden sm:block leading-tight">
+                                        <div className="text-gray-400 text-xs">{l.timestamp.split(" ")[0]}</div>
+                                        <div className="text-gray-500 text-xs font-medium">{l.timestamp.split(" ")[1] || ""}</div>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
