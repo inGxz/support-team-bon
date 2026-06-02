@@ -1026,7 +1026,12 @@ export default function Page() {
 
           <div>
             <label className={labelCls}>🧑‍💼 เซลล์ <span className="text-xs text-gray-400">(ผู้ดูแล)</span></label>
-            <input className={inputCls(!!errors.agent)} placeholder="Agent Name" value={agent} onChange={(e) => { setAgent(e.target.value); setErrors((p) => ({ ...p, agent: "" })); }} />
+            <select className={inputCls(!!errors.agent)} value={agent} onChange={(e) => { setAgent(e.target.value); setErrors((p) => ({ ...p, agent: "" })); }}>
+              <option value="">— เลือกชื่อเซลล์ —</option>
+              {["Aeey","Amy","Bon","Chom","Claire","Ice","Jan","Junior","Khaw","Mindmint","Mod","Muanfun","Oil","Pang","Parn","Piakpoon","Pin","Rit","Seangpleng","Tuang"].map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
             {errors.agent && <p className="text-red-400 text-xs mt-1">⚠️ {errors.agent}</p>}
           </div>
 

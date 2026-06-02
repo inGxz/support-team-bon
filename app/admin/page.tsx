@@ -1274,6 +1274,54 @@ export default function AdminPage() {
 
                 </div>
 
+                {/* Agent ranking */}
+                {(() => {
+                  const agentMap: Record<string, { total: number; done: number }> = {};
+                  reportJobs.forEach((j) => {
+                    const name = j.agent || "ไม่ระบุ";
+                    if (!agentMap[name]) agentMap[name] = { total: 0, done: 0 };
+                    agentMap[name].total += 1;
+                    if (j.status === "Done" || j.status === "เสร็จแล้ว" || j.status === "Approved") {
+                      agentMap[name].done += 1;
+                    }
+                  });
+                  const ranked = Object.entries(agentMap).sort((a, b) => b[1].total - a[1].total);
+                  const max = ranked[0]?.[1].total || 1;
+                  const medals = ["🥇","🥈","🥉"];
+                  if (ranked.length === 0) return null;
+                  return (
+                    <div className="bg-white rounded-xl border border-gray-100 p-4">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">🧑‍💼 เซลล์ที่รับงานสูงสุด</p>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        {ranked.map(([name, { total, done }], idx) => {
+                          const pct     = Math.round((total / max) * 100);
+                          const donePct = total ? Math.round((done / total) * 100) : 0;
+                          return (
+                            <div key={name}>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="font-semibold text-gray-700 flex items-center gap-1.5">
+                                  <span>{medals[idx] ?? `#${idx + 1}`}</span>
+                                  <span>{name}</span>
+                                </span>
+                                <span className="font-bold text-indigo-700 shrink-0">
+                                  {total} งาน
+                                  <span className="text-green-500 font-normal ml-1">({donePct}% done)</span>
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-100 rounded-full h-2">
+                                <div className="h-2 rounded-full transition-all" style={{
+                                  width: `${pct}%`,
+                                  background: idx === 0 ? "#6366f1" : idx === 1 ? "#a78bfa" : idx === 2 ? "#c4b5fd" : "#e0e7ff",
+                                }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* 2-col layout: Customer ranking (left) + Workflow breakdown (right) */}
                 <div className="grid grid-cols-3 gap-3 items-start">
 
