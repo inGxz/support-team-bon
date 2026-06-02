@@ -26,25 +26,28 @@ type Job = {
 type EditState = { status: string; deliveryLink: string; internalNote: string };
 
 // แปลง timestamp → "พ.ค. 2026"
-// รองรับหลาย format: "26/5/2569", "2026-06-02T...", Date object
+// รองรับ: "26/5/2569" (DD/MM/BE), "5/26/2569" (MM/DD/BE), "2026-06-02T..." (ISO)
 function parseMonthYear(timestamp: string): string {
   const monthNames = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
   try {
     if (!timestamp) return "ไม่ระบุ";
 
-    // format Thai: "26/5/2569" หรือ "26/5/2569, 22:35:56"
     const slashParts = String(timestamp).split("/");
     if (slashParts.length >= 3) {
-      const month  = parseInt(slashParts[1]);
+      const p0 = parseInt(slashParts[0]);
+      const p1 = parseInt(slashParts[1]);
       const yearRaw = parseInt(slashParts[2]);
-      // ถ้า year > 2500 แสดงว่าเป็น พ.ศ. ต้องลบ 543
-      const yearCE = yearRaw > 2500 ? yearRaw - 543 : yearRaw;
-      if (month >= 1 && month <= 12) return `${monthNames[month - 1]} ${yearCE}`;
+      const yearCE  = yearRaw > 2500 ? yearRaw - 543 : yearRaw;
+
+      // DD/MM/YYYY (Thai): p1 คือเดือน (1-12)
+      if (p1 >= 1 && p1 <= 12) return `${monthNames[p1 - 1]} ${yearCE}`;
+      // MM/DD/YYYY (American): p0 คือเดือน (1-12) แต่ p1 > 12
+      if (p0 >= 1 && p0 <= 12) return `${monthNames[p0 - 1]} ${yearCE}`;
     }
 
-    // format ISO: "2026-06-02T..." หรือ "2026-06-02"
+    // ISO format: "2026-06-02T..." — ป้องกัน getFullYear() คืน BE year
     const d = new Date(timestamp);
-    if (!isNaN(d.getTime())) {
+    if (!isNaN(d.getTime()) && d.getFullYear() < 2500) {
       return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
     }
   } catch {}
