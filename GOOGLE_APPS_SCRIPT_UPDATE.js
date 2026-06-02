@@ -48,12 +48,21 @@ const COL = {
   INTERNAL_NOTE:  18,  // R - internalNote (Admin only, ไม่แสดงให้ลูกค้า)
 };
 
-// ─── formatTs: แปลง Date cell → "DD/MM/YYYY HH:mm:ss" (CE year) ───────────────
+// ─── formatTs: แปลง Date cell → "DD/MM/YYYY HH:mm:ss" (CE year เสมอ) ──────────
+// ไม่ใช้ Utilities.formatDate เพราะมัน auto-แปลงเป็น พ.ศ. ใน Thai locale
 function formatTs(val) {
   try {
     if (!val) return "";
     if (val instanceof Date) {
-      return Utilities.formatDate(val, "Asia/Bangkok", "dd/MM/yyyy HH:mm:ss");
+      var d   = val;
+      var pad = function(n) { return n < 10 ? "0" + n : String(n); };
+      var day  = pad(d.getDate());
+      var mon  = pad(d.getMonth() + 1); // getMonth() 0-indexed
+      var year = d.getFullYear();       // CE year เสมอ (2026 ไม่ใช่ 2569)
+      var hh   = pad(d.getHours());
+      var mm   = pad(d.getMinutes());
+      var ss   = pad(d.getSeconds());
+      return day + "/" + mon + "/" + year + " " + hh + ":" + mm + ":" + ss;
     }
     return String(val);
   } catch(e) { return String(val || ""); }

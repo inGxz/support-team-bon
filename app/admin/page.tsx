@@ -54,27 +54,60 @@ function parseMonthYear(timestamp: string): string {
   return "ไม่ระบุ";
 }
 
-// แปลง timestamp → Date object (CE)
-// รองรับ: "27/5/2569, 13:26:32", "2026-06-02T..."
+// แปลง timestamp (ทุก format) → Date object (CE year)
 function parseThaiTimestamp(timestamp: string): Date | null {
   try {
     if (!timestamp) return null;
+    const s = String(timestamp).trim();
 
-    // ISO format
-    if (String(timestamp).includes("-") || String(timestamp).includes("T")) {
-      const d = new Date(timestamp);
-      return isNaN(d.getTime()) ? null : d;
+    // Slash format: "27/5/2569" หรือ "02/06/2026 12:19:30"
+    if (s.includes("/")) {
+      const clean = s.replace(",", "").trim();
+      const parts = clean.split(/[\s/]+/);
+      const p0 = parseInt(parts[0]);
+      const p1 = parseInt(parts[1]);
+      const yearRaw = parseInt(parts[2] || "0");
+      const yearCE  = yearRaw > 2500 ? yearRaw - 543 : yearRaw;
+      // DD/MM: p1 คือเดือน
+      if (p1 >= 1 && p1 <= 12) return new Date(yearCE, p1 - 1, p0);
+      // MM/DD: p0 คือเดือน
+      if (p0 >= 1 && p0 <= 12) return new Date(yearCE, p0 - 1, p1);
     }
 
-    // Thai slash format: "27/5/2569, 13:26:32"
-    const clean = String(timestamp).replace(",", "").trim();
-    const parts = clean.split(/[\s/]+/);
-    const day    = parseInt(parts[0]);
-    const month  = parseInt(parts[1]) - 1;
-    const yearRaw = parseInt(parts[2]);
-    const yearCE  = yearRaw > 2500 ? yearRaw - 543 : yearRaw;
-    return new Date(yearCE, month, day);
+    // ISO format: "2026-06-02T..."
+    if (s.includes("-") || s.includes("T")) {
+      const d = new Date(s);
+      if (!isNaN(d.getTime()) && d.getFullYear() < 2500) return d;
+    }
+
+    // "Mon Feb 06 2569 12:19:30 GMT+0700" — Date.toString() จาก GAS
+    // แยก year แล้วแปลง BE→CE ก่อน parse
+    const beMatch = s.match(/\b(25\d\d)\b/);
+    if (beMatch) {
+      const yearCE = parseInt(beMatch[1]) - 543;
+      const fixed  = s.replace(beMatch[1], String(yearCE));
+      const d = new Date(fixed);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    // fallback: ลอง parse ตรงๆ
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
   } catch { return null; }
+}
+
+// แสดง timestamp สวยงาม: "2 มิ.ย. 2026 12:19"
+const MONTH_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+function fmtTimestamp(timestamp: string): string {
+  if (!timestamp) return "–";
+  const d = parseThaiTimestamp(timestamp);
+  if (!d) return timestamp;
+  const day  = d.getDate();
+  const mon  = MONTH_SHORT[d.getMonth()];
+  const year = d.getFullYear();
+  const hh   = String(d.getHours()).padStart(2, "0");
+  const mm   = String(d.getMinutes()).padStart(2, "0");
+  return `${day} ${mon} ${year} ${hh}:${mm}`;
 }
 
 const MONTH_NAMES_TH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
@@ -876,7 +909,7 @@ export default function AdminPage() {
 
   const exportCSV = () => {
     const headers = ["Job ID", "ลูกค้า", "เซลล์", "ประเภทงาน", "ประเภทย่อย", "Deadline", "สถานะ", "Delivery Link", "วันที่สั่ง", "Priority", "Note ภายใน"];
-    const rows = filtered.map((j) => [j.jobId, j.customerName, j.agent, j.task, j.subType, formatDate(j.deadline), j.status, j.deliveryLink, j.timestamp, j.priority === "urgent" ? "ด่วน" : "", j.internalNote]);
+    const rows = filtered.map((j) => [j.jobId, j.customerName, j.agent, j.task, j.subType, formatDate(j.deadline), j.status, j.deliveryLink, fmtTimestamp(j.timestamp), j.priority === "urgent" ? "ด่วน" : "", j.internalNote]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -893,7 +926,7 @@ export default function AdminPage() {
         ["Job ID", "ลูกค้า", "เซลล์", "ประเภทงาน", "ประเภทย่อย", "Deadline", "สถานะ", "Delivery Link", "วันที่สั่ง", "Priority", "Note ภายใน"],
         ...filtered.map((j) => [
           j.jobId, j.customerName, j.agent, j.task, j.subType,
-          formatDate(j.deadline), j.status, j.deliveryLink, j.timestamp,
+          formatDate(j.deadline), j.status, j.deliveryLink, fmtTimestamp(j.timestamp),
           j.priority === "urgent" ? "ด่วน" : "", j.internalNote,
         ]),
       ];
@@ -1775,7 +1808,7 @@ export default function AdminPage() {
                           >
                             🚨
                           </button>
-                          <span className="text-xs text-gray-400 shrink-0">{job.timestamp}</span>
+                          <span className="text-xs text-gray-400 shrink-0">{fmtTimestamp(job.timestamp)}</span>
                         </div>
                       </div>
 
