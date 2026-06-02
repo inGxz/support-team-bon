@@ -48,6 +48,17 @@ const COL = {
   INTERNAL_NOTE:  18,  // R - internalNote (Admin only, ไม่แสดงให้ลูกค้า)
 };
 
+// ─── formatTs: แปลง Date cell → "DD/MM/YYYY HH:mm:ss" (CE year) ───────────────
+function formatTs(val) {
+  try {
+    if (!val) return "";
+    if (val instanceof Date) {
+      return Utilities.formatDate(val, "Asia/Bangkok", "dd/MM/yyyy HH:mm:ss");
+    }
+    return String(val);
+  } catch(e) { return String(val || ""); }
+}
+
 // ─── LINE Channel Access Token ────────────────────────────────────────────────
 function getLineToken() {
   // เก็บ token ใน Script Properties เท่านั้น
@@ -145,7 +156,7 @@ function getMyJobs(lineUserId) {
         task:           row[COL.TASK            - 1],
         deadline:       row[COL.DEADLINE        - 1],
         status:         row[COL.STATUS          - 1],
-        timestamp:      row[COL.TIMESTAMP       - 1],
+        timestamp:      formatTs(row[COL.TIMESTAMP - 1]),
         revisionCount:  String(row[COL.REVISION_COUNT  - 1] || "0"),
         subType:        String(row[COL.SUB_TYPE        - 1] || ""),
         workflowParams: String(row[COL.WORKFLOW_PARAMS - 1] || ""),
@@ -634,7 +645,7 @@ function getAllJobs() {
       imageUrl:       String(row[COL.IMAGE_URL        - 1] || ""),
       revisionNote:   String(row[COL.REVISION_NOTE    - 1] || ""),
       revisionCount:  String(row[COL.REVISION_COUNT   - 1] || "0"),
-      timestamp:      String(row[COL.TIMESTAMP        - 1] || ""),
+      timestamp:      formatTs(row[COL.TIMESTAMP        - 1]),
       priority:       String(row[COL.PRIORITY         - 1] || ""),
       internalNote:   String(row[COL.INTERNAL_NOTE    - 1] || ""),
     });
