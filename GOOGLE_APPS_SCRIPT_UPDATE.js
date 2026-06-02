@@ -48,21 +48,20 @@ const COL = {
   INTERNAL_NOTE:  18,  // R - internalNote (Admin only, ไม่แสดงให้ลูกค้า)
 };
 
-// ─── formatTs: แปลง Date cell → "DD/MM/YYYY HH:mm:ss" (CE year เสมอ) ──────────
-// ไม่ใช้ Utilities.formatDate เพราะมัน auto-แปลงเป็น พ.ศ. ใน Thai locale
+// ─── formatTs: แปลง Date cell → "D/M/YYYY HH:mm:ss" (พ.ศ. เหมือน Sheets) ─────
 function formatTs(val) {
   try {
     if (!val) return "";
     if (val instanceof Date) {
-      var d   = val;
-      var pad = function(n) { return n < 10 ? "0" + n : String(n); };
-      var day  = pad(d.getDate());
-      var mon  = pad(d.getMonth() + 1); // getMonth() 0-indexed
-      var year = d.getFullYear();       // CE year เสมอ (2026 ไม่ใช่ 2569)
+      var d    = val;
+      var pad  = function(n) { return n < 10 ? "0" + n : String(n); };
+      var day  = d.getDate();               // ไม่ใส่ 0 นำหน้า เหมือน Sheets
+      var mon  = d.getMonth() + 1;
+      var yearBE = d.getFullYear() + 543;   // CE → พ.ศ. เหมือนที่ Sheets แสดง
       var hh   = pad(d.getHours());
       var mm   = pad(d.getMinutes());
       var ss   = pad(d.getSeconds());
-      return day + "/" + mon + "/" + year + " " + hh + ":" + mm + ":" + ss;
+      return day + "/" + mon + "/" + yearBE + " " + hh + ":" + mm + ":" + ss;
     }
     return String(val);
   } catch(e) { return String(val || ""); }
@@ -216,7 +215,7 @@ function createJob(body) {
   try {
     const sheet     = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
     const jobId     = generateJobId();
-    const timestamp = new Date().toLocaleString("th-TH");
+    const timestamp = formatTs(new Date());
 
     // Upload images to Drive if provided (up to 3)
     var imageUrl = "";
@@ -232,6 +231,7 @@ function createJob(body) {
     }
     imageUrl = imageUrls.join(",");
 
+    var nextRow = sheet.getLastRow() + 1;
     sheet.appendRow([
       timestamp,
       jobId,
@@ -252,6 +252,8 @@ function createJob(body) {
       "",                          // Q: priority
       "",                          // R: internalNote
     ]);
+    // บังคับ column A เป็น plain text ไม่ให้ Sheets แปลงเป็น Date cell
+    sheet.getRange(nextRow, 1).setNumberFormat("@");
 
     // แจ้งเตือน admin group
     notifyAdminGroup(jobId, body.customerName, body.task, body.deadline, body.detail, body.agent, body.lineUserId || "");

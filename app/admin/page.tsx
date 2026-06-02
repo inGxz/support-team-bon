@@ -1808,7 +1808,7 @@ export default function AdminPage() {
                           >
                             🚨
                           </button>
-                          <span className="text-xs text-gray-400 shrink-0">{fmtTimestamp(job.timestamp)}</span>
+                          <span className="text-xs text-gray-400 shrink-0">{job.timestamp}</span>
                         </div>
                       </div>
 

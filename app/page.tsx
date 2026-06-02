@@ -1095,12 +1095,12 @@ export default function Page() {
         {/* TASK TYPE */}
         {!taskType && (
           <div className={card + " space-y-3"}>
-            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#7c3aed 0%,#6366f1 50%,#8b5cf6 100%)">✦ Select Workflow</GradText></h2>
-            <button className={btnPrimary} onClick={() => setTaskType("Video")}>🎬 Video Workflow</button>
-            <button className={btnPrimary} onClick={() => setTaskType("Design")}>🎨 Design Workflow</button>
-            <button className={btnPrimary} onClick={() => setTaskType("Ads")}>📢 Ads Workflow</button>
-            <button className={btnPrimary} onClick={() => setTaskType("Content")}>✍️ Content Workflow</button>
-            <button className={btnPrimary} onClick={() => setTaskType("Filming")}>🎥 Filming Workflow</button>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#7c3aed 0%,#6366f1 50%,#8b5cf6 100%)">✦ กรุณาเลือกงานที่ต้องการสั่ง</GradText></h2>
+            <button className={btnPrimary} onClick={() => setTaskType("Video")}>🎬 ตัดต่อวิดีโอ</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Design")}>🎨 ทำรูปกราฟฟิค</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Ads")}>📢 ยิงแอด</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Content")}>✍️ คอนเท้น / สคริป</button>
+            <button className={btnPrimary} onClick={() => setTaskType("Filming")}>🎥 ถ่ายงานนอกสถานที่</button>
           </div>
         )}
 
@@ -1108,7 +1108,7 @@ export default function Page() {
         {taskType === "Video" && (
           <div className={card + " space-y-4"}>
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#a855f7 0%,#ec4899 60%,#f472b6 100%)">🎬 Video Workflow</GradText></h2>
+              <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#a855f7 0%,#ec4899 60%,#f472b6 100%)">🎬 ตัดต่อวิดีโอ</GradText></h2>
               <span className={`text-xs ${dark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-400"} px-3 py-1 rounded-full`}>Step {step + 1} / 5</span>
             </div>
             <div className={`w-full ${dark ? "bg-gray-700" : "bg-gray-100"} rounded-full h-2`}>
@@ -1172,7 +1172,7 @@ export default function Page() {
         {taskType === "Design" && (
           <div className={card + " space-y-4"}>
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#06b6d4 0%,#3b82f6 60%,#6366f1 100%)">🎨 Design Workflow</GradText></h2>
+              <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#06b6d4 0%,#3b82f6 60%,#6366f1 100%)">🎨 ทำรูปกราฟฟิค</GradText></h2>
               <span className={`text-xs ${dark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-400"} px-3 py-1 rounded-full`}>Step {designStep + 1} / 2</span>
             </div>
             <div className={`w-full ${dark ? "bg-gray-700" : "bg-gray-100"} rounded-full h-2`}>
@@ -1226,7 +1226,7 @@ export default function Page() {
         {/* ADS */}
         {taskType === "Ads" && (
           <div className={card + " space-y-4"}>
-            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#f97316 0%,#ef4444 60%,#f43f5e 100%)">📢 Ads Workflow</GradText></h2>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#f97316 0%,#ef4444 60%,#f43f5e 100%)">📢 ยิงแอด</GradText></h2>
             <select className={inputCls()} value={adsType} onChange={(e) => setAdsType(e.target.value)}>
               <option value="">เลือกประเภท Ads</option>
               <option>Facebook Ads</option><option>Google Ads</option><option>TikTok Ads</option>
@@ -1239,7 +1239,7 @@ export default function Page() {
         {/* CONTENT */}
         {taskType === "Content" && (
           <div className={card + " space-y-4"}>
-            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#10b981 0%,#059669 60%,#047857 100%)">✍️ Content Workflow</GradText></h2>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#10b981 0%,#059669 60%,#047857 100%)">✍️ คอนเท้น / สคริป</GradText></h2>
             <select className={inputCls()} value={contentType} onChange={(e) => setContentType(e.target.value)}>
               <option value="">เลือกประเภท Content</option>
               <option>Caption / Post</option><option>Script</option><option>Blog Post</option><option>Social Media Content</option><option>Email / Newsletter</option><option>Subtitle</option>
@@ -1252,10 +1252,10 @@ export default function Page() {
         {/* FILMING */}
         {taskType === "Filming" && (
           <div className={card + " space-y-4"}>
-            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#6366f1 0%,#8b5cf6 60%,#a78bfa 100%)">🎥 Filming Workflow</GradText></h2>
+            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#6366f1 0%,#8b5cf6 60%,#a78bfa 100%)">🎥 ถ่ายงานนอกสถานที่</GradText></h2>
             <select className={inputCls()} value={filmingType} onChange={(e) => setFilmingType(e.target.value)}>
-              <option value="">เลือกประเภท Filming</option>
-              <option>ถ่ายวิดีโอ On-location</option><option>Studio Filming</option><option>Product Shoot</option><option>Interview</option><option>Event Coverage</option><option>Drone Shot</option>
+              <option value="">เลือกประเภทการถ่าย</option>
+              <option>ถ่ายวิดีโอ On-location</option><option>Studio Filming</option><option>Interview</option><option>Event Coverage</option>
             </select>
             <button className={btnPrimary} onClick={() => openPreview("Filming", `Type:${filmingType || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
             <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!filmingType)}>← กลับเลือก Workflow</button>
