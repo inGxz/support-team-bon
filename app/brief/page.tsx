@@ -14,6 +14,7 @@ type JobBrief = {
   reference: string;
   imageUrl: string;
   revisionNote: string;
+  internalNote: string;
   status: string;
 };
 
@@ -242,11 +243,19 @@ export default function BriefPage() {
           </div>
         )}
 
-        {/* Revision note (ถ้างานอยู่ใน Revision) */}
+        {/* Revision note */}
         {job.revisionNote && (
           <div className="bg-red-50 rounded-2xl shadow-sm border border-red-200 px-5 py-4">
             <p className="text-xs font-bold text-red-500 uppercase tracking-wide mb-2">🔄 หมายเหตุการแก้ไข</p>
             <p className="text-sm text-red-800 whitespace-pre-wrap leading-relaxed">{job.revisionNote}</p>
+          </div>
+        )}
+
+        {/* Internal note สำหรับฟรีแลนซ์ */}
+        {job.internalNote && (
+          <div className="bg-yellow-50 rounded-2xl shadow-sm border border-yellow-200 px-5 py-4">
+            <p className="text-xs font-bold text-yellow-600 uppercase tracking-wide mb-2">🔒 Note จากทีมงาน</p>
+            <p className="text-sm text-yellow-900 whitespace-pre-wrap leading-relaxed">{job.internalNote}</p>
           </div>
         )}
 

@@ -2088,7 +2088,7 @@ export default function AdminPage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  const url = `${window.location.origin}/job?jobId=${job.jobId}&fl=1`;
+                                  const url = `${window.location.origin}/brief?jobId=${job.jobId}`;
                                   navigator.clipboard.writeText(url);
                                   setCopiedMap((p) => ({ ...p, [job.jobId]: true }));
                                   setTimeout(() => setCopiedMap((p) => ({ ...p, [job.jobId]: false })), 2500);

@@ -143,8 +143,8 @@ function doGet(e) {
         imageUrl:       String(row[COL.IMAGE_URL       - 1] || ""),
         revisionNote:   String(row[COL.REVISION_NOTE   - 1] || ""),
       };
-      // ถ้าเป็น freelancer link → ส่ง internalNote ด้วย
-      if (source === "freelancer") {
+      // ถ้าเป็น freelancer/brief link → ส่ง internalNote ด้วย
+      if (source === "freelancer" || source === "brief") {
         resp.internalNote = String(row[COL.INTERNAL_NOTE - 1] || "");
       }
       return jsonResponse(resp);
