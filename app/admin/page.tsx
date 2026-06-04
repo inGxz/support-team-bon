@@ -2046,21 +2046,7 @@ export default function AdminPage() {
                           <div className="space-y-2 pt-1 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                             {/* Internal note */}
                             <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-xs text-gray-400 font-medium">🔒 Note ภายใน <span className="text-gray-300">(ลูกค้าไม่เห็น)</span></p>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = `${window.location.origin}/job?jobId=${job.jobId}&fl=1`;
-                                    navigator.clipboard.writeText(url).then(() => {
-                                      alert(`✅ คัดลอกลิงก์ฟรีแลนซ์แล้ว!\n\n${url}`);
-                                    });
-                                  }}
-                                  className="text-xs px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 transition font-medium flex items-center gap-1"
-                                >
-                                  🔗 แชร์ให้ฟรีแลนซ์
-                                </button>
-                              </div>
+                              <p className="text-xs text-gray-400 mb-1 font-medium">🔒 Note ภายใน <span className="text-gray-300">(ลูกค้าไม่เห็น)</span></p>
                               <textarea
                                 className="w-full p-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-yellow-300 outline-none text-gray-800 resize-none bg-yellow-50 placeholder-gray-300"
                                 placeholder="เช่น รอไฟล์จากเซลล์, ติดต่อลูกค้าอีกครั้ง..."
@@ -2102,7 +2088,7 @@ export default function AdminPage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  const url = `${window.location.origin}/brief?jobId=${job.jobId}`;
+                                  const url = `${window.location.origin}/job?jobId=${job.jobId}&fl=1`;
                                   navigator.clipboard.writeText(url);
                                   setCopiedMap((p) => ({ ...p, [job.jobId]: true }));
                                   setTimeout(() => setCopiedMap((p) => ({ ...p, [job.jobId]: false })), 2500);
