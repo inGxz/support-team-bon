@@ -86,8 +86,9 @@ function tlEventText(log: LogEntry): string {
 }
 
 function JobPageContent() {
-  const params  = useSearchParams();
-  const jobId   = params.get("jobId") || "";
+  const params      = useSearchParams();
+  const jobId       = params.get("jobId") || "";
+  const isFreelancer = params.get("fl") === "1";
 
   const [lineUserId,   setLineUserId]   = useState("");
   const [liffReady,    setLiffReady]    = useState(false);
@@ -101,6 +102,7 @@ function JobPageContent() {
   const [submitting,   setSubmitting]   = useState(false);
   const [actionMsg,    setActionMsg]    = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [approved,     setApproved]     = useState(false);
+  const [internalNote, setInternalNote] = useState("");
 
   // init LIFF
   useEffect(() => {
@@ -131,10 +133,11 @@ function JobPageContent() {
       setLoading(true);
       setError(null);
       try {
-        const uid = lineUserId ? `&lineUserId=${encodeURIComponent(lineUserId)}` : "";
+        const uid    = lineUserId ? `&lineUserId=${encodeURIComponent(lineUserId)}` : "";
+        const source = isFreelancer ? "freelancer" : "customer";
         const [jr, lr] = await Promise.all([
-          fetch(`/api/gas?jobId=${encodeURIComponent(jobId)}${uid}&source=customer`),
-          fetch(`/api/gas?action=jobLog&jobId=${encodeURIComponent(jobId)}${uid}&source=customer`),
+          fetch(`/api/gas?jobId=${encodeURIComponent(jobId)}${uid}&source=${source}`),
+          fetch(`/api/gas?action=jobLog&jobId=${encodeURIComponent(jobId)}${uid}&source=${source}`),
         ]);
         const jd = await jr.json();
         const ld = await lr.json();
@@ -143,6 +146,7 @@ function JobPageContent() {
         } else {
           setJob(jd);
           if (jd.status === "Approved") setApproved(true);
+          if (jd.internalNote) setInternalNote(jd.internalNote);
         }
         if (!ld.error) {
           setLogs(ld.logs || []);
@@ -248,8 +252,15 @@ function JobPageContent() {
   return (
     <div style={{ minHeight: "100vh", background: "#F8F7F4", fontFamily: "'Noto Sans Thai', sans-serif", maxWidth: 480, margin: "0 auto" }}>
 
+      {/* Freelancer banner */}
+      {isFreelancer && (
+        <div style={{ background: "#fef9c3", borderBottom: "1px solid #fde047", padding: "8px 16px", fontSize: 12, color: "#854d0e", fontWeight: 500, textAlign: "center" }}>
+          🔗 Freelancer View — คุณเห็น Note ภายในของงานนี้
+        </div>
+      )}
+
       {/* Top Bar */}
-      <div style={{ background: "#1e1b2e", padding: "44px 16px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ background: "#1e1b2e", padding: isFreelancer ? "14px 16px" : "44px 16px 14px", display: "flex", alignItems: "center", gap: 10 }}>
         <button onClick={() => window.history.back()}
           style={{ width: 32, height: 32, borderRadius: 8, background: "#2d2a3e", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
           <svg width="16" height="16" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
@@ -322,6 +333,11 @@ function JobPageContent() {
           {job.revisionNote && (
             <div style={{ marginTop: 8, background: "#fff5f5", border: "0.5px solid #fca5a5", borderRadius: 8, padding: "10px 12px", fontSize: 12, lineHeight: 1.6, color: "#b91c1c" }}>
               📝 {job.revisionNote}
+            </div>
+          )}
+          {isFreelancer && internalNote && (
+            <div style={{ marginTop: 8, background: "#fefce8", border: "0.5px solid #fde047", borderRadius: 8, padding: "10px 12px", fontSize: 12, lineHeight: 1.6, color: "#854d0e" }}>
+              🔒 <span style={{ fontWeight: 600 }}>Note จากทีมงาน:</span> {internalNote}
             </div>
           )}
         </div>

@@ -129,7 +129,7 @@ function doGet(e) {
         return jsonResponse({ error: "FORBIDDEN" });
       }
 
-      return jsonResponse({
+      var resp = {
         jobId:          row[COL.JOB_ID          - 1],
         customerName:   row[COL.CUSTOMER_NAME   - 1],
         agent:          row[COL.AGENT           - 1],
@@ -142,7 +142,12 @@ function doGet(e) {
         workflowParams: String(row[COL.WORKFLOW_PARAMS - 1] || ""),
         imageUrl:       String(row[COL.IMAGE_URL       - 1] || ""),
         revisionNote:   String(row[COL.REVISION_NOTE   - 1] || ""),
-      });
+      };
+      // ถ้าเป็น freelancer link → ส่ง internalNote ด้วย
+      if (source === "freelancer") {
+        resp.internalNote = String(row[COL.INTERNAL_NOTE - 1] || "");
+      }
+      return jsonResponse(resp);
     }
   }
 
