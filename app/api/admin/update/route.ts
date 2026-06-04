@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
         deliveryLink: body.deliveryLink,
         priority: body.priority,
         internalNote: body.internalNote,
+        actor: body.actor || "Admin",
       }),
     });
     const data = await res.json();

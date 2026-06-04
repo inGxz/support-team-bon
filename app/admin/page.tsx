@@ -624,8 +624,12 @@ function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.R
 
 
 export default function AdminPage() {
+  const ADMIN_NAMES = ["ING", "BON", "FEW", "NAT"];
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [nameError, setNameError] = useState(false);
   const [pwError, setPwError] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
 
@@ -787,8 +791,10 @@ export default function AdminPage() {
 
   const handleLogin = async () => {
     if (!password) return;
+    if (!adminName) { setNameError(true); return; }
     setAuthLoading(true);
     setPwError(false);
+    setNameError(false);
     try {
       const res = await fetch("/api/admin/auth", {
         method: "POST",
@@ -798,6 +804,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (data.ok) {
         sessionStorage.setItem("adminAuth", password);
+        sessionStorage.setItem("adminName", adminName);
         setIsLoggedIn(true);
       } else {
         setPwError(true);
@@ -817,7 +824,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/update", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ jobId, status: edit.status, deliveryLink: edit.deliveryLink, internalNote: edit.internalNote }),
+        body: JSON.stringify({ jobId, status: edit.status, deliveryLink: edit.deliveryLink, internalNote: edit.internalNote, actor: sessionStorage.getItem("adminName") || "Admin" }),
       });
       const data = await res.json();
       if (data.success) {
@@ -858,7 +865,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/update", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ jobId, status: newStatus }),
+        body: JSON.stringify({ jobId, status: newStatus, actor: sessionStorage.getItem("adminName") || "Admin" }),
       });
       const data = await res.json();
       if (data.success) {
@@ -999,6 +1006,15 @@ export default function AdminPage() {
               <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
               <p className="text-gray-400 text-sm mt-1">SUPPORT TEAMBON VT MARKET</p>
             </div>
+            <select
+              className={`w-full p-3 rounded-xl border ${nameError ? "border-red-400 ring-2 ring-red-200" : "border-gray-200"} focus:ring-2 focus:ring-purple-300 outline-none text-center text-gray-800 bg-white`}
+              value={adminName}
+              onChange={(e) => { setAdminName(e.target.value); setNameError(false); }}
+            >
+              <option value="">— คุณคือใคร? —</option>
+              {ADMIN_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            {nameError && <p className="text-red-400 text-sm">กรุณาเลือกชื่อของคุณ</p>}
             <input
               type="password"
               placeholder="รหัสผ่าน Admin"
@@ -1045,7 +1061,7 @@ export default function AdminPage() {
               ฉันยังอยู่นี่ — ต่อเซสชัน
             </button>
             <button
-              onClick={() => { sessionStorage.removeItem("adminAuth"); setIsLoggedIn(false); }}
+              onClick={() => { sessionStorage.removeItem("adminAuth"); sessionStorage.removeItem("adminName"); setIsLoggedIn(false); }}
               className="w-full text-gray-400 text-sm hover:text-gray-600 transition"
             >
               ออกจากระบบเลย
@@ -1058,7 +1074,7 @@ export default function AdminPage() {
       <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-700 px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-10">
         <div>
           <h1 className="text-white font-black text-lg tracking-widest">🛠️ ADMIN PANEL</h1>
-          <p className="text-purple-200 text-xs">SUPPORT TEAMBON VT MARKET</p>
+          <p className="text-purple-200 text-xs">SUPPORT TEAMBON VT MARKET · 👤 {sessionStorage.getItem("adminName") || ""}</p>
         </div>
         <div className="flex gap-2 items-center">
           {lastUpdated && (
@@ -1077,7 +1093,7 @@ export default function AdminPage() {
             <span className={loading ? "animate-spin" : ""}>🔄</span> Refresh
           </button>
           <button
-            onClick={() => { sessionStorage.removeItem("adminAuth"); setIsLoggedIn(false); setPassword(""); }}
+            onClick={() => { sessionStorage.removeItem("adminAuth"); sessionStorage.removeItem("adminName"); setIsLoggedIn(false); setPassword(""); }}
             className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
           >
             ออกจากระบบ

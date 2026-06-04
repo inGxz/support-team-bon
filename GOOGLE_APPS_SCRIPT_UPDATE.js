@@ -587,21 +587,23 @@ function updateJob(body) {
       var oldPriority     = String(data[i][COL.PRIORITY      - 1] || "");
       var oldInternalNote = String(data[i][COL.INTERNAL_NOTE - 1] || "");
 
+      var actor = body.actor || "Admin";
+
       if (body.status !== undefined && body.status !== oldStatus) {
         sheet.getRange(rowNum, COL.STATUS).setValue(body.status);
-        writeActivityLog(body.jobId, "Admin", "status", oldStatus, body.status);
+        writeActivityLog(body.jobId, actor, "status", oldStatus, body.status);
       }
       if (body.deliveryLink !== undefined && body.deliveryLink !== oldDelivery) {
         sheet.getRange(rowNum, COL.DELIVERY_LINK).setValue(body.deliveryLink);
-        writeActivityLog(body.jobId, "Admin", "deliveryLink", oldDelivery, body.deliveryLink);
+        writeActivityLog(body.jobId, actor, "deliveryLink", oldDelivery, body.deliveryLink);
       }
       if (body.priority !== undefined && body.priority !== oldPriority) {
         sheet.getRange(rowNum, COL.PRIORITY).setValue(body.priority);
-        writeActivityLog(body.jobId, "Admin", "priority", oldPriority, body.priority);
+        writeActivityLog(body.jobId, actor, "priority", oldPriority, body.priority);
       }
       if (body.internalNote !== undefined && body.internalNote !== oldInternalNote) {
         sheet.getRange(rowNum, COL.INTERNAL_NOTE).setValue(body.internalNote);
-        writeActivityLog(body.jobId, "Admin", "internalNote", oldInternalNote, body.internalNote);
+        writeActivityLog(body.jobId, actor, "internalNote", oldInternalNote, body.internalNote);
       }
 
       // ส่ง LINE push ตามสถานะที่เปลี่ยน
