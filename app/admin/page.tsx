@@ -1539,6 +1539,7 @@ export default function AdminPage() {
                             <div className="text-gray-500 font-medium">{l.timestamp.split(" ")[1] || ""}</div>
                           </div>
                           <span className="font-mono text-xs font-bold text-purple-600 shrink-0 w-24">{l.jobId}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 font-semibold shrink-0">{l.actor || "Admin"}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${fieldColor[l.field] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
                             {fieldLabel[l.field] || l.field}
                           </span>
@@ -2044,9 +2045,10 @@ export default function AdminPage() {
                                     <div key={li} className="px-4 py-2 flex items-center gap-3 text-xs">
                                       <span className="shrink-0">{fieldIcon[l.field] || "✏️"}</span>
                                       <span className="text-gray-500 shrink-0 font-medium">{fieldLabel[l.field] || l.field}</span>
-                                      <span className="text-gray-400 line-through truncate w-24" title={l.oldValue}>{l.oldValue || "-"}</span>
+                                      <span className="text-gray-400 line-through truncate w-20" title={l.oldValue}>{l.oldValue || "-"}</span>
                                       <span className="text-gray-300">{"->"}</span>
-                                      <span className="text-gray-800 font-semibold truncate w-28" title={l.newValue}>{l.newValue || "-"}</span>
+                                      <span className="text-gray-800 font-semibold truncate w-24" title={l.newValue}>{l.newValue || "-"}</span>
+                                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 font-semibold">{l.actor || "Admin"}</span>
                                       <div className="ml-auto text-right shrink-0 hidden sm:block leading-tight">
                                         <div className="text-gray-400 text-xs">{l.timestamp.split(" ")[0]}</div>
                                         <div className="text-gray-500 text-xs font-medium">{l.timestamp.split(" ")[1] || ""}</div>
