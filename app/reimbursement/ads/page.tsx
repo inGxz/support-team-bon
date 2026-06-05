@@ -67,6 +67,10 @@ export default function AdsReimbursementPage() {
   const [rebateAccount, setRebateAccount] = useState("");
   const [ibSocial,      setIbSocial]      = useState("");
 
+  // Period
+  const [perfMonth, setPerfMonth] = useState(String(new Date().getMonth() + 1).padStart(2, "0"));
+  const [perfYear,  setPerfYear]  = useState(String(new Date().getFullYear()));
+
   // Performance
   const [depUSD, setDepUSD] = useState("");
   const [depUSC, setDepUSC] = useState("");
@@ -218,7 +222,29 @@ Sales Agent`;
 
           {/* Section 2: Performance */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <SectionHeader icon="📊" num="2" title="Client Performance" sub="ระบบจะแปลง USC เป็น USD โดยอัตโนมัติ (1 USC = 0.01 USD)" />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-sm font-bold text-blue-600">2</div>
+                <h2 className="font-semibold text-gray-800 text-sm">📊 Performance Date</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 font-medium">Period:</span>
+                <select className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                  value={perfMonth} onChange={e => setPerfMonth(e.target.value)}>
+                  {["01","02","03","04","05","06","07","08","09","10","11","12"].map((m, i) => (
+                    <option key={m} value={m}>
+                      {["January","February","March","April","May","June","July","August","September","October","November","December"][i]}
+                    </option>
+                  ))}
+                </select>
+                <select className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                  value={perfYear} onChange={e => setPerfYear(e.target.value)}>
+                  {Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - 2 + i)).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4 text-xs text-blue-700">
               หมายเหตุ: ระบบจะแปลง USC เป็น USD โดยอัตโนมัติ (1 USC = 0.01 USD)
             </div>
