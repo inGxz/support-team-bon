@@ -449,9 +449,9 @@ Sales Agent`;
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-gray-600">📧 ตัวอย่างอีเมล (Preview)</p>
               </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-96 overflow-y-auto">
                 <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono leading-relaxed">
-                  {`Subject: IB reimburse advertising UID: ${uid || "[UID]"}\n\nDear Team,\n\nI would like to request approval for advertising support reimbursement for the following client...\n\nClient Name : ${clientName || "-"}\nUID         : ${uid || "-"}\nNet Deposit : ${fmt(netDeposit)} USD\nTier        : ${tier ? `Tier ${tier.tier}` : "-"}\nClaimable   : ${fmt(claimable, 2)} THB\n\n[ดูข้อความเต็มหลังคัดลอก]`}
+                  {buildEmail()}
                 </pre>
               </div>
             </div>
