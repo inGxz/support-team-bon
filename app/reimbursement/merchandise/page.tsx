@@ -159,9 +159,8 @@ export default function MerchandisePage() {
     const periodLabel = validPeriods.find(p => p.year === perfYear && p.month === perfMonth)?.label || `${MONTH_NAMES[parseInt(perfMonth)-1]} ${perfYear}`;
     const itemLines  = items.filter(i => i.name || i.qty).map((i, idx) => {
       const qty = parseInt(i.qty) || 0;
-      const total = qty * i.unitValue;
       const sizeLabel = i.size ? ` (Size: ${i.size})` : "";
-      return `  ${idx + 1}. ${i.name || "-"}${sizeLabel}  |  ${qty} pcs × $${fmt(i.unitValue)}  =  $${fmt(total)}`;
+      return `  ${idx + 1}. ${i.name || "-"}${sizeLabel} — ${qty} pcs`;
     }).join("\n");
 
     return `Subject: IB Merchandise Support Request - ${ibName || "[IB Name]"} | UID: ${uid || "[UID]"}
