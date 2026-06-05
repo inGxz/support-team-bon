@@ -126,8 +126,9 @@ Rebate Account      : ${rebateAccount || "-"}
 IB Social Media     : ${ibSocial || "-"}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CLIENT PERFORMANCE
+PERFORMANCE DATE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Period              : ${["January","February","March","April","May","June","July","August","September","October","November","December"][parseInt(perfMonth)-1]} ${perfYear}
 Total Deposit (USD) : ${fmt(totalDeposit)} USD
 Total Withdraw (USD): ${fmt(totalWithdraw)} USD
 Net Deposit (USD)   : ${fmt(netDeposit)} USD
@@ -157,7 +158,7 @@ Please review and approve at your earliest convenience.
 
 Best regards,
 Sales Agent`;
-  }, [clientName, uid, registerDate, rebateAccount, ibSocial, totalDeposit, totalWithdraw, netDeposit, tier, adsPlatform, totalBills, claimable, bills]);
+  }, [clientName, uid, registerDate, rebateAccount, ibSocial, totalDeposit, totalWithdraw, netDeposit, tier, adsPlatform, totalBills, claimable, bills, perfMonth, perfYear]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(buildEmail()).then(() => {
