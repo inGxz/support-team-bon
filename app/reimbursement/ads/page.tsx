@@ -71,6 +71,42 @@ export default function AdsReimbursementPage() {
   const [perfMonth, setPerfMonth] = useState(String(new Date().getMonth() + 1).padStart(2, "0"));
   const [perfYear,  setPerfYear]  = useState(String(new Date().getFullYear()));
 
+  // คำนวณช่วงเดือนที่เลือกได้ (Register Date - 1 เดือน → ปัจจุบัน)
+  const validPeriods: { year: string; month: string; label: string }[] = (() => {
+    const now = new Date();
+    const nowY = now.getFullYear();
+    const nowM = now.getMonth() + 1; // 1-12
+
+    // ถ้ายังไม่ได้กรอก Register Date → แสดงย้อนหลัง 12 เดือน
+    let minY = nowY;
+    let minM = nowM - 11;
+    if (minM <= 0) { minY -= 1; minM += 12; }
+
+    if (registerDate) {
+      const reg = new Date(registerDate);
+      // ย้อนหลังได้ไม่เกิน 1 เดือนจาก Register Date
+      let rY = reg.getFullYear();
+      let rM = reg.getMonth() + 1 - 1; // -1 เดือน
+      if (rM <= 0) { rY -= 1; rM += 12; }
+      minY = rY;
+      minM = rM;
+    }
+
+    const periods: { year: string; month: string; label: string }[] = [];
+    const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    let cy = minY, cm = minM;
+    while (cy < nowY || (cy === nowY && cm <= nowM)) {
+      periods.push({
+        year:  String(cy),
+        month: String(cm).padStart(2, "0"),
+        label: `${MONTH_NAMES[cm - 1]} ${cy}`,
+      });
+      cm++;
+      if (cm > 12) { cm = 1; cy++; }
+    }
+    return periods;
+  })();
+
   // Performance
   const [depUSD, setDepUSD] = useState("");
   const [depUSC, setDepUSC] = useState("");
@@ -230,20 +266,29 @@ Sales Agent`;
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400 font-medium">Period:</span>
-                <select className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-                  value={perfMonth} onChange={e => setPerfMonth(e.target.value)}>
-                  {["01","02","03","04","05","06","07","08","09","10","11","12"].map((m, i) => (
-                    <option key={m} value={m}>
-                      {["January","February","March","April","May","June","July","August","September","October","November","December"][i]}
+                <select
+                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                  value={`${perfYear}-${perfMonth}`}
+                  onChange={e => {
+                    const [y, m] = e.target.value.split("-");
+                    setPerfYear(y);
+                    setPerfMonth(m);
+                  }}
+                >
+                  {validPeriods.length === 0 && (
+                    <option value="">— กรอก Register Date ก่อน —</option>
+                  )}
+                  {validPeriods.map(p => (
+                    <option key={`${p.year}-${p.month}`} value={`${p.year}-${p.month}`}>
+                      {p.label}
                     </option>
                   ))}
                 </select>
-                <select className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
-                  value={perfYear} onChange={e => setPerfYear(e.target.value)}>
-                  {Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - 2 + i)).map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                {registerDate && (
+                  <span className="text-xs text-blue-400">
+                    (นับจาก {new Date(registerDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })})
+                  </span>
+                )}
               </div>
             </div>
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4 text-xs text-blue-700">
