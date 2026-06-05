@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 // ─── TIER CONFIG ─────────────────────────────────────────────────────────────
 const TIERS = [
@@ -60,6 +61,7 @@ const numInp = inp + " text-right";
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function AdsReimbursementPage() {
+  const router = useRouter();
   // Client Info
   const [clientName,    setClientName]    = useState("");
   const [uid,           setUid]           = useState("");
@@ -213,19 +215,32 @@ Sales Agent`;
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Top bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">IB Advertising Reimbursement</h1>
-          <p className="text-xs text-gray-400 mt-0.5">กรอกข้อมูลเพื่อขอเบิกค่าโฆษณา (Ads Fee Support)</p>
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="px-6 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">IB Reimbursement</h1>
+            <p className="text-xs text-gray-400 mt-0.5">กรอกข้อมูลเพื่อขอเบิกค่าใช้จ่าย</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleReset}
+              className="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+              ล้างข้อมูล
+            </button>
+            <button onClick={handleCopy}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition flex items-center gap-2 ${copied ? "bg-green-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
+              {copied ? "✅ คัดลอกแล้ว!" : "📋 คัดลอกข้อความอีเมล"}
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleReset}
-            className="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-            ล้างข้อมูล
+        {/* Tab switcher */}
+        <div className="px-6 flex gap-1 border-t border-gray-100">
+          <button className="px-5 py-2.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 bg-white -mb-px">
+            📢 เบิกค่า Ads
           </button>
-          <button onClick={handleCopy}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition flex items-center gap-2 ${copied ? "bg-green-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
-            {copied ? "✅ คัดลอกแล้ว!" : "📋 คัดลอกข้อความอีเมล"}
+          <button
+            onClick={() => router.push("/reimbursement/merchandise")}
+            className="px-5 py-2.5 text-sm text-gray-400 hover:text-gray-600 border-b-2 border-transparent hover:border-gray-300 transition">
+            🎁 เบิกของรางวัล
           </button>
         </div>
       </div>
