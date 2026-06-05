@@ -1235,22 +1235,21 @@ function checkDeadlines() {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
     var data  = sheet.getDataRange().getValues();
 
-    // หางานที่ deadline = พรุ่งนี้ และยังไม่เสร็จ
     var today    = new Date();
     today.setHours(0, 0, 0, 0);
     var tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    var tomorrowEnd = new Date(tomorrow);
-    tomorrowEnd.setHours(23, 59, 59, 999);
 
-    var dueJobs = [];
+    var overdueJobs = []; // เกิน deadline แล้ว (แดง)
+    var todayJobs   = []; // deadline วันนี้ (เหลือง)
+    var tomorrowJobs = []; // deadline พรุ่งนี้ (ฟ้า)
+
     for (var i = 1; i < data.length; i++) {
-      var row    = data[i];
-      var jobId  = String(row[COL.JOB_ID - 1] || "");
+      var row   = data[i];
+      var jobId = String(row[COL.JOB_ID - 1] || "");
       if (!jobId) continue;
 
       var status = String(row[COL.STATUS - 1] || "");
-      // ข้ามงานที่เสร็จแล้ว
       if (status === "Done" || status === "เสร็จแล้ว" || status === "Approved") continue;
 
       var deadlineRaw = row[COL.DEADLINE - 1];
@@ -1258,42 +1257,38 @@ function checkDeadlines() {
       var deadline = new Date(deadlineRaw);
       deadline.setHours(0, 0, 0, 0);
 
-      // ตรวจว่า deadline ตรงกับพรุ่งนี้พอดี
-      if (deadline.getTime() !== tomorrow.getTime()) continue;
-
-      dueJobs.push({
+      var jobInfo = {
         jobId:        jobId,
         customerName: String(row[COL.CUSTOMER_NAME - 1] || "-"),
         agent:        String(row[COL.AGENT         - 1] || "-"),
         task:         String(row[COL.TASK          - 1] || "-"),
         status:       status,
         priority:     String(row[COL.PRIORITY      - 1] || ""),
-      });
+      };
+
+      if (deadline.getTime() < today.getTime()) {
+        overdueJobs.push(jobInfo);
+      } else if (deadline.getTime() === today.getTime()) {
+        todayJobs.push(jobInfo);
+      } else if (deadline.getTime() === tomorrow.getTime()) {
+        tomorrowJobs.push(jobInfo);
+      }
     }
 
-    if (dueJobs.length === 0) {
-      console.log("checkDeadlines: ไม่มีงานที่ครบ deadline พรุ่งนี้");
+    if (overdueJobs.length === 0 && todayJobs.length === 0 && tomorrowJobs.length === 0) {
+      console.log("checkDeadlines: ไม่มีงานที่ต้องแจ้งเตือน");
       return;
     }
 
-    // สร้าง body contents แสดงทุกงาน
-    var bodyContents = [
-      { type: "text",
-        text: "มีงาน " + dueJobs.length + " รายการที่ครบกำหนดพรุ่งนี้",
-        size: "sm", color: "#374151", weight: "bold", wrap: true
-      },
-      { type: "separator", margin: "md" }
-    ];
-
-    dueJobs.forEach(function(j, idx) {
+    // helper สร้าง job row
+    function makeJobRow(j, bgColor, idColor) {
       var priorityTag = j.priority === "urgent" ? " 🚨" : "";
-      bodyContents.push({
+      return {
         type: "box", layout: "vertical", margin: "md",
-        paddingAll: "sm", backgroundColor: "#FFF7ED",
-        cornerRadius: "md",
+        paddingAll: "sm", backgroundColor: bgColor, cornerRadius: "md",
         contents: [
           { type: "box", layout: "horizontal", contents: [
-            { type: "text", text: j.jobId + priorityTag, size: "xs", color: "#C2410C", weight: "bold", flex: 3 },
+            { type: "text", text: j.jobId + priorityTag, size: "xs", color: idColor, weight: "bold", flex: 3 },
             { type: "text", text: j.status, size: "xs", color: "#6B7280", flex: 2, align: "end" }
           ]},
           { type: "text", text: j.task, size: "xs", color: "#111827", wrap: true, margin: "xs" },
@@ -1302,42 +1297,59 @@ function checkDeadlines() {
             { type: "text", text: "เซลล์: " + j.agent, size: "xxs", color: "#6B7280", flex: 2, align: "end" }
           ]}
         ]
-      });
-    });
+      };
+    }
 
-    bodyContents.push({
-      type: "text",
-      text: "กรุณาดำเนินการให้เสร็จก่อนหมดเวลา",
-      size: "xs", color: "#9CA3AF", margin: "md", wrap: true, align: "center"
-    });
+    // helper สร้าง bubble card
+    function makeBubble(headerColor, subColor, title, jobs, bgColor, idColor, footerText, altText) {
+      var contents = [];
+      jobs.forEach(function(j) { contents.push(makeJobRow(j, bgColor, idColor)); });
+      contents.push({ type: "text", text: footerText, size: "xs", color: "#9CA3AF", margin: "md", wrap: true, align: "center" });
+      return {
+        altText: altText,
+        bubble: {
+          type: "bubble",
+          header: {
+            type: "box", layout: "vertical", paddingAll: "md",
+            backgroundColor: headerColor,
+            contents: [
+              { type: "text", text: title, color: "#FFFFFF", weight: "bold", size: "md" },
+              { type: "text", text: "SUPPORT TEAMBON VT MARKET", color: subColor, size: "xs" }
+            ]
+          },
+          body: { type: "box", layout: "vertical", spacing: "none", paddingAll: "md", contents: contents }
+        }
+      };
+    }
 
-    var bubble = {
-      type: "bubble",
-      header: {
-        type: "box", layout: "vertical", paddingAll: "md",
-        backgroundColor: "#F59E0B",
-        contents: [
-          { type: "text", text: "⏰ แจ้งเตือน Deadline พรุ่งนี้!", color: "#FFFFFF", weight: "bold", size: "md" },
-          { type: "text", text: "SUPPORT TEAMBON VT MARKET", color: "#FEF3C7", size: "xs" }
-        ]
-      },
-      body: {
-        type: "box", layout: "vertical", spacing: "none",
-        paddingAll: "md", contents: bodyContents
-      }
-    };
+    var messages = [];
+
+    // 🔴 แดง — เกิน deadline
+    if (overdueJobs.length > 0) {
+      var r = makeBubble("#DC2626", "#FECACA", "🚨 เกิน Deadline แล้ว! (" + overdueJobs.length + " งาน)", overdueJobs, "#FEF2F2", "#DC2626", "กรุณาดำเนินการโดยเร็วที่สุด", "🚨 เกิน Deadline " + overdueJobs.length + " งาน");
+      messages.push({ type: "flex", altText: r.altText, contents: r.bubble });
+    }
+
+    // 🟡 เหลือง — deadline วันนี้
+    if (todayJobs.length > 0) {
+      var y = makeBubble("#D97706", "#FEF9C3", "🔥 Deadline วันนี้! (" + todayJobs.length + " งาน)", todayJobs, "#FFFBEB", "#92400E", "ต้องส่งงานก่อนหมดวันนี้", "🔥 Deadline วันนี้ " + todayJobs.length + " งาน");
+      messages.push({ type: "flex", altText: y.altText, contents: y.bubble });
+    }
+
+    // 🔵 ฟ้า — deadline พรุ่งนี้
+    if (tomorrowJobs.length > 0) {
+      var b = makeBubble("#2563EB", "#BFDBFE", "⏰ Deadline พรุ่งนี้ (" + tomorrowJobs.length + " งาน)", tomorrowJobs, "#EFF6FF", "#1D4ED8", "เตรียมพร้อมส่งงานพรุ่งนี้", "⏰ Deadline พรุ่งนี้ " + tomorrowJobs.length + " งาน");
+      messages.push({ type: "flex", altText: b.altText, contents: b.bubble });
+    }
 
     var resp = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-      payload: JSON.stringify({
-        to: groupId,
-        messages: [{ type: "flex", altText: "⏰ มีงาน " + dueJobs.length + " รายการครบ deadline พรุ่งนี้!", contents: bubble }]
-      }),
+      payload: JSON.stringify({ to: groupId, messages: messages }),
       muteHttpExceptions: true
     });
 
-    console.log("checkDeadlines: ส่งแจ้งเตือน " + dueJobs.length + " งาน → HTTP " + resp.getResponseCode());
+    console.log("checkDeadlines: overdue=" + overdueJobs.length + " today=" + todayJobs.length + " tomorrow=" + tomorrowJobs.length + " → HTTP " + resp.getResponseCode());
   } catch(err) {
     console.error("checkDeadlines error:", String(err));
   }
