@@ -259,6 +259,10 @@ Sales Agent`;
           <button className="px-5 py-2.5 text-sm font-semibold text-indigo-600 border-b-2 border-indigo-600 bg-white -mb-px">
             🎁 เบิกของรางวัล
           </button>
+          <button onClick={() => router.push("/reimbursement/personal")}
+            className="px-5 py-2.5 text-sm text-gray-400 hover:text-gray-600 border-b-2 border-transparent hover:border-gray-300 transition">
+            💰 เบิกเงินส่วนตัว
+          </button>
         </div>
       </div>
 

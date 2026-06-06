@@ -36,7 +36,7 @@ export default function ReimbursementPage() {
       </div>
 
       {/* Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14, width: "100%", maxWidth: 640 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14, width: "100%", maxWidth: 640, gridAutoRows: "1fr" }}>
 
         {/* Ads card */}
         <button onClick={() => router.push("/reimbursement/ads")}
@@ -93,6 +93,32 @@ export default function ReimbursementPage() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#EEEDFE", borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, color: "#534AB7" }}>
             เริ่มกรอกข้อมูล
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </button>
+      </div>
+
+        {/* Personal card */}
+        <button onClick={() => router.push("/reimbursement/personal")}
+          style={{ background: "#fff", border: "0.5px solid #ebe9e1", borderRadius: 20, padding: 24, cursor: "pointer", textAlign: "left", position: "relative", overflow: "hidden", transition: "all 0.2s", gridColumn: "1 / -1" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#FDE68A"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#ebe9e1"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
+        >
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "#D97706", borderRadius: "20px 20px 0 0" }} />
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "#FFFBEB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="22" height="22" fill="none" stroke="#B45309" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "#FFFBEB", color: "#B45309", marginBottom: 6 }}>
+                Personal Reimbursement
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#1e1b2e", marginBottom: 4 }}>เบิกเงินส่วนตัว</div>
+              <div style={{ fontSize: 12, color: "#888780", lineHeight: 1.6 }}>ขอเบิกค่าใช้จ่ายส่วนตัวที่ใช้เพื่อธุรกิจ พร้อมระบุรายการและข้อมูลบัญชีธนาคาร</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFFBEB", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 700, color: "#B45309", flexShrink: 0, alignSelf: "center" }}>
+              เริ่มกรอกข้อมูล
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
           </div>
         </button>
       </div>
