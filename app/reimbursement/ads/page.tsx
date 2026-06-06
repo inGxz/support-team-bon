@@ -214,10 +214,24 @@ Sales Agent`;
 
   return (
     <main className="min-h-screen bg-gray-50">
+      <style>{`
+        .rh-wrap{background:#fff;border-bottom:0.5px solid #ede9e0;position:sticky;top:0;z-index:10;font-family:'Inter','Noto Sans Thai',sans-serif}
+        .rh-mob{display:block}.rh-desk{display:none}
+        @media(min-width:768px){.rh-mob{display:none}.rh-desk{display:flex;align-items:center;padding:12px 24px;gap:16px}}
+        .rh-seg{background:#f5f3ee;border-radius:11px;padding:3px;display:inline-flex;gap:2px;flex:1;justify-content:center}
+        .rh-seg-item{border-radius:8px;padding:7px 20px;font-size:11px;font-weight:600;color:#9c9a93;cursor:pointer;white-space:nowrap;letter-spacing:0.01em;background:transparent;border:none}
+        .rh-seg-on{background:#fff;color:#1a1825;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+        .rh-btn-clear{background:#f5f3ee;border:0.5px solid #e5e2d8;border-radius:10px;padding:8px 14px;font-size:11px;font-weight:600;color:#888780;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+        .rh-btn-copy{border:none;border-radius:10px;padding:8px 16px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+        .rh-btn-back{width:32px;height:32px;border-radius:9px;background:#f7f6f2;border:0.5px solid #e5e2d8;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+      `}</style>
+
       {/* Header */}
-      <div style={{background:"#fff",borderBottom:"0.5px solid #ede9e0",position:"sticky",top:0,zIndex:10,fontFamily:"'Inter','Noto Sans Thai',sans-serif"}}>
-        <div style={{padding:"18px 18px 0",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <div className="rh-wrap">
+
+        {/* ── Desktop ── */}
+        <div className="rh-desk">
+          <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
             <div style={{width:36,height:36,borderRadius:11,background:"linear-gradient(135deg,#1a1825,#2e2847)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <svg width="16" height="16" fill="none" stroke="#c4b5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             </div>
@@ -226,25 +240,59 @@ Sales Agent`;
               <div style={{fontSize:9,color:"#b4b2a9",marginTop:1}}>Support Teambon VT Market</div>
             </div>
           </div>
-          <button onClick={() => router.push("/reimbursement")} style={{width:32,height:32,borderRadius:9,background:"#f7f6f2",border:"0.5px solid #e5e2d8",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-            <svg width="12" height="12" fill="none" stroke="#9c9a93" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          </button>
+          <div className="rh-seg">
+            <div className="rh-seg-item rh-seg-on">เบิกค่า Ads</div>
+            <button className="rh-seg-item" onClick={() => router.push("/reimbursement/merchandise")}>เบิกของรางวัล</button>
+            <button className="rh-seg-item" onClick={() => router.push("/reimbursement/personal")}>เบิกเงินส่วนตัว</button>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+            <button className="rh-btn-clear" onClick={handleReset}>
+              <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.74"/></svg>
+              ล้างข้อมูล
+            </button>
+            <button className="rh-btn-copy" onClick={handleCopy} style={{background:copied?"#22c55e":"#f97316"}}>
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              {copied ? "คัดลอกแล้ว!" : "คัดลอกข้อความอีเมล"}
+            </button>
+            <button className="rh-btn-back" onClick={() => router.push("/reimbursement")}>
+              <svg width="12" height="12" fill="none" stroke="#9c9a93" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            </button>
+          </div>
         </div>
-        <div style={{margin:"0 18px 14px",background:"#f5f3ee",borderRadius:12,padding:3,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>
-          <div style={{borderRadius:9,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,color:"#1a1825",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",letterSpacing:"0.01em"}}>เบิกค่า Ads</div>
-          <button onClick={() => router.push("/reimbursement/merchandise")} style={{borderRadius:9,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:600,color:"#9c9a93",background:"transparent",border:"none",cursor:"pointer",letterSpacing:"0.01em"}}>เบิกของรางวัล</button>
-          <button onClick={() => router.push("/reimbursement/personal")} style={{borderRadius:9,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:600,color:"#9c9a93",background:"transparent",border:"none",cursor:"pointer",letterSpacing:"0.01em"}}>เบิกเงินส่วนตัว</button>
+
+        {/* ── Mobile (ไม่เปลี่ยน) ── */}
+        <div className="rh-mob">
+          <div style={{padding:"18px 18px 0",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:11,background:"linear-gradient(135deg,#1a1825,#2e2847)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="16" height="16" fill="none" stroke="#c4b5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              </div>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:"#1a1825",letterSpacing:"-0.01em",lineHeight:1.3}}>IB Reimbursement</div>
+                <div style={{fontSize:9,color:"#b4b2a9",marginTop:1}}>Support Teambon VT Market</div>
+              </div>
+            </div>
+            <button onClick={() => router.push("/reimbursement")} style={{width:32,height:32,borderRadius:9,background:"#f7f6f2",border:"0.5px solid #e5e2d8",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+              <svg width="12" height="12" fill="none" stroke="#9c9a93" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            </button>
+          </div>
+          <div style={{margin:"0 18px 14px",background:"#f5f3ee",borderRadius:12,padding:3,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>
+            <div style={{borderRadius:9,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,color:"#1a1825",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",letterSpacing:"0.01em"}}>เบิกค่า Ads</div>
+            <button onClick={() => router.push("/reimbursement/merchandise")} style={{borderRadius:9,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:600,color:"#9c9a93",background:"transparent",border:"none",cursor:"pointer",letterSpacing:"0.01em"}}>เบิกของรางวัล</button>
+            <button onClick={() => router.push("/reimbursement/personal")} style={{borderRadius:9,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:600,color:"#9c9a93",background:"transparent",border:"none",cursor:"pointer",letterSpacing:"0.01em"}}>เบิกเงินส่วนตัว</button>
+          </div>
+          <div style={{padding:"0 18px 16px",display:"grid",gridTemplateColumns:"1fr 1.8fr",gap:8}}>
+            <button onClick={handleReset} style={{borderRadius:12,padding:"11px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600,color:"#888780",background:"#f5f3ee",border:"0.5px solid #e5e2d8",cursor:"pointer"}}>
+              <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.74"/></svg>
+              ล้างข้อมูล
+            </button>
+            <button onClick={handleCopy} style={{borderRadius:12,padding:"11px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:11,fontWeight:700,color:"#fff",background:copied?"#22c55e":"#f97316",border:"none",cursor:"pointer"}}>
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              {copied ? "คัดลอกแล้ว!" : "คัดลอกข้อความอีเมล"}
+            </button>
+          </div>
         </div>
-        <div style={{padding:"0 18px 16px",display:"grid",gridTemplateColumns:"1fr 1.8fr",gap:8}}>
-          <button onClick={handleReset} style={{borderRadius:12,padding:"11px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600,color:"#888780",background:"#f5f3ee",border:"0.5px solid #e5e2d8",cursor:"pointer"}}>
-            <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.74"/></svg>
-            ล้างข้อมูล
-          </button>
-          <button onClick={handleCopy} style={{borderRadius:12,padding:"11px 0",display:"flex",alignItems:"center",justifyContent:"center",gap:6,fontSize:11,fontWeight:700,color:"#fff",background:copied?"#22c55e":"#f97316",border:"none",cursor:"pointer"}}>
-            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            {copied ? "คัดลอกแล้ว!" : "คัดลอกข้อความอีเมล"}
-          </button>
-        </div>
+
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
