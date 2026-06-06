@@ -119,7 +119,7 @@ export default function ReimbursementPage() {
         /* ── mobile header ── */
         .rl-mob-header{
           background:#1a1825;
-          padding:28px 22px 32px;
+          padding:36px 22px 40px;
           position:relative;
           overflow:hidden;
         }
@@ -154,19 +154,19 @@ export default function ReimbursementPage() {
           margin-bottom:10px;
         }
         .rl-mob-h1-white{
-          font-size:26px;font-weight:900;color:#fff;
-          line-height:1.15;letter-spacing:-0.025em;
+          font-size:32px;font-weight:900;color:#fff;
+          line-height:1.15;letter-spacing:-0.03em;
           margin-bottom:4px;
           display:block;
         }
         .rl-mob-h1-grad{
-          font-size:28px;font-weight:900;line-height:1.15;
-          letter-spacing:-0.025em;
+          font-size:34px;font-weight:900;line-height:1.15;
+          letter-spacing:-0.03em;
           background:linear-gradient(90deg,#f97316,#f59e0b,#eab308);
           -webkit-background-clip:text;-webkit-text-fill-color:transparent;
           background-clip:text;
           display:block;
-          margin-bottom:14px;
+          margin-bottom:16px;
         }
         .rl-mob-divider{display:flex;align-items:center;gap:7px}
         .rl-mob-line{width:20px;height:1px;background:rgba(255,255,255,0.12);flex-shrink:0}
@@ -175,49 +175,50 @@ export default function ReimbursementPage() {
         /* ── mobile cards section ── */
         .rl-mob-cards{
           background:#f5f4f0;
-          border-radius:26px 26px 0 0;
-          padding:16px 16px 32px;
-          display:flex;flex-direction:column;gap:10px;
-          min-height:calc(100vh - 260px);
+          border-radius:28px 28px 0 0;
+          padding:20px 16px 40px;
+          display:flex;flex-direction:column;gap:12px;
+          min-height:calc(100vh - 280px);
         }
         .rl-mob-card{
           background:#fff;
-          border-radius:16px;
+          border-radius:18px;
           border:0.5px solid #eae8e0;
-          padding:15px;
-          display:flex;align-items:center;gap:13px;
+          padding:18px 16px;
+          display:flex;align-items:center;gap:14px;
           cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;
           text-align:left;
+          box-shadow:0 2px 8px rgba(0,0,0,0.04);
         }
         .rl-mob-card:active{transform:scale(0.98)}
         .rl-mob-icon{
-          width:46px;height:46px;border-radius:13px;
+          width:52px;height:52px;border-radius:15px;
           display:flex;align-items:center;justify-content:center;
           flex-shrink:0;position:relative;
         }
         .rl-mob-dot{
           position:absolute;top:-2px;right:-2px;
-          width:9px;height:9px;border-radius:50%;
+          width:10px;height:10px;border-radius:50%;
           border:2px solid #fff;
         }
         .rl-mob-body{flex:1;min-width:0}
-        .rl-mob-title{font-size:14px;font-weight:800;color:#1a1825;letter-spacing:-0.01em;margin-bottom:2px}
-        .rl-mob-sub{font-size:10px;color:#9c9a93;line-height:1.5}
+        .rl-mob-title{font-size:15px;font-weight:800;color:#1a1825;letter-spacing:-0.01em;margin-bottom:3px}
+        .rl-mob-sub{font-size:11px;color:#9c9a93;line-height:1.5}
         .rl-mob-arrow{
-          width:32px;height:32px;border-radius:9px;
+          width:36px;height:36px;border-radius:10px;
           display:flex;align-items:center;justify-content:center;flex-shrink:0;
         }
         .rl-mob-footer{
           display:flex;align-items:center;justify-content:center;gap:6px;
-          padding-top:6px;
+          padding-top:8px;
         }
-        .rl-mob-footer-t{font-size:9px;color:#b4b2a9}
+        .rl-mob-footer-t{font-size:10px;color:#b4b2a9}
 
         /* ══════════════════════════════
            DESKTOP  (≥ 768px)
         ══════════════════════════════ */
         @media(min-width:768px){
-          .rl-root{background:#f5f4f0}
+          .rl-root{background:#1a1825}
           .rl-mob-header{display:none}
           .rl-mob-cards{
             background:transparent;border-radius:0;
@@ -236,15 +237,18 @@ export default function ReimbursementPage() {
           }
           .rl-desk-logo{display:flex;align-items:center;gap:10px}
           .rl-desk-logo-icon{
-            width:34px;height:34px;border-radius:10px;background:#1e1b2e;
+            width:34px;height:34px;border-radius:10px;
+            background:rgba(167,139,250,0.15);
+            border:0.5px solid rgba(167,139,250,0.25);
             display:flex;align-items:center;justify-content:center;flex-shrink:0;
           }
-          .rl-desk-logo-t{font-size:13px;font-weight:700;color:#1e1b2e}
-          .rl-desk-logo-s{font-size:10px;color:#b0aea6;margin-top:1px}
+          .rl-desk-logo-t{font-size:13px;font-weight:700;color:#f0efff}
+          .rl-desk-logo-s{font-size:10px;color:rgba(255,255,255,0.28);margin-top:1px}
           .rl-desk-badge{
             display:flex;align-items:center;gap:5px;
-            font-size:11px;color:#a0a098;background:#fff;
-            border:0.5px solid #e2e0d8;border-radius:20px;padding:5px 13px;
+            font-size:11px;color:rgba(255,255,255,0.35);
+            background:rgba(255,255,255,0.05);
+            border:0.5px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 13px;
           }
 
           /* desktop hero */
@@ -252,24 +256,35 @@ export default function ReimbursementPage() {
             text-align:center;
             padding:52px 36px 36px;
             width:100%;max-width:960px;margin:0 auto;
+            position:relative;overflow:hidden;
+          }
+          .rl-desk-hero::before{
+            content:'';position:absolute;top:-80px;right:-80px;
+            width:320px;height:320px;border-radius:50%;
+            background:rgba(127,119,221,0.06);pointer-events:none;
+          }
+          .rl-desk-hero::after{
+            content:'';position:absolute;bottom:-60px;left:-60px;
+            width:220px;height:220px;border-radius:50%;
+            background:rgba(59,100,220,0.05);pointer-events:none;
           }
           .rl-desk-pill{
             display:inline-flex;align-items:center;gap:6px;
-            font-size:10px;font-weight:700;color:#6366f1;
-            background:#eef2ff;border:0.5px solid #c7d2fe;
-            border-radius:20px;padding:4px 13px;
-            margin-bottom:16px;letter-spacing:0.04em;text-transform:uppercase;
+            font-size:10px;font-weight:700;color:rgba(167,139,250,0.7);
+            background:transparent;border:none;
+            border-radius:20px;padding:4px 0;
+            margin-bottom:12px;letter-spacing:0.12em;text-transform:uppercase;
           }
           .rl-desk-h1{
-            font-size:clamp(26px,4vw,40px);font-weight:900;color:#1e1b2e;
-            letter-spacing:-0.025em;line-height:1.15;margin-bottom:12px;
+            font-size:clamp(28px,4vw,44px);font-weight:900;color:#fff;
+            letter-spacing:-0.03em;line-height:1.15;margin-bottom:12px;
           }
           .rl-desk-h1 span{
             background:linear-gradient(90deg,#f97316,#f59e0b,#eab308);
             -webkit-background-clip:text;-webkit-text-fill-color:transparent;
             background-clip:text;
           }
-          .rl-desk-desc{font-size:13px;color:#a0a098;line-height:1.75;max-width:460px;margin:0 auto}
+          .rl-desk-desc{font-size:13px;color:rgba(255,255,255,0.28);line-height:1.75;max-width:460px;margin:0 auto}
 
           /* desktop 3-col grid */
           .rl-desk-cards{
@@ -279,13 +294,14 @@ export default function ReimbursementPage() {
             display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
           }
           .rl-desk-card{
-            background:#fff;border:0.5px solid #e8e6de;border-radius:20px;
+            background:#fff;border:none;border-radius:20px;
             padding:24px;cursor:pointer;text-align:left;
             position:relative;overflow:hidden;
             display:flex;flex-direction:column;
-            transition:transform 0.2s ease,box-shadow 0.2s ease,border-color 0.2s ease;
+            transition:transform 0.2s ease,box-shadow 0.2s ease;
+            box-shadow:0 4px 24px rgba(0,0,0,0.18);
           }
-          .rl-desk-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.08)}
+          .rl-desk-card:hover{transform:translateY(-5px);box-shadow:0 16px 48px rgba(0,0,0,0.3)}
           .rl-desk-bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:20px 20px 0 0}
           .rl-desk-icon{
             width:46px;height:46px;border-radius:13px;
@@ -298,10 +314,10 @@ export default function ReimbursementPage() {
             letter-spacing:0.04em;text-transform:uppercase;
             width:fit-content;margin-bottom:8px;
           }
-          .rl-desk-title{font-size:18px;font-weight:800;color:#1e1b2e;margin-bottom:8px;letter-spacing:-0.01em}
-          .rl-desk-desc-t{font-size:12px;color:#a0a098;line-height:1.7;flex:1;margin-bottom:14px}
+          .rl-desk-title{font-size:18px;font-weight:800;color:#1a1825;margin-bottom:8px;letter-spacing:-0.01em}
+          .rl-desk-desc-t{font-size:12px;color:#9c9a93;line-height:1.7;flex:1;margin-bottom:14px}
           .rl-desk-feats{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
-          .rl-desk-feat{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#b0aea6}
+          .rl-desk-feat{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#b4b2a9}
           .rl-desk-feat-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
           .rl-desk-cta{
             display:flex;align-items:center;justify-content:center;gap:6px;
@@ -311,11 +327,11 @@ export default function ReimbursementPage() {
           }
           .rl-desk-cta:hover{opacity:0.75}
           .rl-desk-footer{
-            font-size:11px;color:#c8c6bc;text-align:center;
+            font-size:11px;color:rgba(255,255,255,0.18);text-align:center;
             padding-bottom:44px;display:flex;align-items:center;
             justify-content:center;gap:8px;
           }
-          .rl-desk-footer-dot{width:3px;height:3px;border-radius:50%;background:#c8c6bc}
+          .rl-desk-footer-dot{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,0.18)}
         }
 
         /* hide desktop elements on mobile */
@@ -380,7 +396,7 @@ export default function ReimbursementPage() {
         <nav className="rl-desk-nav">
           <div className="rl-desk-logo">
             <div className="rl-desk-logo-icon">
-              <svg width="17" height="17" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <svg width="17" height="17" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                 <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
               </svg>
             </div>
@@ -397,7 +413,7 @@ export default function ReimbursementPage() {
 
         <section className="rl-desk-hero">
           <div className="rl-desk-pill">
-            <svg width="7" height="7" fill="#6366f1" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
+            <svg width="7" height="7" fill="rgba(167,139,250,0.6)" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
             ระบบขอเบิกค่าใช้จ่าย
           </div>
           <h1 className="rl-desk-h1">เลือกประเภท<span>การขอเบิก</span></h1>
