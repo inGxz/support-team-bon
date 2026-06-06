@@ -24,7 +24,7 @@ export default function ReimbursementPage() {
       desc: "ขอเบิกค่า Ads สำหรับ IB ที่เข้าเกณฑ์ Tier พร้อมคำนวณยอดอัตโนมัติ",
       features: ["คำนวณ Net Deposit อัตโนมัติ", "ตรวจ Tier 1–3 อัตโนมัติ", "รองรับ Facebook · Line · Google"],
       iconPath: (
-        <svg width="20" height="20" fill="none" stroke="#93c5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <svg width="26" height="26" fill="none" stroke="#93c5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
         </svg>
       ),
@@ -52,7 +52,7 @@ export default function ReimbursementPage() {
       desc: "ขอเบิกของแจก Merchandise ตาม Tier พร้อมตรวจสอบจำนวนและมูลค่า",
       features: ["Tier A–3 + Special อัตโนมัติ", "เลือกของได้ 8 ประเภท", "ตรวจ Pass / Over Limit ทันที"],
       iconPath: (
-        <svg width="20" height="20" fill="none" stroke="#c4b5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <svg width="26" height="26" fill="none" stroke="#c4b5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
           <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
           <line x1="12" y1="22" x2="12" y2="7"/>
           <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
@@ -86,7 +86,7 @@ export default function ReimbursementPage() {
       desc: "ขอเบิกค่าใช้จ่ายส่วนตัวเพื่อธุรกิจ พร้อมระบุรายการบิลและบัญชีธนาคาร",
       features: ["ใส่รายการบิลได้หลายรายการ", "ระบุบัญชีธนาคารโอนเงิน", "สร้างอีเมลอัตโนมัติ"],
       iconPath: (
-        <svg width="20" height="20" fill="none" stroke="#fde68a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+        <svg width="26" height="26" fill="none" stroke="#fde68a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
           <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
           <line x1="6" y1="15" x2="10" y2="15"/>
         </svg>
@@ -175,44 +175,44 @@ export default function ReimbursementPage() {
         /* ── mobile cards section ── */
         .rl-mob-cards{
           background:#f5f4f0;
-          border-radius:28px 28px 0 0;
-          padding:20px 16px 40px;
-          display:flex;flex-direction:column;gap:12px;
-          min-height:calc(100vh - 280px);
+          border-radius:32px 32px 0 0;
+          padding:24px 18px 48px;
+          display:flex;flex-direction:column;gap:14px;
+          min-height:calc(100vh - 300px);
         }
         .rl-mob-card{
           background:#fff;
-          border-radius:18px;
+          border-radius:22px;
           border:0.5px solid #eae8e0;
-          padding:18px 16px;
-          display:flex;align-items:center;gap:14px;
+          padding:22px 20px;
+          display:flex;align-items:center;gap:16px;
           cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;
           text-align:left;
-          box-shadow:0 2px 8px rgba(0,0,0,0.04);
+          box-shadow:0 2px 12px rgba(0,0,0,0.05);
         }
         .rl-mob-card:active{transform:scale(0.98)}
         .rl-mob-icon{
-          width:52px;height:52px;border-radius:15px;
+          width:62px;height:62px;border-radius:18px;
           display:flex;align-items:center;justify-content:center;
           flex-shrink:0;position:relative;
         }
         .rl-mob-dot{
-          position:absolute;top:-2px;right:-2px;
-          width:10px;height:10px;border-radius:50%;
-          border:2px solid #fff;
+          position:absolute;top:-3px;right:-3px;
+          width:12px;height:12px;border-radius:50%;
+          border:2.5px solid #fff;
         }
         .rl-mob-body{flex:1;min-width:0}
-        .rl-mob-title{font-size:15px;font-weight:800;color:#1a1825;letter-spacing:-0.01em;margin-bottom:3px}
-        .rl-mob-sub{font-size:11px;color:#9c9a93;line-height:1.5}
+        .rl-mob-title{font-size:17px;font-weight:800;color:#1a1825;letter-spacing:-0.01em;margin-bottom:4px}
+        .rl-mob-sub{font-size:12px;color:#9c9a93;line-height:1.5}
         .rl-mob-arrow{
-          width:36px;height:36px;border-radius:10px;
+          width:42px;height:42px;border-radius:12px;
           display:flex;align-items:center;justify-content:center;flex-shrink:0;
         }
         .rl-mob-footer{
           display:flex;align-items:center;justify-content:center;gap:6px;
-          padding-top:8px;
+          padding-top:10px;
         }
-        .rl-mob-footer-t{font-size:10px;color:#b4b2a9}
+        .rl-mob-footer-t{font-size:11px;color:#b4b2a9}
 
         /* ══════════════════════════════
            DESKTOP  (≥ 768px)
@@ -382,7 +382,7 @@ export default function ReimbursementPage() {
                 <div className="rl-mob-sub">{c.sub}</div>
               </div>
               <div className="rl-mob-arrow" style={{ background: c.arrowBg, border: `0.5px solid ${c.arrowBorder}` }}>
-                <svg width="14" height="14" fill="none" stroke={c.arrowColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                <svg width="18" height="18" fill="none" stroke={c.arrowColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </div>
             </button>
           ))}
