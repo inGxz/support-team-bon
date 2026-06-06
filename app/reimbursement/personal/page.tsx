@@ -40,7 +40,7 @@ export default function PersonalReimbursementPage() {
   const router = useRouter();
 
   // Request details
-  const [purpose,     setPurpose]     = useState("");
+  const [purposes,    setPurposes]    = useState<string[]>([]);
   const [dateFrom,    setDateFrom]    = useState("");
   const [dateTo,      setDateTo]      = useState("");
   const [bizPurpose,  setBizPurpose]  = useState("");
@@ -83,7 +83,7 @@ export default function PersonalReimbursementPage() {
 
 I am writing this email to kindly request for your approval for my request.
 
-I would like to request reimbursement for: ${purpose || "[Please specify]"}
+I would like to request reimbursement for: ${purposes.length ? purposes.join(" & ") : "[Please specify]"}
 Date: ${fmtDate(dateFrom)} – ${fmtDate(dateTo)}
 Business Purpose: ${bizPurpose || "-"}
 
@@ -116,7 +116,7 @@ Kindly approve the reimbursement at your earliest convenience. Thank you for you
 
 Best regards,
 ${empName || "[Your Name]"}`;
-  }, [purpose, dateFrom, dateTo, bizPurpose, empName, department, ibClient, empEmail, uid, bills, total, accName, accNo, bank, branch]);
+  }, [purposes, dateFrom, dateTo, bizPurpose, empName, department, ibClient, empEmail, uid, bills, total, accName, accNo, bank, branch]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(buildEmail()).then(() => {
@@ -125,8 +125,11 @@ ${empName || "[Your Name]"}`;
     });
   };
 
+  const togglePurpose = (val: string) =>
+    setPurposes(p => p.includes(val) ? p.filter(x => x !== val) : [...p, val]);
+
   const handleReset = () => {
-    setPurpose(""); setDateFrom(""); setDateTo(""); setBizPurpose("");
+    setPurposes([]); setDateFrom(""); setDateTo(""); setBizPurpose("");
     setEmpName(""); setDepartment(""); setIbClient(""); setEmpEmail(""); setUid("");
     setBills([{ id: 1, desc: "", amount: "" }]);
     setAccName(""); setAccNo(""); setBank(""); setBranch("");
@@ -179,7 +182,28 @@ ${empName || "[Your Name]"}`;
             <SH num="1" icon="💰" title="Request Details" />
             <div className="space-y-4">
               <Field label="ต้องการเบิกเงินสำหรับ" required>
-                <input className={inp} placeholder="เช่น ค่าเดินทาง, ค่าอาหาร, ค่าอุปกรณ์..." value={purpose} onChange={e => setPurpose(e.target.value)} />
+                <div className="flex flex-col gap-2 mt-1">
+                  {[
+                    { val: "Transportation Expenses", icon: "🚗" },
+                    { val: "Food & Beverage Expenses", icon: "🍽️" },
+                  ].map(({ val, icon }) => {
+                    const checked = purposes.includes(val);
+                    return (
+                      <label key={val}
+                        onClick={() => togglePurpose(val)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition select-none
+                          ${checked
+                            ? "border-amber-400 bg-amber-50 text-amber-800"
+                            : "border-gray-200 bg-white text-gray-600 hover:border-amber-200 hover:bg-amber-50/40"}`}>
+                        <div className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition
+                          ${checked ? "bg-amber-500 border-amber-500" : "border-gray-300 bg-white"}`}>
+                          {checked && <svg width="9" height="9" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                        <span className="text-sm font-medium">{icon} {val}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Date From" required>
