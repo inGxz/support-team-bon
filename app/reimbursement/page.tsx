@@ -9,17 +9,27 @@ export default function ReimbursementPage() {
     {
       id: "ads",
       route: "/reimbursement/ads",
-      color: "#3b64dc",
-      barGrad: "linear-gradient(90deg,#3b64dc,#60a5fa)",
-      bgLight: "#eff6ff",
-      border: "#bfdbfe",
-      hoverBorder: "#bfdbfe",
-      pillLabel: "Ads Fee Support",
+      color: "#2563eb",
+      iconBg: "#0f2a5c",
+      iconColor: "#93c5fd",
+      dotColor: "#3b82f6",
+      arrowBg: "#eff6ff",
+      arrowBorder: "#bfdbfe",
+      arrowColor: "#2563eb",
+      deskBg: "#eff6ff",
+      deskBorder: "#bfdbfe",
+      deskType: "Ads Fee Support",
       title: "เบิกค่าโฆษณา",
+      sub: "Tier 1–3 · Facebook · Line · Google",
       desc: "ขอเบิกค่า Ads สำหรับ IB ที่เข้าเกณฑ์ Tier พร้อมคำนวณยอดอัตโนมัติ",
       features: ["คำนวณ Net Deposit อัตโนมัติ", "ตรวจ Tier 1–3 อัตโนมัติ", "รองรับ Facebook · Line · Google"],
-      icon: (
-        <svg width="20" height="20" fill="none" stroke="#3b64dc" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      iconPath: (
+        <svg width="20" height="20" fill="none" stroke="#93c5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      ),
+      iconPathDesk: (
+        <svg width="20" height="20" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
         </svg>
       ),
@@ -28,15 +38,28 @@ export default function ReimbursementPage() {
       id: "merchandise",
       route: "/reimbursement/merchandise",
       color: "#7c3aed",
-      barGrad: "linear-gradient(90deg,#7c3aed,#c084fc)",
-      bgLight: "#f5f3ff",
-      border: "#ddd6fe",
-      hoverBorder: "#ddd6fe",
-      pillLabel: "Merchandise Support",
+      iconBg: "#1e0a4a",
+      iconColor: "#c4b5fd",
+      dotColor: "#7c3aed",
+      arrowBg: "#f5f3ff",
+      arrowBorder: "#ddd6fe",
+      arrowColor: "#7c3aed",
+      deskBg: "#f5f3ff",
+      deskBorder: "#ddd6fe",
+      deskType: "Merchandise Support",
       title: "เบิกของรางวัล",
+      sub: "Tier A–Special · 8 ประเภทของรางวัล",
       desc: "ขอเบิกของแจก Merchandise ตาม Tier พร้อมตรวจสอบจำนวนและมูลค่า",
       features: ["Tier A–3 + Special อัตโนมัติ", "เลือกของได้ 8 ประเภท", "ตรวจ Pass / Over Limit ทันที"],
-      icon: (
+      iconPath: (
+        <svg width="20" height="20" fill="none" stroke="#c4b5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
+          <line x1="12" y1="22" x2="12" y2="7"/>
+          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+        </svg>
+      ),
+      iconPathDesk: (
         <svg width="20" height="20" fill="none" stroke="#7c3aed" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
           <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
           <line x1="12" y1="22" x2="12" y2="7"/>
@@ -49,15 +72,26 @@ export default function ReimbursementPage() {
       id: "personal",
       route: "/reimbursement/personal",
       color: "#d97706",
-      barGrad: "linear-gradient(90deg,#d97706,#fbbf24)",
-      bgLight: "#fffbeb",
-      border: "#fde68a",
-      hoverBorder: "#fcd34d",
-      pillLabel: "Personal Reimbursement",
+      iconBg: "#431407",
+      iconColor: "#fde68a",
+      dotColor: "#d97706",
+      arrowBg: "#fffbeb",
+      arrowBorder: "#fde68a",
+      arrowColor: "#d97706",
+      deskBg: "#fffbeb",
+      deskBorder: "#fde68a",
+      deskType: "Personal Reimbursement",
       title: "เบิกเงินส่วนตัว",
-      desc: "ขอเบิกค่าใช้จ่ายส่วนตัวเพื่อธุรกิจ พร้อมระบุรายการบิลและข้อมูลบัญชีธนาคาร",
+      sub: "Transportation · Food & Beverage",
+      desc: "ขอเบิกค่าใช้จ่ายส่วนตัวเพื่อธุรกิจ พร้อมระบุรายการบิลและบัญชีธนาคาร",
       features: ["ใส่รายการบิลได้หลายรายการ", "ระบุบัญชีธนาคารโอนเงิน", "สร้างอีเมลอัตโนมัติ"],
-      icon: (
+      iconPath: (
+        <svg width="20" height="20" fill="none" stroke="#fde68a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+          <line x1="6" y1="15" x2="10" y2="15"/>
+        </svg>
+      ),
+      iconPathDesk: (
         <svg width="20" height="20" fill="none" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
           <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
           <line x1="6" y1="15" x2="10" y2="15"/>
@@ -70,237 +104,330 @@ export default function ReimbursementPage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-        .rl-root {
-          min-height: 100vh;
-          background: #f5f4f0;
-          font-family: 'Inter', 'Noto Sans Thai', sans-serif;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+        .rl-root{
+          min-height:100vh;
+          font-family:'Inter','Noto Sans Thai',sans-serif;
         }
 
-        .rl-nav {
-          width: 100%; max-width: 960px;
-          padding: 28px 36px 0;
-          display: flex; align-items: center; justify-content: space-between;
+        /* ══════════════════════════════
+           MOBILE  (default)
+        ══════════════════════════════ */
+        .rl-root{ background:#1a1825; }
+
+        /* ── mobile header ── */
+        .rl-mob-header{
+          background:#1a1825;
+          padding:28px 22px 32px;
+          position:relative;
+          overflow:hidden;
         }
-        .rl-logo { display: flex; align-items: center; gap: 10px; }
-        .rl-logo-icon {
-          width: 34px; height: 34px; border-radius: 10px;
-          background: #1e1b2e;
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        .rl-mob-circle1{
+          position:absolute;top:-40px;right:-40px;
+          width:160px;height:160px;border-radius:50%;
+          background:rgba(127,119,221,0.07);
+          pointer-events:none;
         }
-        .rl-logo-title { font-size: 13px; font-weight: 700; color: #1e1b2e; }
-        .rl-logo-sub { font-size: 10px; color: #b0aea6; margin-top: 1px; }
-        .rl-badge {
-          display: flex; align-items: center; gap: 5px;
-          font-size: 11px; color: #a0a098;
-          background: #fff; border: 0.5px solid #e2e0d8;
-          border-radius: 20px; padding: 5px 13px;
+        .rl-mob-circle2{
+          position:absolute;bottom:-30px;left:-30px;
+          width:110px;height:110px;border-radius:50%;
+          background:rgba(59,100,220,0.06);
+          pointer-events:none;
+        }
+        .rl-mob-logo{
+          display:flex;align-items:center;gap:9px;
+          margin-bottom:28px;
+        }
+        .rl-mob-logo-icon{
+          width:30px;height:30px;border-radius:9px;
+          background:rgba(167,139,250,0.15);
+          border:0.5px solid rgba(167,139,250,0.25);
+          display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        }
+        .rl-mob-logo-t{font-size:12px;font-weight:700;color:#f0efff;line-height:1.2}
+        .rl-mob-logo-s{font-size:9px;color:rgba(255,255,255,0.28);margin-top:1px}
+        .rl-mob-tag{
+          font-size:9px;font-weight:700;
+          color:rgba(167,139,250,0.65);
+          letter-spacing:0.12em;text-transform:uppercase;
+          margin-bottom:10px;
+        }
+        .rl-mob-h1-white{
+          font-size:26px;font-weight:900;color:#fff;
+          line-height:1.15;letter-spacing:-0.025em;
+          margin-bottom:4px;
+          display:block;
+        }
+        .rl-mob-h1-grad{
+          font-size:28px;font-weight:900;line-height:1.15;
+          letter-spacing:-0.025em;
+          background:linear-gradient(90deg,#f97316,#f59e0b,#eab308);
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+          background-clip:text;
+          display:block;
+          margin-bottom:14px;
+        }
+        .rl-mob-divider{display:flex;align-items:center;gap:7px}
+        .rl-mob-line{width:20px;height:1px;background:rgba(255,255,255,0.12);flex-shrink:0}
+        .rl-mob-subdesc{font-size:10px;color:rgba(255,255,255,0.27);line-height:1.65}
+
+        /* ── mobile cards section ── */
+        .rl-mob-cards{
+          background:#f5f4f0;
+          border-radius:26px 26px 0 0;
+          padding:16px 16px 32px;
+          display:flex;flex-direction:column;gap:10px;
+          min-height:calc(100vh - 260px);
+        }
+        .rl-mob-card{
+          background:#fff;
+          border-radius:16px;
+          border:0.5px solid #eae8e0;
+          padding:15px;
+          display:flex;align-items:center;gap:13px;
+          cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;
+          text-align:left;
+        }
+        .rl-mob-card:active{transform:scale(0.98)}
+        .rl-mob-icon{
+          width:46px;height:46px;border-radius:13px;
+          display:flex;align-items:center;justify-content:center;
+          flex-shrink:0;position:relative;
+        }
+        .rl-mob-dot{
+          position:absolute;top:-2px;right:-2px;
+          width:9px;height:9px;border-radius:50%;
+          border:2px solid #fff;
+        }
+        .rl-mob-body{flex:1;min-width:0}
+        .rl-mob-title{font-size:14px;font-weight:800;color:#1a1825;letter-spacing:-0.01em;margin-bottom:2px}
+        .rl-mob-sub{font-size:10px;color:#9c9a93;line-height:1.5}
+        .rl-mob-arrow{
+          width:32px;height:32px;border-radius:9px;
+          display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        }
+        .rl-mob-footer{
+          display:flex;align-items:center;justify-content:center;gap:6px;
+          padding-top:6px;
+        }
+        .rl-mob-footer-t{font-size:9px;color:#b4b2a9}
+
+        /* ══════════════════════════════
+           DESKTOP  (≥ 768px)
+        ══════════════════════════════ */
+        @media(min-width:768px){
+          .rl-root{background:#f5f4f0}
+          .rl-mob-header{display:none}
+          .rl-mob-cards{
+            background:transparent;border-radius:0;
+            padding:0;min-height:unset;gap:0;
+            display:block;
+          }
+          .rl-mob-card{display:none}
+          .rl-mob-footer{display:none}
+
+          /* desktop nav */
+          .rl-desk-nav{
+            display:flex;align-items:center;justify-content:space-between;
+            width:100%;max-width:960px;
+            padding:28px 36px 0;
+            margin:0 auto;
+          }
+          .rl-desk-logo{display:flex;align-items:center;gap:10px}
+          .rl-desk-logo-icon{
+            width:34px;height:34px;border-radius:10px;background:#1e1b2e;
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;
+          }
+          .rl-desk-logo-t{font-size:13px;font-weight:700;color:#1e1b2e}
+          .rl-desk-logo-s{font-size:10px;color:#b0aea6;margin-top:1px}
+          .rl-desk-badge{
+            display:flex;align-items:center;gap:5px;
+            font-size:11px;color:#a0a098;background:#fff;
+            border:0.5px solid #e2e0d8;border-radius:20px;padding:5px 13px;
+          }
+
+          /* desktop hero */
+          .rl-desk-hero{
+            text-align:center;
+            padding:52px 36px 36px;
+            width:100%;max-width:960px;margin:0 auto;
+          }
+          .rl-desk-pill{
+            display:inline-flex;align-items:center;gap:6px;
+            font-size:10px;font-weight:700;color:#6366f1;
+            background:#eef2ff;border:0.5px solid #c7d2fe;
+            border-radius:20px;padding:4px 13px;
+            margin-bottom:16px;letter-spacing:0.04em;text-transform:uppercase;
+          }
+          .rl-desk-h1{
+            font-size:clamp(26px,4vw,40px);font-weight:900;color:#1e1b2e;
+            letter-spacing:-0.025em;line-height:1.15;margin-bottom:12px;
+          }
+          .rl-desk-h1 span{
+            background:linear-gradient(90deg,#f97316,#f59e0b,#eab308);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            background-clip:text;
+          }
+          .rl-desk-desc{font-size:13px;color:#a0a098;line-height:1.75;max-width:460px;margin:0 auto}
+
+          /* desktop 3-col grid */
+          .rl-desk-cards{
+            width:100%;max-width:960px;
+            padding:0 36px 64px;
+            margin:0 auto;
+            display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+          }
+          .rl-desk-card{
+            background:#fff;border:0.5px solid #e8e6de;border-radius:20px;
+            padding:24px;cursor:pointer;text-align:left;
+            position:relative;overflow:hidden;
+            display:flex;flex-direction:column;
+            transition:transform 0.2s ease,box-shadow 0.2s ease,border-color 0.2s ease;
+          }
+          .rl-desk-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.08)}
+          .rl-desk-bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:20px 20px 0 0}
+          .rl-desk-icon{
+            width:46px;height:46px;border-radius:13px;
+            display:flex;align-items:center;justify-content:center;
+            margin-bottom:16px;flex-shrink:0;
+          }
+          .rl-desk-type{
+            display:inline-flex;font-size:9px;font-weight:700;
+            padding:3px 9px;border-radius:20px;
+            letter-spacing:0.04em;text-transform:uppercase;
+            width:fit-content;margin-bottom:8px;
+          }
+          .rl-desk-title{font-size:18px;font-weight:800;color:#1e1b2e;margin-bottom:8px;letter-spacing:-0.01em}
+          .rl-desk-desc-t{font-size:12px;color:#a0a098;line-height:1.7;flex:1;margin-bottom:14px}
+          .rl-desk-feats{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+          .rl-desk-feat{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#b0aea6}
+          .rl-desk-feat-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+          .rl-desk-cta{
+            display:flex;align-items:center;justify-content:center;gap:6px;
+            border-radius:12px;padding:11px 14px;font-size:12.5px;font-weight:700;
+            margin-top:auto;border:none;cursor:pointer;
+            transition:opacity 0.15s ease;
+          }
+          .rl-desk-cta:hover{opacity:0.75}
+          .rl-desk-footer{
+            font-size:11px;color:#c8c6bc;text-align:center;
+            padding-bottom:44px;display:flex;align-items:center;
+            justify-content:center;gap:8px;
+          }
+          .rl-desk-footer-dot{width:3px;height:3px;border-radius:50%;background:#c8c6bc}
         }
 
-        .rl-hero {
-          text-align: center;
-          padding: 52px 36px 36px;
-          width: 100%; max-width: 960px;
-        }
-        .rl-pill {
-          display: inline-flex; align-items: center; gap: 6px;
-          font-size: 10px; font-weight: 700; color: #6366f1;
-          background: #eef2ff; border: 0.5px solid #c7d2fe;
-          border-radius: 20px; padding: 4px 13px;
-          margin-bottom: 16px; letter-spacing: 0.04em; text-transform: uppercase;
-        }
-        .rl-h1 {
-          font-size: clamp(26px, 4vw, 40px);
-          font-weight: 900; color: #1e1b2e;
-          letter-spacing: -0.025em; line-height: 1.15; margin-bottom: 12px;
-        }
-        .rl-h1 span {
-          background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .rl-desc { font-size: 13px; color: #a0a098; line-height: 1.75; max-width: 460px; margin: 0 auto; }
-
-        /* ── Cards ── */
-        .rl-cards {
-          width: 100%; max-width: 960px;
-          padding: 0 36px 64px;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
-          align-items: stretch;
-        }
-
-        .rl-card {
-          background: #fff;
-          border: 0.5px solid #e8e6de;
-          border-radius: 20px;
-          padding: 24px;
-          cursor: pointer; text-align: left;
-          position: relative; overflow: hidden;
-          display: flex; flex-direction: column;
-          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-        }
-        .rl-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.08); }
-
-        .rl-card-bar {
-          position: absolute; top: 0; left: 0; right: 0;
-          height: 3px; border-radius: 20px 20px 0 0;
-        }
-
-        /* Desktop: icon standalone above type pill */
-        .rl-icon-wrap {
-          width: 46px; height: 46px; border-radius: 13px;
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 16px; flex-shrink: 0;
-        }
-
-        .rl-type {
-          display: inline-flex;
-          font-size: 9px; font-weight: 700;
-          padding: 3px 9px; border-radius: 20px;
-          letter-spacing: 0.04em; text-transform: uppercase;
-          width: fit-content; margin-bottom: 8px;
-        }
-
-        .rl-card-title {
-          font-size: 18px; font-weight: 800; color: #1e1b2e;
-          margin-bottom: 8px; letter-spacing: -0.01em;
-        }
-        .rl-card-desc {
-          font-size: 12px; color: #a0a098; line-height: 1.7;
-          flex: 1; margin-bottom: 14px;
-        }
-        .rl-features { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
-        .rl-feat { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #b0aea6; }
-        .rl-feat-dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
-
-        .rl-cta {
-          display: flex; align-items: center; justify-content: center; gap: 6px;
-          border-radius: 12px; padding: 11px 14px;
-          font-size: 12.5px; font-weight: 700; margin-top: auto;
-          border: none; cursor: pointer;
-          transition: opacity 0.15s ease, transform 0.15s ease;
-        }
-        .rl-cta:hover { opacity: 0.75; transform: scale(0.99); }
-
-        .rl-footer {
-          font-size: 11px; color: #c8c6bc;
-          text-align: center; padding-bottom: 44px;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .rl-footer-dot { width: 3px; height: 3px; border-radius: 50%; background: #c8c6bc; }
-
-        /* ── Mobile ── */
-        @media (max-width: 640px) {
-          .rl-nav { padding: 20px 18px 0; }
-          .rl-badge { display: none; }
-          .rl-hero { padding: 36px 18px 22px; }
-          .rl-cards { grid-template-columns: 1fr; padding: 0 18px 48px; gap: 10px; }
-
-          .rl-card { padding: 14px; border-radius: 14px; }
-          .rl-card-bar { border-radius: 14px 14px 0 0; }
-
-          .rl-mob-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-          .rl-icon-wrap { width: 36px; height: 36px; border-radius: 9px; margin-bottom: 0; }
-          .rl-desk-icon { display: none; }
-          .rl-desk-only { display: none; }
-          .rl-features { display: none; }
-          .rl-card-desc { font-size: 11.5px; margin-bottom: 10px; }
-          .rl-card-title { font-size: 14px; margin-bottom: 1px; }
-          .rl-type { font-size: 8px; margin-bottom: 2px; }
-          .rl-cta { padding: 9px 14px; font-size: 12px; border-radius: 9px; }
-        }
-        @media (min-width: 641px) {
-          .rl-mob-header { display: none; }
-          .rl-desk-icon { display: flex; }
-          .rl-desk-only { display: block; }
+        /* hide desktop elements on mobile */
+        .rl-desk-nav,.rl-desk-hero,.rl-desk-cards,.rl-desk-footer{display:none}
+        @media(min-width:768px){
+          .rl-desk-nav,.rl-desk-hero,.rl-desk-cards,.rl-desk-footer{display:flex}
+          .rl-desk-cards{display:grid}
+          .rl-desk-hero,.rl-desk-footer{display:flex;flex-direction:column;align-items:center}
+          .rl-desk-nav{display:flex}
         }
       `}</style>
 
       <div className="rl-root">
 
-        {/* Nav */}
-        <nav className="rl-nav">
-          <div className="rl-logo">
-            <div className="rl-logo-icon">
+        {/* ══ MOBILE ══ */}
+        <div className="rl-mob-header">
+          <div className="rl-mob-circle1" />
+          <div className="rl-mob-circle2" />
+          <div className="rl-mob-logo">
+            <div className="rl-mob-logo-icon">
+              <svg width="15" height="15" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+              </svg>
+            </div>
+            <div>
+              <div className="rl-mob-logo-t">IB Reimbursement</div>
+              <div className="rl-mob-logo-s">Support Teambon VT Market</div>
+            </div>
+          </div>
+          <div className="rl-mob-tag">ระบบขอเบิกค่าใช้จ่าย</div>
+          <span className="rl-mob-h1-white">เลือกประเภท</span>
+          <span className="rl-mob-h1-grad">การขอเบิก</span>
+          <div className="rl-mob-divider">
+            <div className="rl-mob-line" />
+            <div className="rl-mob-subdesc">กรอกข้อมูลครบ รับอีเมลสำเร็จรูปทันที</div>
+          </div>
+        </div>
+
+        <div className="rl-mob-cards">
+          {cards.map(c => (
+            <button key={c.id} className="rl-mob-card" onClick={() => router.push(c.route)}>
+              <div className="rl-mob-icon" style={{ background: c.iconBg }}>
+                {c.iconPath}
+                <div className="rl-mob-dot" style={{ background: c.dotColor }} />
+              </div>
+              <div className="rl-mob-body">
+                <div className="rl-mob-title">{c.title}</div>
+                <div className="rl-mob-sub">{c.sub}</div>
+              </div>
+              <div className="rl-mob-arrow" style={{ background: c.arrowBg, border: `0.5px solid ${c.arrowBorder}` }}>
+                <svg width="14" height="14" fill="none" stroke={c.arrowColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </div>
+            </button>
+          ))}
+          <div className="rl-mob-footer">
+            <svg width="11" height="11" fill="none" stroke="#b4b2a9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span className="rl-mob-footer-t">ไม่บันทึกข้อมูลใดๆ ทั้งสิ้น</span>
+          </div>
+        </div>
+
+        {/* ══ DESKTOP ══ */}
+        <nav className="rl-desk-nav">
+          <div className="rl-desk-logo">
+            <div className="rl-desk-logo-icon">
               <svg width="17" height="17" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                 <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
               </svg>
             </div>
             <div>
-              <div className="rl-logo-title">IB Reimbursement</div>
-              <div className="rl-logo-sub">Support Teambon VT Market</div>
+              <div className="rl-desk-logo-t">IB Reimbursement</div>
+              <div className="rl-desk-logo-s">Support Teambon VT Market</div>
             </div>
           </div>
-          <div className="rl-badge">
+          <div className="rl-desk-badge">
             <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             ไม่ต้อง Login
           </div>
         </nav>
 
-        {/* Hero */}
-        <section className="rl-hero">
-          <div className="rl-pill">
+        <section className="rl-desk-hero">
+          <div className="rl-desk-pill">
             <svg width="7" height="7" fill="#6366f1" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
             ระบบขอเบิกค่าใช้จ่าย
           </div>
-          <h1 className="rl-h1">เลือกประเภท<span>การขอเบิก</span></h1>
-          <p className="rl-desc">กรอกข้อมูลให้ครบ ระบบจะสร้างอีเมลสำเร็จรูปให้ทันที<br/>พร้อมก็อปปี้ส่งได้เลย — ไม่บันทึกข้อมูลใดๆ</p>
+          <h1 className="rl-desk-h1">เลือกประเภท<span>การขอเบิก</span></h1>
+          <p className="rl-desk-desc">กรอกข้อมูลให้ครบ ระบบจะสร้างอีเมลสำเร็จรูปให้ทันที<br/>พร้อมก็อปปี้ส่งได้เลย — ไม่บันทึกข้อมูลใดๆ</p>
         </section>
 
-        {/* Cards */}
-        <div className="rl-cards">
+        <div className="rl-desk-cards">
           {cards.map(c => (
-            <button
-              key={c.id}
-              className="rl-card"
+            <button key={`d-${c.id}`} className="rl-desk-card"
               onClick={() => router.push(c.route)}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = c.hoverBorder)}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = c.deskBorder)}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "#e8e6de")}
             >
-              <div className="rl-card-bar" style={{ background: c.barGrad }} />
-
-              {/* Desktop: icon standalone */}
-              <div className="rl-icon-wrap rl-desk-icon" style={{ background: c.bgLight, border: `0.5px solid ${c.border}` }}>
-                {c.icon}
+              <div className="rl-desk-bar" style={{ background: `linear-gradient(90deg,${c.color},${c.dotColor})` }} />
+              <div className="rl-desk-icon" style={{ background: c.deskBg, border: `0.5px solid ${c.deskBorder}` }}>
+                {c.iconPathDesk}
               </div>
-
-              {/* Mobile: icon + text in a row */}
-              <div className="rl-mob-header">
-                <div className="rl-icon-wrap" style={{ background: c.bgLight, border: `0.5px solid ${c.border}` }}>
-                  {c.icon}
-                </div>
-                <div>
-                  <div className="rl-type" style={{ background: c.bgLight, color: c.color, border: `0.5px solid ${c.border}` }}>
-                    {c.pillLabel}
-                  </div>
-                  <div className="rl-card-title">{c.title}</div>
-                </div>
+              <div className="rl-desk-type" style={{ background: c.deskBg, color: c.color, border: `0.5px solid ${c.deskBorder}` }}>
+                {c.deskType}
               </div>
-
-              {/* Desktop: type + title */}
-              <div className="rl-type rl-desk-only" style={{ background: c.bgLight, color: c.color, border: `0.5px solid ${c.border}` }}>
-                {c.pillLabel}
-              </div>
-              <div className="rl-card-title rl-desk-only">{c.title}</div>
-
-              <div className="rl-card-desc">{c.desc}</div>
-
-              <div className="rl-features">
+              <div className="rl-desk-title">{c.title}</div>
+              <div className="rl-desk-desc-t">{c.desc}</div>
+              <div className="rl-desk-feats">
                 {c.features.map(f => (
-                  <div className="rl-feat" key={f}>
-                    <div className="rl-feat-dot" style={{ background: c.color }} />
-                    {f}
+                  <div className="rl-desk-feat" key={f}>
+                    <div className="rl-desk-feat-dot" style={{ background: c.color }} />{f}
                   </div>
                 ))}
               </div>
-
-              <div className="rl-cta" style={{ background: c.bgLight, color: c.color }}>
+              <div className="rl-desk-cta" style={{ background: c.deskBg, color: c.color }}>
                 เริ่มกรอกข้อมูล
                 <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </div>
@@ -308,10 +435,9 @@ export default function ReimbursementPage() {
           ))}
         </div>
 
-        {/* Footer */}
-        <div className="rl-footer">
+        <div className="rl-desk-footer">
           <span>กรอกข้อมูลแล้วก็อปปี้อีเมลไปส่งได้ทันที</span>
-          <div className="rl-footer-dot" />
+          <div className="rl-desk-footer-dot" />
           <span>ไม่บันทึกข้อมูลใดๆ ทั้งสิ้น</span>
         </div>
 
