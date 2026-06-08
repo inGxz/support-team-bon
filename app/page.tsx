@@ -1056,9 +1056,9 @@ export default function Page() {
             )}
           </div>
 
-          {/* IMAGE UPLOAD — max 3 */}
+          {/* IMAGE UPLOAD — max 10 */}
           <div>
-            <label className={labelCls}>🖼️ แนบรูปภาพ <span className="text-xs text-gray-400">(ไม่บังคับ — สูงสุด 3 รูป)</span></label>
+            <label className={labelCls}>🖼️ แนบรูปภาพ <span className="text-xs text-gray-400">(ไม่บังคับ — สูงสุด 10 รูป)</span></label>
             <div className="space-y-2">
               {imagePreviews.map((preview, idx) => (
                 <div key={idx} className="relative rounded-xl overflow-hidden border border-purple-100 shadow-sm">
@@ -1072,12 +1072,12 @@ export default function Page() {
                   <div className="absolute bottom-2 left-2 bg-black/40 text-white text-xs px-2 py-0.5 rounded-full">{imageFiles[idx]?.name}</div>
                 </div>
               ))}
-              {imageFiles.length < 3 && (
+              {imageFiles.length < 10 && (
                 <label className="flex items-center gap-3 cursor-pointer">
                   <div className="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-purple-200 hover:bg-purple-50/50 transition">
                     <span className="text-lg">➕</span>
                     <span className="text-sm text-gray-400">
-                      {imageFiles.length === 0 ? "เลือกไฟล์รูป (JPG, PNG, WEBP — ไม่เกิน 5MB)" : `เพิ่มรูปอีก (${3 - imageFiles.length} รูปที่เหลือ)`}
+                      {imageFiles.length === 0 ? "เลือกไฟล์รูป (JPG, PNG, WEBP — ไม่เกิน 5MB)" : `เพิ่มรูปอีก (${10 - imageFiles.length} รูปที่เหลือ)`}
                     </span>
                   </div>
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => {
