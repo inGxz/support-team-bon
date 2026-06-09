@@ -527,7 +527,7 @@ Sales Agent`;
                             <input
                               type="number" min="0"
                               max={tier.special ? undefined : remaining > 0 ? remaining : 0}
-                              className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-right focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                              className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-right text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
                               placeholder="0" value={item.qty}
                               onChange={e => {
                                 const v = parseInt(e.target.value) || 0;
