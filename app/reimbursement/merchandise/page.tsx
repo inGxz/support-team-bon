@@ -131,13 +131,20 @@ export default function MerchandisePage() {
   })();
 
   // ── Calculations ──────────────────────────────────────────────────────────
-  const totalGross    = parseFloat(grossDep) || 0;
-  const totalWithdraw = parseFloat(withdraw) || 0;
-  const netDeposit    = totalGross - totalWithdraw;
+  const USDC_RATE = 0.01; // 1 USDC = 0.01 USD
+
+  const usdGross    = parseFloat(grossDep)    || 0;
+  const usdWithdraw = parseFloat(withdraw)    || 0;
 
   const totalGrossUsdc    = parseFloat(grossDepUsdc) || 0;
   const totalWithdrawUsdc = parseFloat(withdrawUsdc) || 0;
   const netDepositUsdc    = totalGrossUsdc - totalWithdrawUsdc;
+
+  // Combined: USD + USDC converted
+  const totalGross    = usdGross    + totalGrossUsdc    * USDC_RATE;
+  const totalWithdraw = usdWithdraw + totalWithdrawUsdc * USDC_RATE;
+  const netDeposit    = totalGross  - totalWithdraw;
+
   const tier          = getTier(totalGross, netDeposit);
   const totalQty      = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
   const totalValue    = items.reduce((s, i) => s + (parseInt(i.qty) || 0) * i.unitValue, 0);
@@ -194,9 +201,9 @@ To support the IB's client acquisition, branding activities, seminars, community
 IB PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Period           : ${periodLabel}
-Total Deposit    : ${fmt(totalGross)} USD${totalGrossUsdc ? `  |  ${fmt(totalGrossUsdc)} USDC` : ""}
-Total Withdraw   : ${fmt(totalWithdraw)} USD${totalWithdrawUsdc ? `  |  ${fmt(totalWithdrawUsdc)} USDC` : ""}
-Net Deposit      : ${fmt(netDeposit)} USD${netDepositUsdc ? `  |  ${fmt(netDepositUsdc)} USDC` : ""}
+Total Deposit    : ${fmt(usdGross)} USD${totalGrossUsdc ? ` + ${fmt(totalGrossUsdc)} USDC (= ${fmt(totalGrossUsdc * USDC_RATE)} USD)` : ""}  →  ${fmt(totalGross)} USD
+Total Withdraw   : ${fmt(usdWithdraw)} USD${totalWithdrawUsdc ? ` + ${fmt(totalWithdrawUsdc)} USDC (= ${fmt(totalWithdrawUsdc * USDC_RATE)} USD)` : ""}  →  ${fmt(totalWithdraw)} USD
+Net Deposit      : ${fmt(netDeposit)} USD
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MERCHANDISE ELIGIBILITY
@@ -220,7 +227,7 @@ Attachment: CRM Deposit/Withdraw Report Screenshot
 
 Best regards,
 Sales Agent`;
-  }, [ibName, ibEmail, uid, registerDate, perfMonth, perfYear, totalGross, totalWithdraw, netDeposit, totalGrossUsdc, totalWithdrawUsdc, netDepositUsdc, tier, items, totalQty, totalValue, status, validPeriods]);
+  }, [ibName, ibEmail, uid, registerDate, perfMonth, perfYear, usdGross, usdWithdraw, totalGross, totalWithdraw, netDeposit, totalGrossUsdc, totalWithdrawUsdc, netDepositUsdc, tier, items, totalQty, totalValue, status, validPeriods]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(buildEmail()).then(() => {
@@ -397,22 +404,25 @@ Sales Agent`;
             {/* USDC */}
             <div className="flex items-center gap-2 mt-5 mb-3">
               <span className="text-xs font-bold text-teal-600 bg-teal-50 border border-teal-200 rounded-full px-2.5 py-0.5">USDC</span>
+              <span className="text-xs text-gray-400">1 USDC = 0.01 USD (รวมอัตโนมัติ)</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Total Deposit / Gross (USDC)">
                 <input type="number" className={numInp} placeholder="0.00" min="0" value={grossDepUsdc} onChange={e => setGrossDepUsdc(e.target.value)} />
+                {totalGrossUsdc > 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(totalGrossUsdc * USDC_RATE)} USD</p>}
               </Field>
               <Field label="Total Withdraw (USDC)">
                 <input type="number" className={numInp} placeholder="0.00" min="0" value={withdrawUsdc} onChange={e => setWithdrawUsdc(e.target.value)} />
+                {totalWithdrawUsdc > 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(totalWithdrawUsdc * USDC_RATE)} USD</p>}
               </Field>
             </div>
             <div className="mt-3 bg-teal-50 rounded-lg p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-700">Net Deposit (USDC)</p>
-                <p className="text-xs text-gray-400">Total Deposit − Total Withdraw</p>
+                <p className="text-sm font-semibold text-gray-700">Net USDC (แปลงเป็น USD)</p>
+                <p className="text-xs text-gray-400">{fmt(netDepositUsdc)} USDC × 0.01</p>
               </div>
               <p className={`text-2xl font-bold ${netDepositUsdc < 0 ? "text-red-500" : "text-teal-600"}`}>
-                {fmt(netDepositUsdc)} <span className="text-sm font-normal text-gray-400">USDC</span>
+                {fmt(netDepositUsdc * USDC_RATE)} <span className="text-sm font-normal text-gray-400">USD</span>
               </p>
             </div>
           </div>
