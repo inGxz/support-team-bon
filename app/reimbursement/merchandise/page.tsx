@@ -137,15 +137,17 @@ export default function MerchandisePage() {
 
   const usdGross    = parseFloat(grossDep)    || 0;
   const usdWithdraw = parseFloat(withdraw)    || 0;
+  const netUsd      = usdGross - usdWithdraw;  // USD-only net
 
   const totalGrossUsdc    = parseFloat(grossDepUsdc) || 0;
   const totalWithdrawUsdc = parseFloat(withdrawUsdc) || 0;
   const netDepositUsdc    = totalGrossUsdc - totalWithdrawUsdc;
+  const netUsdcConverted  = netDepositUsdc * USDC_RATE; // USDC net → USD
 
-  // Combined: USD + USDC converted
+  // Combined totals (for tier calc)
   const totalGross    = usdGross    + totalGrossUsdc    * USDC_RATE;
   const totalWithdraw = usdWithdraw + totalWithdrawUsdc * USDC_RATE;
-  const netDeposit    = totalGross  - totalWithdraw;
+  const netDeposit    = netUsd + netUsdcConverted; // sum of both
 
   const tier          = getTier(totalGross, netDeposit);
   const totalQty      = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
@@ -398,8 +400,8 @@ Sales Agent`;
                 <p className="text-sm font-semibold text-gray-700">Net Deposit (USD)</p>
                 <p className="text-xs text-gray-400">Total Deposit − Total Withdraw</p>
               </div>
-              <p className={`text-2xl font-bold ${netDeposit < 0 ? "text-red-500" : "text-indigo-600"}`}>
-                {fmt(netDeposit)} <span className="text-sm font-normal text-gray-400">USD</span>
+              <p className={`text-2xl font-bold ${netUsd < 0 ? "text-red-500" : "text-indigo-600"}`}>
+                {fmt(netUsd)} <span className="text-sm font-normal text-gray-400">USD</span>
               </p>
             </div>
 
@@ -423,8 +425,19 @@ Sales Agent`;
                 <p className="text-sm font-semibold text-gray-700">Net USDC (แปลงเป็น USD)</p>
                 <p className="text-xs text-gray-400">{fmt(netDepositUsdc)} USDC × 0.01</p>
               </div>
-              <p className={`text-2xl font-bold ${netDepositUsdc < 0 ? "text-red-500" : "text-teal-600"}`}>
-                {fmt(netDepositUsdc * USDC_RATE)} <span className="text-sm font-normal text-gray-400">USD</span>
+              <p className={`text-2xl font-bold ${netUsdcConverted < 0 ? "text-red-500" : "text-teal-600"}`}>
+                {fmt(netUsdcConverted)} <span className="text-sm font-normal text-gray-400">USD</span>
+              </p>
+            </div>
+
+            {/* Total รวม */}
+            <div className="mt-3 bg-indigo-600 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white">Net Deposit (รวม USD + USDC)</p>
+                <p className="text-xs text-indigo-200">{fmt(netUsd)} + {fmt(netUsdcConverted)} USD</p>
+              </div>
+              <p className={`text-2xl font-bold ${netDeposit < 0 ? "text-red-300" : "text-white"}`}>
+                {fmt(netDeposit)} <span className="text-sm font-normal text-indigo-200">USD</span>
               </p>
             </div>
           </div>
