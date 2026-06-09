@@ -540,14 +540,7 @@ Sales Agent`;
                               <span className="text-xs text-red-400">(เต็มแล้ว)</span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-400">ราคา/ชิ้น:</span>
-                            <span className="text-xs font-semibold text-indigo-600">${fmt(item.unitValue)}</span>
-                          </div>
-                          <div className="ml-auto flex items-center gap-1">
-                            <span className="text-xs text-gray-400">รวม:</span>
-                            <span className="text-xs font-bold text-gray-700">${fmt(total)}</span>
-                          </div>
+                          <div className="ml-auto" />
                         </div>
                       </div>
                     );
@@ -569,10 +562,6 @@ Sales Agent`;
                     <span className="font-bold text-gray-800">
                       {totalQty} pcs {!tier.special && <span className="text-xs font-normal text-gray-400">/ {tier.maxQty} pcs</span>}
                     </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Total Requested Value</span>
-                    <span className="font-bold text-gray-800">${fmt(totalValue)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm pt-1 border-t border-gray-100">
                     <span className="font-semibold text-gray-700">Status</span>
