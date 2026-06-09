@@ -204,17 +204,10 @@ To support the IB's client acquisition, branding activities, seminars, community
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 IB PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Period           : ${periodLabel}
-
-Total Deposit    : ${fmt(usdGross)} USD${totalGrossUsdc ? `
-                 + ${fmt(totalGrossUsdc * USDC_RATE)} USD  (${fmt(totalGrossUsdc)} USDC × 0.01)
-                 = ${fmt(totalGross)} USD` : ""}
-
-Total Withdraw   : ${fmt(usdWithdraw)} USD${totalWithdrawUsdc ? `
-                 + ${fmt(totalWithdrawUsdc * USDC_RATE)} USD  (${fmt(totalWithdrawUsdc)} USDC × 0.01)
-                 = ${fmt(totalWithdraw)} USD` : ""}
-
-Net Deposit      : ${fmt(netDeposit)} USD
+Period              : ${periodLabel}
+Total Deposit (USD) : ${fmt(usdGross)}${totalGrossUsdc  ? `\nTotal Deposit (USDC): ${fmt(totalGrossUsdc)}  →  ${fmt(totalGrossUsdc * USDC_RATE)} USD\nTotal Deposit       : ${fmt(totalGross)} USD` : " USD"}
+Total Withdraw (USD): ${fmt(usdWithdraw)}${totalWithdrawUsdc ? `\nTotal Withdraw (USDC): ${fmt(totalWithdrawUsdc)}  →  ${fmt(totalWithdrawUsdc * USDC_RATE)} USD\nTotal Withdraw      : ${fmt(totalWithdraw)} USD` : " USD"}
+Net Deposit         : ${fmt(netDeposit)} USD
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MERCHANDISE ELIGIBILITY
