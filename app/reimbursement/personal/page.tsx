@@ -231,6 +231,7 @@ ${empName || "[Your Name]"}`;
                   {[
                     { val: "Transportation Expenses", icon: "🚗" },
                     { val: "Food & Beverage Expenses", icon: "🍽️" },
+                    { val: "Hotel Expenses", icon: "🏨" },
                   ].map(({ val, icon }) => {
                     const checked = purposes.includes(val);
                     return (
