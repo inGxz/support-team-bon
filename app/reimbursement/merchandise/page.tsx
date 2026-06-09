@@ -76,6 +76,8 @@ function StatusBadge({ status }: { status: string }) {
     return <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">✅ Pass</span>;
   if (status === "Over Limit")
     return <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">❌ Over Limit</span>;
+  if (status === "ไม่เข้าเกณฑ์")
+    return <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">🚫 ไม่เข้าเกณฑ์ — ยอดไม่ถึง Tier A</span>;
   if (status === "Special Approval Required")
     return <span className="px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">⭐ Special Approval Required</span>;
   return <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">— กรอกข้อมูลให้ครบ</span>;
@@ -150,7 +152,7 @@ export default function MerchandisePage() {
   const totalValue    = items.reduce((s, i) => s + (parseInt(i.qty) || 0) * i.unitValue, 0);
 
   function getStatus(): string {
-    if (!tier) return "";
+    if (!tier) return totalQty > 0 ? "ไม่เข้าเกณฑ์" : "";
     if (tier.special) return "Special Approval Required";
     const overQty   = totalQty > tier.maxQty;
     const overValue = items.some(i => i.unitValue > tier.maxItemValue && i.unitValue > 0);
@@ -456,103 +458,129 @@ Sales Agent`;
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <SH num="4" icon="🎁" title="Requested Merchandise" />
 
-            {/* Preset price reference */}
-            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 mb-4">
-              <p className="text-xs font-semibold text-indigo-700 mb-2">ราคาของรางวัล (USD)</p>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_ITEMS.map(p => (
-                  <span key={p.name} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-2 py-1 rounded-full">
-                    {p.name} ${p.price}
-                  </span>
-                ))}
+            {!tier ? (
+              /* ── ล็อค: ยังไม่เข้า Tier ใด ── */
+              <div className="flex flex-col items-center justify-center py-10 gap-3 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <span className="text-3xl">🔒</span>
+                <p className="text-sm font-semibold text-gray-500">ไม่สามารถเบิกของรางวัลได้</p>
+                <p className="text-xs text-gray-400">ยอด Net Deposit ยังไม่ถึงเกณฑ์ขั้นต่ำของ Tier A<br/>(ต้องการ Gross ≥ 7,500 USD และ Net ≥ 3,000 USD)</p>
               </div>
-            </div>
-
-            <div className="space-y-3">
-              {items.map((item, i) => {
-                const qty   = parseInt(item.qty) || 0;
-                const total = qty * item.unitValue;
-                const overPrice = tier && !tier.special && item.unitValue > tier.maxItemValue && item.unitValue > 0;
-                const preset = PRESET_ITEMS.find(p => p.name === item.name);
-                return (
-                  <div key={item.id} className={`border rounded-xl p-3 ${overPrice ? "border-red-200 bg-red-50" : "border-gray-100 bg-gray-50"}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-gray-400 font-medium w-4">{i + 1}.</span>
-                      <select
-                        className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-                        value={item.name}
-                        onChange={e => updateItemName(item.id, e.target.value)}
-                      >
-                        <option value="">— เลือกของรางวัล —</option>
-                        {PRESET_ITEMS.map(p => (
-                          <option key={p.name} value={p.name}>{p.name} (${p.price})</option>
-                        ))}
-                      </select>
-                      {items.length > 1 && (
-                        <button onClick={() => removeItem(item.id)} className="text-red-400 hover:text-red-600 text-base ml-1">🗑</button>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 pl-6">
-                      {preset?.hasSize && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-gray-400">Size:</span>
-                          <select
-                            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-                            value={item.size}
-                            onChange={e => updateItem(item.id, "size", e.target.value)}
-                          >
-                            <option value="">เลือก Size</option>
-                            {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-400">จำนวน:</span>
-                        <input
-                          type="number" min="0"
-                          className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-right focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-                          placeholder="0" value={item.qty}
-                          onChange={e => updateItem(item.id, "qty", e.target.value)}
-                        />
-                        <span className="text-xs text-gray-400">pcs</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-400">ราคา/ชิ้น:</span>
-                        <span className={`text-xs font-semibold ${overPrice ? "text-red-500" : "text-indigo-600"}`}>${fmt(item.unitValue)}</span>
-                      </div>
-                      <div className="ml-auto flex items-center gap-1">
-                        <span className="text-xs text-gray-400">รวม:</span>
-                        <span className="text-xs font-bold text-gray-700">${fmt(total)}</span>
-                      </div>
-                    </div>
-                    {overPrice && (
-                      <p className="text-xs text-red-500 pl-6 mt-1">⚠️ ราคาเกิน Max ${tier?.maxItemValue} ตาม {tier?.label}</p>
-                    )}
+            ) : (
+              <>
+                {/* Preset price reference — กรองตาม tier */}
+                <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 mb-4">
+                  <p className="text-xs font-semibold text-indigo-700 mb-2">
+                    ของรางวัลที่เบิกได้ใน {tier.label}
+                    {!tier.special && <span className="ml-1 font-normal text-indigo-400">(≤ ${tier.maxItemValue} / ชิ้น · max {tier.maxQty} pcs รวม)</span>}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(tier.special ? PRESET_ITEMS : PRESET_ITEMS.filter(p => p.price <= tier.maxItemValue)).map(p => (
+                      <span key={p.name} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-2 py-1 rounded-full">
+                        {p.name} ${p.price}
+                      </span>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
+                </div>
 
-            <button onClick={addItem} className="mt-3 text-xs text-indigo-600 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition font-medium">
-              + เพิ่มรายการ
-            </button>
+                <div className="space-y-3">
+                  {items.map((item, i) => {
+                    const qty        = parseInt(item.qty) || 0;
+                    const total      = qty * item.unitValue;
+                    const otherQty   = totalQty - qty;
+                    const remaining  = tier.special ? Infinity : tier.maxQty - otherQty;
+                    const preset     = PRESET_ITEMS.find(p => p.name === item.name);
+                    const allowedItems = tier.special ? PRESET_ITEMS : PRESET_ITEMS.filter(p => p.price <= tier.maxItemValue);
+                    return (
+                      <div key={item.id} className="border rounded-xl p-3 border-gray-100 bg-gray-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs text-gray-400 font-medium w-4">{i + 1}.</span>
+                          <select
+                            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                            value={item.name}
+                            onChange={e => updateItemName(item.id, e.target.value)}
+                          >
+                            <option value="">— เลือกของรางวัล —</option>
+                            {allowedItems.map(p => (
+                              <option key={p.name} value={p.name}>{p.name} (${p.price})</option>
+                            ))}
+                          </select>
+                          {items.length > 1 && (
+                            <button onClick={() => removeItem(item.id)} className="text-red-400 hover:text-red-600 text-base ml-1">🗑</button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 pl-6">
+                          {preset?.hasSize && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400">Size:</span>
+                              <select
+                                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                                value={item.size}
+                                onChange={e => updateItem(item.id, "size", e.target.value)}
+                              >
+                                <option value="">เลือก Size</option>
+                                {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400">จำนวน:</span>
+                            <input
+                              type="number" min="0"
+                              max={tier.special ? undefined : remaining > 0 ? remaining : 0}
+                              className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-right focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                              placeholder="0" value={item.qty}
+                              onChange={e => {
+                                const v = parseInt(e.target.value) || 0;
+                                const capped = tier.special ? v : Math.min(v, remaining > 0 ? remaining : 0);
+                                updateItem(item.id, "qty", capped === 0 && e.target.value === "" ? "" : String(capped));
+                              }}
+                            />
+                            <span className="text-xs text-gray-400">pcs</span>
+                            {!tier.special && remaining <= 0 && qty === 0 && (
+                              <span className="text-xs text-red-400">(เต็มแล้ว)</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400">ราคา/ชิ้น:</span>
+                            <span className="text-xs font-semibold text-indigo-600">${fmt(item.unitValue)}</span>
+                          </div>
+                          <div className="ml-auto flex items-center gap-1">
+                            <span className="text-xs text-gray-400">รวม:</span>
+                            <span className="text-xs font-bold text-gray-700">${fmt(total)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-            <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Total Requested Quantity</span>
-                <span className={`font-bold ${tier && !tier.special && totalQty > tier.maxQty ? "text-red-500" : "text-gray-800"}`}>
-                  {totalQty} pcs {tier && !tier.special && totalQty > tier.maxQty && `(เกิน max ${tier.maxQty} pcs)`}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Total Requested Value</span>
-                <span className="font-bold text-gray-800">${fmt(totalValue)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm pt-1 border-t border-gray-100">
-                <span className="font-semibold text-gray-700">Status</span>
-                <StatusBadge status={status} />
-              </div>
-            </div>
+                {/* เพิ่มรายการ — ปิดถ้าเต็ม */}
+                {(tier.special || totalQty < tier.maxQty) ? (
+                  <button onClick={addItem} className="mt-3 text-xs text-indigo-600 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition font-medium">
+                    + เพิ่มรายการ
+                  </button>
+                ) : (
+                  <p className="mt-3 text-xs text-red-400">🚫 ถึงจำนวนสูงสุดแล้ว ({tier.maxQty} pcs)</p>
+                )}
+
+                <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Total Requested Quantity</span>
+                    <span className="font-bold text-gray-800">
+                      {totalQty} pcs {!tier.special && <span className="text-xs font-normal text-gray-400">/ {tier.maxQty} pcs</span>}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Total Requested Value</span>
+                    <span className="font-bold text-gray-800">${fmt(totalValue)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm pt-1 border-t border-gray-100">
+                    <span className="font-semibold text-gray-700">Status</span>
+                    <StatusBadge status={status} />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Section 5: Attachment */}
