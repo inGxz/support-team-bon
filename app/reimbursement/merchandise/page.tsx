@@ -94,9 +94,13 @@ export default function MerchandisePage() {
   const [perfMonth, setPerfMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
   const [perfYear,  setPerfYear]  = useState(String(now.getFullYear()));
 
-  // Performance numbers
+  // Performance numbers — USD
   const [grossDep, setGrossDep] = useState("");
   const [withdraw, setWithdraw] = useState("");
+
+  // Performance numbers — USDC
+  const [grossDepUsdc, setGrossDepUsdc] = useState("");
+  const [withdrawUsdc, setWithdrawUsdc] = useState("");
 
   // Items
   const [items, setItems] = useState<Item[]>([
@@ -130,6 +134,10 @@ export default function MerchandisePage() {
   const totalGross    = parseFloat(grossDep) || 0;
   const totalWithdraw = parseFloat(withdraw) || 0;
   const netDeposit    = totalGross - totalWithdraw;
+
+  const totalGrossUsdc    = parseFloat(grossDepUsdc) || 0;
+  const totalWithdrawUsdc = parseFloat(withdrawUsdc) || 0;
+  const netDepositUsdc    = totalGrossUsdc - totalWithdrawUsdc;
   const tier          = getTier(totalGross, netDeposit);
   const totalQty      = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
   const totalValue    = items.reduce((s, i) => s + (parseInt(i.qty) || 0) * i.unitValue, 0);
@@ -186,9 +194,9 @@ To support the IB's client acquisition, branding activities, seminars, community
 IB PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Period           : ${periodLabel}
-Total Deposit    : ${fmt(totalGross)} USD
-Total Withdraw   : ${fmt(totalWithdraw)} USD
-Net Deposit      : ${fmt(netDeposit)} USD
+Total Deposit    : ${fmt(totalGross)} USD${totalGrossUsdc ? `  |  ${fmt(totalGrossUsdc)} USDC` : ""}
+Total Withdraw   : ${fmt(totalWithdraw)} USD${totalWithdrawUsdc ? `  |  ${fmt(totalWithdrawUsdc)} USDC` : ""}
+Net Deposit      : ${fmt(netDeposit)} USD${netDepositUsdc ? `  |  ${fmt(netDepositUsdc)} USDC` : ""}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MERCHANDISE ELIGIBILITY
@@ -212,7 +220,7 @@ Attachment: CRM Deposit/Withdraw Report Screenshot
 
 Best regards,
 Sales Agent`;
-  }, [ibName, ibEmail, uid, registerDate, perfMonth, perfYear, totalGross, totalWithdraw, netDeposit, tier, items, totalQty, totalValue, status, validPeriods]);
+  }, [ibName, ibEmail, uid, registerDate, perfMonth, perfYear, totalGross, totalWithdraw, netDeposit, totalGrossUsdc, totalWithdrawUsdc, netDepositUsdc, tier, items, totalQty, totalValue, status, validPeriods]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(buildEmail()).then(() => {
@@ -223,7 +231,7 @@ Sales Agent`;
 
   const handleReset = () => {
     setIbName(""); setIbEmail(""); setUid(""); setRegisterDate("");
-    setGrossDep(""); setWithdraw("");
+    setGrossDep(""); setWithdraw(""); setGrossDepUsdc(""); setWithdrawUsdc("");
     setItems([{ id: 1, name: "", size: "", qty: "", unitValue: 0 }]);
   };
 
@@ -364,6 +372,10 @@ Sales Agent`;
               </div>
             </div>
 
+            {/* USD */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-full px-2.5 py-0.5">USD</span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Total Deposit / Gross (USD)" required>
                 <input type="number" className={numInp} placeholder="0.00" min="0" value={grossDep} onChange={e => setGrossDep(e.target.value)} />
@@ -372,13 +384,35 @@ Sales Agent`;
                 <input type="number" className={numInp} placeholder="0.00" min="0" value={withdraw} onChange={e => setWithdraw(e.target.value)} />
               </Field>
             </div>
-            <div className="mt-4 bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+            <div className="mt-3 bg-gray-50 rounded-lg p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-gray-700">Net Deposit (USD)</p>
                 <p className="text-xs text-gray-400">Total Deposit − Total Withdraw</p>
               </div>
               <p className={`text-2xl font-bold ${netDeposit < 0 ? "text-red-500" : "text-indigo-600"}`}>
                 {fmt(netDeposit)} <span className="text-sm font-normal text-gray-400">USD</span>
+              </p>
+            </div>
+
+            {/* USDC */}
+            <div className="flex items-center gap-2 mt-5 mb-3">
+              <span className="text-xs font-bold text-teal-600 bg-teal-50 border border-teal-200 rounded-full px-2.5 py-0.5">USDC</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Total Deposit / Gross (USDC)">
+                <input type="number" className={numInp} placeholder="0.00" min="0" value={grossDepUsdc} onChange={e => setGrossDepUsdc(e.target.value)} />
+              </Field>
+              <Field label="Total Withdraw (USDC)">
+                <input type="number" className={numInp} placeholder="0.00" min="0" value={withdrawUsdc} onChange={e => setWithdrawUsdc(e.target.value)} />
+              </Field>
+            </div>
+            <div className="mt-3 bg-teal-50 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Net Deposit (USDC)</p>
+                <p className="text-xs text-gray-400">Total Deposit − Total Withdraw</p>
+              </div>
+              <p className={`text-2xl font-bold ${netDepositUsdc < 0 ? "text-red-500" : "text-teal-600"}`}>
+                {fmt(netDepositUsdc)} <span className="text-sm font-normal text-gray-400">USDC</span>
               </p>
             </div>
           </div>
