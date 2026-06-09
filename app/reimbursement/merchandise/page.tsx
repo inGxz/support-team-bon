@@ -205,8 +205,15 @@ To support the IB's client acquisition, branding activities, seminars, community
 IB PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Period           : ${periodLabel}
-Total Deposit    : ${fmt(usdGross)} USD${totalGrossUsdc ? ` + ${fmt(totalGrossUsdc)} USDC (= ${fmt(totalGrossUsdc * USDC_RATE)} USD)` : ""}  →  ${fmt(totalGross)} USD
-Total Withdraw   : ${fmt(usdWithdraw)} USD${totalWithdrawUsdc ? ` + ${fmt(totalWithdrawUsdc)} USDC (= ${fmt(totalWithdrawUsdc * USDC_RATE)} USD)` : ""}  →  ${fmt(totalWithdraw)} USD
+
+Total Deposit    : ${fmt(usdGross)} USD${totalGrossUsdc ? `
+                 + ${fmt(totalGrossUsdc * USDC_RATE)} USD  (${fmt(totalGrossUsdc)} USDC × 0.01)
+                 = ${fmt(totalGross)} USD` : ""}
+
+Total Withdraw   : ${fmt(usdWithdraw)} USD${totalWithdrawUsdc ? `
+                 + ${fmt(totalWithdrawUsdc * USDC_RATE)} USD  (${fmt(totalWithdrawUsdc)} USDC × 0.01)
+                 = ${fmt(totalWithdraw)} USD` : ""}
+
 Net Deposit      : ${fmt(netDeposit)} USD
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
