@@ -192,7 +192,7 @@ IB DETAILS
 IB Name        : ${ibName || "-"}
 IB Email       : ${ibEmail || "-"}
 UID            : ${uid || "-"}
-Register Date  : ${fmtDate(registerDate)}
+Request Date  : ${fmtDate(registerDate)}
 
 Purpose:
 To support the IB's client acquisition, branding activities, seminars, community engagement, and ongoing marketing efforts.
@@ -342,7 +342,7 @@ Sales Agent`;
               <Field label="UID" required>
                 <input className={inp} placeholder="กรอก UID" value={uid} onChange={e => setUid(e.target.value)} />
               </Field>
-              <Field label="Register Date" required>
+              <Field label="Request Date" required>
                 <input type="date" className={inp} value={registerDate} onChange={e => setRegisterDate(e.target.value)} />
               </Field>
             </div>
@@ -366,7 +366,7 @@ Sales Agent`;
                     setPerfYear(y); setPerfMonth(m);
                   }}
                 >
-                  {validPeriods.length === 0 && <option value="">— กรอก Register Date ก่อน —</option>}
+                  {validPeriods.length === 0 && <option value="">— กรอก Request Date ก่อน —</option>}
                   {validPeriods.map(p => (
                     <option key={`${p.year}-${p.month}`} value={`${p.year}-${p.month}`}>{p.label}</option>
                   ))}
@@ -626,7 +626,7 @@ Sales Agent`;
 
             <div className="mt-4 space-y-1.5">
               <p className="text-xs font-semibold text-gray-500 mb-2">คำแนะนำ</p>
-              {["กรอกข้อมูลให้ครบทุกช่องที่มี *","กรอก Register Date เพื่อกำหนดช่วง Period","ตรวจสอบ Tier ก่อนเลือกของรางวัล","แนบไฟล์ CRM ในอีเมลเมื่อส่งจริง"].map((t, i) => (
+              {["กรอกข้อมูลให้ครบทุกช่องที่มี *","กรอก Request Date เพื่อกำหนดช่วง Period","ตรวจสอบ Tier ก่อนเลือกของรางวัล","แนบไฟล์ CRM ในอีเมลเมื่อส่งจริง"].map((t, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
                   <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span><span>{t}</span>
                 </div>
