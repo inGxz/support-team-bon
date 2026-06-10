@@ -9,6 +9,13 @@ let nid = 2;
 function fmt(n: number, d = 2) {
   return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
+// Allow only digits and a single decimal point (no +, -, e, etc.)
+function sanitizeDecimal(v: string): string {
+  let s = v.replace(/[^0-9.]/g, "");
+  const i = s.indexOf(".");
+  if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "");
+  return s;
+}
 function fmtDate(d: string) {
   if (!d) return "-";
   return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -305,7 +312,7 @@ ${empName || "[Your Name]"}`;
                     <input className={inp + " text-xs"} placeholder="รายการ / คำอธิบาย" value={b.desc} onChange={e => updateBill(b.id, "desc", e.target.value)} />
                   </div>
                   <div className="col-span-3">
-                    <input type="number" className={numInp + " text-xs"} placeholder="0.00" min="0" value={b.amount} onChange={e => updateBill(b.id, "amount", e.target.value)} />
+                    <input type="text" inputMode="decimal" className={numInp + " text-xs"} placeholder="0.00" value={b.amount} onChange={e => updateBill(b.id, "amount", sanitizeDecimal(e.target.value))} />
                   </div>
                   <div className="col-span-1 flex justify-center">
                     {bills.length > 1 && (

@@ -25,6 +25,13 @@ type BillRow = { id: number; dueDate: string; fileName: string; amount: string }
 function fmt(n: number, decimals = 2) {
   return n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
+// Allow only digits and a single decimal point (no +, -, e, etc.)
+function sanitizeDecimal(v: string): string {
+  let s = v.replace(/[^0-9.]/g, "");
+  const i = s.indexOf(".");
+  if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "");
+  return s;
+}
 function fmtDate(d: string) {
   if (!d) return "-";
   const dt = new Date(d);
@@ -373,20 +380,20 @@ Sales Agent`;
                   <tr className="border-b border-gray-50">
                     <td className="py-3 pr-4 text-gray-700 font-medium">Total Deposit</td>
                     <td className="py-3 pr-4">
-                      <input type="number" className={numInp} placeholder="0.00" value={depUSD} onChange={e => setDepUSD(e.target.value)} min="0" />
+                      <input type="text" inputMode="decimal" className={numInp} placeholder="0.00" value={depUSD} onChange={e => setDepUSD(sanitizeDecimal(e.target.value))} />
                     </td>
                     <td className="py-3 pr-4">
-                      <input type="number" className={numInp} placeholder="0" value={depUSC} onChange={e => setDepUSC(e.target.value)} min="0" />
+                      <input type="text" inputMode="decimal" className={numInp} placeholder="0" value={depUSC} onChange={e => setDepUSC(sanitizeDecimal(e.target.value))} />
                     </td>
                     <td className="py-3 text-right font-semibold text-blue-600">{fmt(totalDeposit)}</td>
                   </tr>
                   <tr>
                     <td className="py-3 pr-4 text-gray-700 font-medium">Total Withdraw</td>
                     <td className="py-3 pr-4">
-                      <input type="number" className={numInp} placeholder="0.00" value={witUSD} onChange={e => setWitUSD(e.target.value)} />
+                      <input type="text" inputMode="decimal" className={numInp} placeholder="0.00" value={witUSD} onChange={e => setWitUSD(sanitizeDecimal(e.target.value))} />
                     </td>
                     <td className="py-3 pr-4">
-                      <input type="number" className={numInp} placeholder="0" value={witUSC} onChange={e => setWitUSC(e.target.value)} />
+                      <input type="text" inputMode="decimal" className={numInp} placeholder="0" value={witUSC} onChange={e => setWitUSC(sanitizeDecimal(e.target.value))} />
                     </td>
                     <td className="py-3 text-right font-semibold text-blue-600">{fmt(totalWithdraw)}</td>
                   </tr>
@@ -469,7 +476,7 @@ Sales Agent`;
                         <input className={inp + " text-xs"} placeholder="ชื่อไฟล์ เช่น FB_Ad_Mar" value={b.fileName} onChange={e => updateBill(b.id, "fileName", e.target.value)} />
                       </td>
                       <td className="py-2 pr-2">
-                        <input type="number" className={numInp + " text-xs"} placeholder="0.00" value={b.amount} onChange={e => updateBill(b.id, "amount", e.target.value)} min="0" />
+                        <input type="text" inputMode="decimal" className={numInp + " text-xs"} placeholder="0.00" value={b.amount} onChange={e => updateBill(b.id, "amount", sanitizeDecimal(e.target.value))} />
                       </td>
                       <td className="py-2">
                         {bills.length > 1 && (

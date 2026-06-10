@@ -43,6 +43,13 @@ function getTier(gross: number, net: number): Tier | null {
 function fmt(n: number, d = 2) {
   return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
+// Allow only digits and a single decimal point (no +, -, e, etc.)
+function sanitizeDecimal(v: string): string {
+  let s = v.replace(/[^0-9.]/g, "");
+  const i = s.indexOf(".");
+  if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "");
+  return s;
+}
 function fmtDate(d: string) {
   if (!d) return "-";
   return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -136,12 +143,11 @@ export default function MerchandisePage() {
   const USDC_RATE = 0.01; // 1 USDC = 0.01 USD
 
   const usdGross    = parseFloat(grossDep)    || 0;
-  const usdWithdraw = Math.abs(parseFloat(withdraw)    || 0);
+  const usdWithdraw = parseFloat(withdraw)    || 0;
   const netUsd      = usdGross - usdWithdraw;  // USD-only net
 
   const totalGrossUsdc    = parseFloat(grossDepUsdc) || 0;
-  const rawWithdrawUsdc   = parseFloat(withdrawUsdc) || 0; // keeps sign as typed, for display
-  const totalWithdrawUsdc = Math.abs(rawWithdrawUsdc);
+  const totalWithdrawUsdc = parseFloat(withdrawUsdc) || 0;
   const netDepositUsdc    = totalGrossUsdc - totalWithdrawUsdc;
   const netUsdcConverted  = netDepositUsdc * USDC_RATE; // USDC net → USD
 
@@ -390,10 +396,10 @@ Sales Agent`;
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Total Deposit / Gross (USD)" required>
-                <input type="number" className={numInp} placeholder="0.00" min="0" value={grossDep} onChange={e => setGrossDep(e.target.value)} />
+                <input type="text" inputMode="decimal" className={numInp} placeholder="0.00" value={grossDep} onChange={e => setGrossDep(sanitizeDecimal(e.target.value))} />
               </Field>
               <Field label="Total Withdraw (USD)">
-                <input type="number" className={numInp} placeholder="0.00" value={withdraw} onChange={e => setWithdraw(e.target.value)} />
+                <input type="text" inputMode="decimal" className={numInp} placeholder="0.00" value={withdraw} onChange={e => setWithdraw(sanitizeDecimal(e.target.value))} />
               </Field>
             </div>
             <div className="mt-3 bg-gray-50 rounded-lg p-4 flex items-center justify-between">
@@ -413,12 +419,12 @@ Sales Agent`;
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Total Deposit / Gross (USDC)">
-                <input type="number" className={numInp} placeholder="0.00" min="0" value={grossDepUsdc} onChange={e => setGrossDepUsdc(e.target.value)} />
+                <input type="text" inputMode="decimal" className={numInp} placeholder="0.00" value={grossDepUsdc} onChange={e => setGrossDepUsdc(sanitizeDecimal(e.target.value))} />
                 {totalGrossUsdc > 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(totalGrossUsdc * USDC_RATE)} USD</p>}
               </Field>
               <Field label="Total Withdraw (USDC)">
-                <input type="number" className={numInp} placeholder="0.00" value={withdrawUsdc} onChange={e => setWithdrawUsdc(e.target.value)} />
-                {rawWithdrawUsdc !== 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(rawWithdrawUsdc * USDC_RATE)} USD</p>}
+                <input type="text" inputMode="decimal" className={numInp} placeholder="0.00" value={withdrawUsdc} onChange={e => setWithdrawUsdc(sanitizeDecimal(e.target.value))} />
+                {totalWithdrawUsdc > 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(totalWithdrawUsdc * USDC_RATE)} USD</p>}
               </Field>
             </div>
             <div className="mt-3 bg-teal-50 rounded-lg p-4 flex items-center justify-between">
