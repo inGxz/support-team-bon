@@ -136,11 +136,11 @@ export default function MerchandisePage() {
   const USDC_RATE = 0.01; // 1 USDC = 0.01 USD
 
   const usdGross    = parseFloat(grossDep)    || 0;
-  const usdWithdraw = parseFloat(withdraw)    || 0;
+  const usdWithdraw = Math.abs(parseFloat(withdraw)    || 0);
   const netUsd      = usdGross - usdWithdraw;  // USD-only net
 
   const totalGrossUsdc    = parseFloat(grossDepUsdc) || 0;
-  const totalWithdrawUsdc = parseFloat(withdrawUsdc) || 0;
+  const totalWithdrawUsdc = Math.abs(parseFloat(withdrawUsdc) || 0);
   const netDepositUsdc    = totalGrossUsdc - totalWithdrawUsdc;
   const netUsdcConverted  = netDepositUsdc * USDC_RATE; // USDC net → USD
 

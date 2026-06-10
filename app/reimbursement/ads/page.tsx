@@ -126,7 +126,7 @@ export default function AdsReimbursementPage() {
 
   // ── Calculations ────────────────────────────────────────────────────────────
   const totalDeposit = (parseFloat(depUSD) || 0) + (parseFloat(depUSC) || 0) / 100;
-  const totalWithdraw = (parseFloat(witUSD) || 0) + (parseFloat(witUSC) || 0) / 100;
+  const totalWithdraw = Math.abs((parseFloat(witUSD) || 0) + (parseFloat(witUSC) || 0) / 100);
   const netDeposit = totalDeposit - totalWithdraw;
   const tier = getTier(totalDeposit, netDeposit);
   const totalBills = bills.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
