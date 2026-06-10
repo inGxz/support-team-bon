@@ -116,6 +116,10 @@ export default function MerchandisePage() {
     { id: 1, name: "", size: "", qty: "", unitValue: 0 },
   ]);
 
+  // Delivery
+  const [deliveryMethod, setDeliveryMethod] = useState<"" | "pickup" | "delivery">("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+
   const [copied, setCopied] = useState(false);
 
   // ── Valid periods ──────────────────────────────────────────────────────────
@@ -234,11 +238,16 @@ Total Requested Quantity : ${totalQty} pcs
 Total Requested Value    : $${fmt(totalValue)} USD
 Status                   : ${status || "-"}
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DELIVERY METHOD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Method  : ${deliveryMethod === "pickup" ? "รับด้วยตนเองที่ Academy (Self Pick-up)" : deliveryMethod === "delivery" ? "จัดส่งทางไปรษณีย์ / ขนส่ง (Delivery / Shipping)" : "-"}${deliveryMethod === "delivery" ? `\nAddress : ${deliveryAddress || "-"}` : ""}
+
 Attachment: CRM Deposit/Withdraw Report Screenshot
 
 Best regards,
 Sales Agent`;
-  }, [ibName, ibEmail, uid, registerDate, perfMonth, perfYear, usdGross, usdWithdraw, totalGross, totalWithdraw, netDeposit, totalGrossUsdc, totalWithdrawUsdc, netDepositUsdc, tier, items, totalQty, totalValue, status, validPeriods]);
+  }, [ibName, ibEmail, uid, registerDate, perfMonth, perfYear, usdGross, usdWithdraw, totalGross, totalWithdraw, netDeposit, totalGrossUsdc, totalWithdrawUsdc, netDepositUsdc, tier, items, totalQty, totalValue, status, validPeriods, deliveryMethod, deliveryAddress]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(buildEmail()).then(() => {
@@ -251,6 +260,7 @@ Sales Agent`;
     setIbName(""); setIbEmail(""); setUid(""); setRegisterDate("");
     setGrossDep(""); setWithdraw(""); setGrossDepUsdc(""); setWithdrawUsdc("");
     setItems([{ id: 1, name: "", size: "", qty: "", unitValue: 0 }]);
+    setDeliveryMethod(""); setDeliveryAddress("");
   };
 
   return (
@@ -587,6 +597,51 @@ Sales Agent`;
                     <span className="font-semibold text-gray-700">Status</span>
                     <StatusBadge status={status} />
                   </div>
+                </div>
+
+                {/* Delivery Method */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <Field label="วิธีรับของ / Delivery Method" required>
+                    <div className="flex flex-col gap-2 mt-1">
+                      {[
+                        { val: "pickup" as const, icon: "🏢", title: "รับด้วยตนเองที่ Academy", subtitle: "Self Pick-up at Academy" },
+                        { val: "delivery" as const, icon: "📦", title: "จัดส่งทางไปรษณีย์ / ขนส่ง", subtitle: "Delivery / Shipping" },
+                      ].map(({ val, icon, title, subtitle }) => {
+                        const checked = deliveryMethod === val;
+                        return (
+                          <label key={val}
+                            onClick={() => setDeliveryMethod(val)}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition select-none
+                              ${checked
+                                ? "border-indigo-400 bg-indigo-50 text-indigo-800"
+                                : "border-gray-200 bg-white text-gray-600 hover:border-indigo-200 hover:bg-indigo-50/40"}`}>
+                            <div className={`w-4 h-4 rounded-full flex-shrink-0 border-2 flex items-center justify-center transition
+                              ${checked ? "border-indigo-500" : "border-gray-300 bg-white"}`}>
+                              {checked && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
+                            </div>
+                            <span className="text-sm font-medium">
+                              {icon} {title}
+                              <span className="block text-xs font-normal text-gray-400">{subtitle}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </Field>
+
+                  {deliveryMethod === "delivery" && (
+                    <div className="mt-3">
+                      <Field label="ที่อยู่สำหรับจัดส่ง / Shipping Address" required>
+                        <textarea
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white resize-none"
+                          rows={3}
+                          placeholder="ที่อยู่, เบอร์โทรศัพท์ผู้รับ..."
+                          value={deliveryAddress}
+                          onChange={e => setDeliveryAddress(e.target.value)}
+                        />
+                      </Field>
+                    </div>
+                  )}
                 </div>
               </>
             )}
