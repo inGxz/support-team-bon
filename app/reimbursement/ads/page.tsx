@@ -383,10 +383,10 @@ Sales Agent`;
                   <tr>
                     <td className="py-3 pr-4 text-gray-700 font-medium">Total Withdraw</td>
                     <td className="py-3 pr-4">
-                      <input type="number" className={numInp} placeholder="0.00" value={witUSD} onChange={e => setWitUSD(e.target.value)} min="0" />
+                      <input type="number" className={numInp} placeholder="0.00" value={witUSD} onChange={e => setWitUSD(e.target.value)} />
                     </td>
                     <td className="py-3 pr-4">
-                      <input type="number" className={numInp} placeholder="0" value={witUSC} onChange={e => setWitUSC(e.target.value)} min="0" />
+                      <input type="number" className={numInp} placeholder="0" value={witUSC} onChange={e => setWitUSC(e.target.value)} />
                     </td>
                     <td className="py-3 text-right font-semibold text-blue-600">{fmt(totalWithdraw)}</td>
                   </tr>

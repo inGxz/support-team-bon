@@ -140,7 +140,8 @@ export default function MerchandisePage() {
   const netUsd      = usdGross - usdWithdraw;  // USD-only net
 
   const totalGrossUsdc    = parseFloat(grossDepUsdc) || 0;
-  const totalWithdrawUsdc = Math.abs(parseFloat(withdrawUsdc) || 0);
+  const rawWithdrawUsdc   = parseFloat(withdrawUsdc) || 0; // keeps sign as typed, for display
+  const totalWithdrawUsdc = Math.abs(rawWithdrawUsdc);
   const netDepositUsdc    = totalGrossUsdc - totalWithdrawUsdc;
   const netUsdcConverted  = netDepositUsdc * USDC_RATE; // USDC net → USD
 
@@ -392,7 +393,7 @@ Sales Agent`;
                 <input type="number" className={numInp} placeholder="0.00" min="0" value={grossDep} onChange={e => setGrossDep(e.target.value)} />
               </Field>
               <Field label="Total Withdraw (USD)">
-                <input type="number" className={numInp} placeholder="0.00" min="0" value={withdraw} onChange={e => setWithdraw(e.target.value)} />
+                <input type="number" className={numInp} placeholder="0.00" value={withdraw} onChange={e => setWithdraw(e.target.value)} />
               </Field>
             </div>
             <div className="mt-3 bg-gray-50 rounded-lg p-4 flex items-center justify-between">
@@ -416,8 +417,8 @@ Sales Agent`;
                 {totalGrossUsdc > 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(totalGrossUsdc * USDC_RATE)} USD</p>}
               </Field>
               <Field label="Total Withdraw (USDC)">
-                <input type="number" className={numInp} placeholder="0.00" min="0" value={withdrawUsdc} onChange={e => setWithdrawUsdc(e.target.value)} />
-                {totalWithdrawUsdc > 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(totalWithdrawUsdc * USDC_RATE)} USD</p>}
+                <input type="number" className={numInp} placeholder="0.00" value={withdrawUsdc} onChange={e => setWithdrawUsdc(e.target.value)} />
+                {rawWithdrawUsdc !== 0 && <p className="text-right text-xs text-teal-500 mt-1">= {fmt(rawWithdrawUsdc * USDC_RATE)} USD</p>}
               </Field>
             </div>
             <div className="mt-3 bg-teal-50 rounded-lg p-4 flex items-center justify-between">
