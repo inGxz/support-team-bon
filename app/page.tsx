@@ -9,6 +9,16 @@ const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "2010203041-kgA7NuVs";
 
 const TODAY = new Date().toISOString().split("T")[0];
 
+const AGENT_LIST = ["Aeey","Amy","Bon","Chom","Claire","Ice","Jan","Junior","Khaw","Mindmint","Mod","Muanfun","Oil","Pang","Parn","Piakpoon","Pin","Rit","Seangpleng","Tuang"];
+
+const AGENT_AVATAR_COLORS = [
+  "bg-purple-100 text-purple-600",
+  "bg-indigo-100 text-indigo-600",
+  "bg-pink-100 text-pink-600",
+  "bg-teal-100 text-teal-600",
+  "bg-amber-100 text-amber-600",
+];
+
 // ================= LIFF TYPES =================
 declare global {
   interface Window {
@@ -184,6 +194,67 @@ function JobIdModal({ jobId, onClose }: { jobId: string; onClose: () => void }) 
           <button onClick={onClose} className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 text-white font-semibold shadow-md hover:scale-[1.02] transition">
             เสร็จสิ้น
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= AGENT PICKER MODAL =================
+function AgentPickerModal({ value, dark, onSelect, onClose }: { value: string; dark: boolean; onSelect: (name: string) => void; onClose: () => void }) {
+  const [search, setSearch] = useState("");
+  const filtered = AGENT_LIST.filter((n) => n.toLowerCase().includes(search.trim().toLowerCase()));
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className={`${dark ? "bg-gray-800" : "bg-white"} rounded-2xl shadow-2xl w-full max-w-md overflow-hidden`}>
+        <div className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-white text-lg font-bold">🧑‍💼 เลือกเซลล์ผู้ดูแล</h2>
+            <p className="text-purple-100 text-xs mt-0.5">เลือกชื่อเซลล์ที่ดูแลลูกค้ารายนี้</p>
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-xl leading-none px-2">✕</button>
+        </div>
+
+        <div className="px-5 pt-4">
+          <input
+            autoFocus
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 ค้นหาชื่อเซลล์..."
+            className={`w-full p-3 rounded-xl border ${dark ? "border-gray-600 bg-gray-700 text-white placeholder-gray-400" : "border-gray-200 text-gray-900"} focus:ring-2 focus:ring-purple-300 outline-none transition`}
+          />
+        </div>
+
+        <div className="px-5 py-4 grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[50vh] overflow-y-auto">
+          {filtered.length === 0 && (
+            <p className={`col-span-full text-center text-sm py-6 ${dark ? "text-gray-400" : "text-gray-400"}`}>ไม่พบชื่อเซลล์</p>
+          )}
+          {filtered.map((name) => {
+            const idx = AGENT_LIST.indexOf(name);
+            const avatarColor = AGENT_AVATAR_COLORS[idx % AGENT_AVATAR_COLORS.length];
+            const selected = name === value;
+            return (
+              <button
+                key={name}
+                onClick={() => { onSelect(name); onClose(); }}
+                className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition
+                  ${selected
+                    ? "border-purple-400 bg-purple-50 ring-2 ring-purple-200"
+                    : dark
+                      ? "border-gray-700 hover:border-purple-400 hover:bg-gray-700"
+                      : "border-gray-100 hover:border-purple-200 hover:bg-purple-50/50"}`}
+              >
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${avatarColor}`}>
+                  {name.slice(0, 2).toUpperCase()}
+                </div>
+                <span className={`text-xs font-medium truncate w-full text-center ${selected ? "text-purple-700" : dark ? "text-gray-200" : "text-gray-700"}`}>
+                  {name}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -525,6 +596,7 @@ export default function Page() {
   // BASE
   const [customerName, setCustomerName] = useState("");
   const [agent, setAgent] = useState("");
+  const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [deadline, setDeadline] = useState("");
   const [detail, setDetail] = useState("");
   const [refLink, setRefLink] = useState("");
@@ -1026,13 +1098,32 @@ export default function Page() {
 
           <div>
             <label className={labelCls}>🧑‍💼 เซลล์ <span className="text-xs text-gray-400">(ผู้ดูแล)</span></label>
-            <select className={inputCls(!!errors.agent)} value={agent} onChange={(e) => { setAgent(e.target.value); setErrors((p) => ({ ...p, agent: "" })); }}>
-              <option value="">— เลือกชื่อเซลล์ —</option>
-              {["Aeey","Amy","Bon","Chom","Claire","Ice","Jan","Junior","Khaw","Mindmint","Mod","Muanfun","Oil","Pang","Parn","Piakpoon","Pin","Rit","Seangpleng","Tuang"].map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
+            <button
+              type="button"
+              onClick={() => setShowAgentPicker(true)}
+              className={inputCls(!!errors.agent) + " flex items-center justify-between text-left"}
+            >
+              {agent ? (
+                <span className="flex items-center gap-2">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${AGENT_AVATAR_COLORS[AGENT_LIST.indexOf(agent) % AGENT_AVATAR_COLORS.length]}`}>
+                    {agent.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className={dark ? "text-white" : "text-gray-900"}>{agent}</span>
+                </span>
+              ) : (
+                <span className="text-gray-400">— เลือกชื่อเซลล์ —</span>
+              )}
+              <span className="text-gray-400 text-xs">▾</span>
+            </button>
             {errors.agent && <p className="text-red-400 text-xs mt-1">⚠️ {errors.agent}</p>}
+            {showAgentPicker && (
+              <AgentPickerModal
+                value={agent}
+                dark={dark}
+                onSelect={(name) => { setAgent(name); setErrors((p) => ({ ...p, agent: "" })); }}
+                onClose={() => setShowAgentPicker(false)}
+              />
+            )}
           </div>
 
           <div>
