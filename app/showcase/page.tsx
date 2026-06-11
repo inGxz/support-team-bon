@@ -9,11 +9,20 @@ type FilterKey = "all" | CategoryKey;
 
 type ShowcaseItem = {
   id: number;
-  file: string; // expects file under /public/showcase/<file>
+  file: string; // expects file under /public/showcase/<file> (used if present)
+  driveId?: string; // Google Drive file id, used as fallback thumbnail source
   title: string;
   subtitle: string;
   category: CategoryKey;
 };
+
+// Builds a Drive-hosted thumbnail URL for a given file id.
+// Note: this only renders for site visitors if the file's Drive sharing is
+// set to "Anyone with the link can view" — otherwise it silently fails and
+// the gradient placeholder below is shown instead.
+function driveThumb(id: string) {
+  return `https://lh3.googleusercontent.com/d/${id}=w800`;
+}
 
 // ─── CATEGORY CONFIG ─────────────────────────────────────────────────────────
 const CATEGORIES: { key: FilterKey; label: string; icon: string }[] = [
@@ -61,6 +70,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 1,
     file: "ea-shadow-hedge.png",
+    driveId: "1ht9ylKYgCe290OX7pMyBbzssLI7XLyWM",
     title: "EA Shadow Hedge",
     subtitle: "เทรดอย่างมั่นใจ กับระบบเทรดอัตโนมัติทรงพลัง",
     category: "ea",
@@ -68,6 +78,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 2,
     file: "ea-super-grid.png",
+    driveId: "1GATRwlCPby3qKZxUuFg3uQtcoI9QfzMS",
     title: "กลยุทธ์ Super Grid",
     subtitle: "EA ระบบ Grid + Hedging โอกาสทำกำไรไม่จำกัดล็อต",
     category: "ea",
@@ -75,6 +86,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 3,
     file: "ea-shadow-grid-ultimate.png",
+    driveId: "1h3eI-um4igQWpgNE_n9qvH6hMYNx4Y68",
     title: "Shadow Grid Ultimate",
     subtitle: "ระบบเทรดอัตโนมัติเวอร์ชันอัปเกรด พร้อมใช้งานฟรี",
     category: "ea",
@@ -82,6 +94,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 4,
     file: "promo-copy-trading.png",
+    driveId: "1sCm7Pm2qj_vsYrUcZy4HyjUjzzOid8da",
     title: "Copy Trading",
     subtitle: "เจาะลึกโซนซื้อ-ขาย ด้วย Demand & Supply",
     category: "promotion",
@@ -89,6 +102,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 5,
     file: "promo-kru-mam.png",
+    driveId: "1KV_PyaN8ohdoPrtTpnbYeOCtXhpctUJ6",
     title: "โปรโมชั่นพิเศษ ครูแหม่ม",
     subtitle: "ติดตามเทคนิคการเทรดจากผู้เชี่ยวชาญตัวจริง",
     category: "promotion",
@@ -96,6 +110,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 6,
     file: "promo-trade.png",
+    driveId: "14_UFTEb9OZN6sVIRr7oE54pFT4P43VTV",
     title: "Promotion เทรดทอง",
     subtitle: "ข้อเสนอพิเศษสำหรับนักเทรดทอง (Gold)",
     category: "promotion",
@@ -103,6 +118,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 7,
     file: "seminar-demand-supply.png",
+    driveId: "1POWtYEgeWEhHi-DkHiJ3Hjj-5ItneUEd",
     title: "เข้าห้อง...จบในโน้ต",
     subtitle: "Workshop เจาะลึก Demand & Supply กับ VT Markets",
     category: "seminar",
@@ -110,6 +126,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 8,
     file: "seminar-pro-trader.png",
+    driveId: "1fj8yD2akJkl0McIV8n_InlvBNR9LExYb",
     title: "เริ่มเทรดแบบมือโปร",
     subtitle: "ปูพื้นฐานการเทรดอย่างเป็นระบบตั้งแต่ก้าวแรก",
     category: "seminar",
@@ -117,6 +134,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 9,
     file: "seminar-vt-life.png",
+    driveId: "1Z7EPIhHntFceZcQn_5Y6-8Mj6BdXwl-H",
     title: "ชีวิตติดเทรด",
     subtitle: "แรงบันดาลใจจากนักเทรดจริงกับ VT Markets",
     category: "seminar",
@@ -124,6 +142,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 10,
     file: "concept-mindset.png",
+    driveId: "1q6NdN-nEpG0PYnyuCqYfX0pF5snGeCk2",
     title: "Mindset",
     subtitle: "ทัศนคติและวิธีคิดของนักเทรดมืออาชีพ",
     category: "concept",
@@ -131,6 +150,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 11,
     file: "concept-money-management.png",
+    driveId: "1tPrHgzknpHoHONycrStLuAqIdVKqgji6",
     title: "Money Management",
     subtitle: "การบริหารเงินทุนเพื่อการเทรดอย่างยั่งยืน",
     category: "concept",
@@ -138,6 +158,7 @@ const ITEMS: ShowcaseItem[] = [
   {
     id: 12,
     file: "concept-3m.png",
+    driveId: "1MoLFe9Zn7rnMMquJFIggq1pxrk1abyfk",
     title: "3M คืออะไร?",
     subtitle: "Mindset, Money Management, Method — 3 เสาหลักของนักเทรด",
     category: "concept",
@@ -146,8 +167,14 @@ const ITEMS: ShowcaseItem[] = [
 
 // ─── CARD ────────────────────────────────────────────────────────────────────
 function ShowcaseCard({ item, dark }: { item: ShowcaseItem; dark: boolean }) {
-  const [imgError, setImgError] = useState(false);
+  // Try a local file in /public/showcase first, then fall back to the Drive
+  // thumbnail, then finally a gradient placeholder if neither loads.
+  const sources = [`/showcase/${item.file}`, item.driveId ? driveThumb(item.driveId) : null].filter(
+    (s): s is string => Boolean(s)
+  );
+  const [srcIndex, setSrcIndex] = useState(0);
   const style = CATEGORY_STYLE[item.category];
+  const exhausted = srcIndex >= sources.length;
 
   return (
     <div
@@ -156,16 +183,16 @@ function ShowcaseCard({ item, dark }: { item: ShowcaseItem; dark: boolean }) {
       }`}
     >
       <div className="relative aspect-video overflow-hidden">
-        {!imgError && (
+        {!exhausted && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`/showcase/${item.file}`}
+            src={sources[srcIndex]}
             alt={item.title}
-            onError={() => setImgError(true)}
+            onError={() => setSrcIndex((i) => i + 1)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         )}
-        {imgError && (
+        {exhausted && (
           <div
             className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${style.gradient}`}
           >
