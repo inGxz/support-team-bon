@@ -27,14 +27,18 @@ function ShowcaseCard({ item, dark }: { item: ShowcaseItem; dark: boolean }) {
         dark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
       }`}
     >
-      <div className="relative aspect-video overflow-hidden">
+      <div
+        className={`relative aspect-square overflow-hidden ${
+          dark ? "bg-gray-900" : "bg-gray-100"
+        }`}
+      >
         {!exhausted && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={sources[srcIndex]}
             alt={item.title}
             onError={() => setSrcIndex((i) => i + 1)}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
           />
         )}
         {exhausted && (
@@ -53,24 +57,6 @@ function ShowcaseCard({ item, dark }: { item: ShowcaseItem; dark: boolean }) {
         >
           {style.label}
         </span>
-      </div>
-      <div className="p-4">
-        <h3
-          className={`font-semibold text-sm mb-1 ${
-            dark ? "text-white" : "text-gray-900"
-          }`}
-        >
-          {item.title}
-        </h3>
-        {item.subtitle && (
-          <p
-            className={`text-xs leading-relaxed ${
-              dark ? "text-gray-400" : "text-gray-500"
-            }`}
-          >
-            {item.subtitle}
-          </p>
-        )}
       </div>
     </div>
   );
