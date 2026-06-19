@@ -71,7 +71,7 @@ const CARDS = [
 /* ── Page ───────────────────────────────────────────────────────────────── */
 export default function TeamPortalPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative">
+    <div className="min-h-screen bg-gray-50 flex flex-col w-full">
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div
@@ -93,7 +93,7 @@ export default function TeamPortalPage() {
       </div>
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div className="flex-1 px-4 pt-5 pb-24 space-y-3">
+      <div className="flex-1 px-4 pt-5 pb-8 space-y-3">
 
         {/* Greeting */}
         <div className="pb-1">
