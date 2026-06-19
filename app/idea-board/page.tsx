@@ -125,7 +125,10 @@ export default function IdeaBoardPage() {
                 </div>
 
                 {/* Idea text */}
-                <p className="text-gray-800 text-sm leading-relaxed font-medium">{item.idea}</p>
+                <div className="bg-yellow-50 rounded-xl px-3 py-2 border border-yellow-200">
+                  <p className="text-xs text-yellow-600 font-semibold mb-1">💡 ไอเดีย</p>
+                  <p className="text-sm text-gray-800 leading-relaxed font-medium">{item.idea}</p>
+                </div>
 
                 {/* Objectives */}
                 {item.objectives && (
