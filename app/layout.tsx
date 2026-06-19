@@ -13,8 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SUPPORT TEAMBON",
-  description: "Premium Workflow System",
+  title: "VT Team Portal",
+  description: "VT Markets Team Portal — เบิกค่าใช้จ่าย, ส่งไอเดีย, ผลงาน",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "VT Team",
+  },
+  icons: {
+    apple: "/icon-192.png",
+  },
 };
 
 export default function RootLayout({
