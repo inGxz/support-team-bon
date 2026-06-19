@@ -350,6 +350,11 @@ export default function ReimbursementPage() {
         <div className="rl-mob-header">
           <div className="rl-mob-circle1" />
           <div className="rl-mob-circle2" />
+          {/* back button */}
+          <a href="/team" style={{display:"inline-flex",alignItems:"center",gap:"4px",color:"rgba(196,181,253,0.8)",fontSize:"12px",marginBottom:"12px",textDecoration:"none"}}>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            กลับ
+          </a>
           <div className="rl-mob-logo">
             <div className="rl-mob-logo-icon">
               <svg width="15" height="15" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
