@@ -114,7 +114,8 @@ export default function IdeaPage() {
   const [objectives, setObjectives] = useState<string[]>([]);
 
   // step 3
-  const [extra, setExtra] = useState("");
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [pm, setPm] = useState("");
 
   // ui
   const [submitting, setSubmitting] = useState(false);
@@ -135,8 +136,12 @@ export default function IdeaPage() {
     }
   };
 
+  const toggleDept = (key: string) =>
+    setDepartments((p) => (p.includes(key) ? p.filter((k) => k !== key) : [...p, key]));
+
   const handleSubmit = async () => {
     setError("");
+    if (departments.length === 0) { setError("เลือกแผนกที่ต้อง support อย่างน้อย 1 แผนกค่ะ"); return; }
     setSubmitting(true);
     try {
       const res = await fetch(SCRIPT_URL, {
@@ -146,7 +151,8 @@ export default function IdeaPage() {
           category,
           idea: idea.trim(),
           objectives: objectives.join(", "),
-          extra: extra.trim(),
+          departments: departments.join(", "),
+          pm: pm.trim(),
         }),
       });
       if (!res.ok) throw new Error();
@@ -159,7 +165,7 @@ export default function IdeaPage() {
   };
 
   const resetAll = () => {
-    setCategory(""); setIdea(""); setObjectives([]); setExtra("");
+    setCategory(""); setIdea(""); setObjectives([]); setDepartments([]); setPm("");
     setError(""); setStep(1); setDone(false); setOpenGroup(null);
   };
 
@@ -227,7 +233,6 @@ export default function IdeaPage() {
           <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5 shadow-sm">
             <div>
               <h2 className="text-lg font-bold text-gray-800">💡 มีไอเดียอะไร?</h2>
-              <p className="text-xs text-gray-400 mt-1">ไม่ต้องระบุชื่อ — เปิดกว้างสำหรับทุกคน</p>
             </div>
 
             {/* Category */}
@@ -341,19 +346,41 @@ export default function IdeaPage() {
 
         {/* ── STEP 3 ── */}
         {step === 3 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5 shadow-sm">
             <div>
-              <h2 className="text-lg font-bold text-gray-800">✍️ มีอะไรเพิ่มเติมมั้ย?</h2>
-              <p className="text-xs text-gray-400 mt-1">ไม่บังคับ — ถ้าอยากอธิบายเพิ่มหรือให้รายละเอียดก็ใส่ได้เลย</p>
+              <h2 className="text-lg font-bold text-gray-800">🏢 แผนกที่ต้อง support</h2>
+              <p className="text-xs text-gray-400 mt-1">ไอเดียนี้ต้องการแผนกไหนมาช่วย? เลือกได้หลายแผนก</p>
             </div>
 
-            <textarea
-              className="w-full p-3 rounded-xl border border-gray-200 text-gray-900 text-sm focus:ring-2 focus:ring-purple-300 outline-none transition bg-white h-32 resize-none"
-              placeholder="เช่น เหตุผลที่อยากให้มี, ตัวอย่างที่เห็นจากที่อื่น, ความคิดเพิ่มเติม..."
-              value={extra}
-              onChange={(e) => setExtra(e.target.value)}
-              maxLength={1000}
-            />
+            <div className="flex flex-wrap gap-2.5">
+              {(["Sales", "MKT", "CS", "Admin", "HR"] as const).map((dept) => (
+                <button
+                  key={dept}
+                  onClick={() => toggleDept(dept)}
+                  className={`px-4 py-2 rounded-xl border text-sm font-medium transition ${
+                    departments.includes(dept)
+                      ? "bg-purple-50 border-purple-400 text-purple-700"
+                      : "bg-white border-gray-200 text-gray-500 hover:border-purple-200"
+                  }`}
+                >
+                  {dept}
+                </button>
+              ))}
+            </div>
+
+            <div className="border-t border-gray-50 pt-4 space-y-2">
+              <label className="text-sm font-semibold text-gray-700">
+                Project Manager ที่อยากให้รับผิดชอบ{" "}
+                <span className="text-xs text-gray-400 font-normal">(ไม่บังคับ)</span>
+              </label>
+              <input
+                type="text"
+                className="w-full p-3 rounded-xl border border-gray-200 text-gray-900 text-sm focus:ring-2 focus:ring-purple-300 outline-none transition"
+                placeholder="ชื่อ PM..."
+                value={pm}
+                onChange={(e) => setPm(e.target.value)}
+              />
+            </div>
 
             {/* recap */}
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1.5">
