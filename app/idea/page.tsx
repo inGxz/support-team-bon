@@ -107,11 +107,18 @@ export default function IdeaPage() {
 
   // step 1
   const [categories, setCategories] = useState<string[]>([]);
+  const [selectedExamples, setSelectedExamples] = useState<string[]>([]);
   const [idea, setIdea] = useState("");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   const toggleCategory = (key: string) =>
     setCategories((p) => (p.includes(key) ? p.filter((k) => k !== key) : [...p, key]));
+
+  const toggleExample = (ex: string) =>
+    setSelectedExamples((p) => (p.includes(ex) ? p.filter((k) => k !== ex) : [...p, ex]));
+
+  // ค่าที่จะส่ง = ชิปที่เลือก + ข้อความที่พิมพ์เพิ่ม
+  const ideaValue = [...selectedExamples, idea.trim()].filter(Boolean).join(" / ");
 
   // step 2
   const [objectives, setObjectives] = useState<string[]>([]);
@@ -131,7 +138,7 @@ export default function IdeaPage() {
   const handleNext = () => {
     setError("");
     if (step === 1) {
-      if (!idea.trim()) { setError("กรุณาเขียนหรือเลือกไอเดียของคุณก่อนนะคะ"); return; }
+      if (!ideaValue) { setError("กรุณาเขียนหรือเลือกไอเดียของคุณก่อนนะคะ"); return; }
       setStep(2);
     } else if (step === 2) {
       if (objectives.length === 0) { setError("เลือกวัตถุประสงค์อย่างน้อย 1 ข้อค่ะ"); return; }
@@ -152,7 +159,7 @@ export default function IdeaPage() {
         body: JSON.stringify({
           type: "idea_submit",
           category: categories.join(", "),
-          idea: idea.trim(),
+          idea: ideaValue,
           objectives: objectives.join(", "),
           departments: departments.join(", "),
           pm: pm.trim(),
@@ -168,7 +175,7 @@ export default function IdeaPage() {
   };
 
   const resetAll = () => {
-    setCategories([]); setIdea(""); setObjectives([]); setDepartments([]); setPm("");
+    setCategories([]); setSelectedExamples([]); setIdea(""); setObjectives([]); setDepartments([]); setPm("");
     setError(""); setStep(1); setDone(false); setOpenGroup(null);
   };
 
@@ -272,36 +279,53 @@ export default function IdeaPage() {
 
             {/* Example chips by group */}
             <div>
-              <p className="text-xs text-gray-500 font-semibold mb-2">หรือเลือกจากตัวอย่างด้านล่าง</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500 font-semibold">หรือเลือกจากตัวอย่างด้านล่าง <span className="text-gray-400 font-normal">(เลือกได้หลายข้อ)</span></p>
+                {selectedExamples.length > 0 && (
+                  <span className="text-xs bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
+                    เลือกแล้ว {selectedExamples.length} ข้อ
+                  </span>
+                )}
+              </div>
               <div className="space-y-3">
-                {EXAMPLE_GROUPS.map(({ label, examples }) => (
-                  <div key={label} className="border border-gray-100 rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setOpenGroup((p) => (p === label ? null : label))}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50 transition"
-                    >
-                      <span className="text-sm font-medium text-gray-700">{label}</span>
-                      <span className="text-gray-400 text-xs">{openGroup === label ? "▲" : "▼"}</span>
-                    </button>
-                    {openGroup === label && (
-                      <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 border-t border-gray-100 bg-gray-50">
-                        {examples.map((ex) => (
-                          <button
-                            key={ex}
-                            onClick={() => setIdea(ex)}
-                            className={`text-xs px-3 py-1.5 rounded-full border transition ${
-                              idea === ex
-                                ? "bg-purple-50 border-purple-400 text-purple-700 font-semibold"
-                                : "bg-white border-gray-200 text-gray-500 hover:border-purple-200 hover:text-purple-600"
-                            }`}
-                          >
-                            {ex}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {EXAMPLE_GROUPS.map(({ label, examples }) => {
+                  const selectedCount = examples.filter((ex) => selectedExamples.includes(ex)).length;
+                  return (
+                    <div key={label} className="border border-gray-100 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setOpenGroup((p) => (p === label ? null : label))}
+                        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50 transition"
+                      >
+                        <span className="text-sm font-medium text-gray-700">
+                          {label}
+                          {selectedCount > 0 && (
+                            <span className="ml-2 text-xs bg-purple-100 text-purple-600 font-semibold px-1.5 py-0.5 rounded-full">
+                              {selectedCount}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-gray-400 text-xs">{openGroup === label ? "▲" : "▼"}</span>
+                      </button>
+                      {openGroup === label && (
+                        <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 border-t border-gray-100 bg-gray-50">
+                          {examples.map((ex) => (
+                            <button
+                              key={ex}
+                              onClick={() => toggleExample(ex)}
+                              className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                                selectedExamples.includes(ex)
+                                  ? "bg-purple-50 border-purple-400 text-purple-700 font-semibold"
+                                  : "bg-white border-gray-200 text-gray-500 hover:border-purple-200 hover:text-purple-600"
+                              }`}
+                            >
+                              {selectedExamples.includes(ex) ? "✓ " : ""}{ex}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -341,7 +365,7 @@ export default function IdeaPage() {
             {/* recap */}
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
               <p className="text-xs text-gray-400 mb-1">ไอเดียของคุณ:</p>
-              <p className="text-sm text-gray-700 leading-relaxed">{idea}</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{ideaValue}</p>
               {categories.length > 0 && <p className="text-xs text-purple-500 mt-1">📌 {categories.join(" · ")}</p>}
             </div>
           </div>
@@ -389,7 +413,7 @@ export default function IdeaPage() {
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1.5">
               <p className="text-xs text-gray-400">สรุปก่อนส่ง:</p>
               {categories.length > 0 && <p className="text-xs text-purple-500">📌 {categories.join(" · ")}</p>}
-              <p className="text-sm text-gray-700 leading-relaxed">{idea}</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{ideaValue}</p>
               {objectives.length > 0 && (
                 <p className="text-xs text-indigo-500">🎯 {objectives.join(" · ")}</p>
               )}
