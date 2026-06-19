@@ -106,9 +106,12 @@ export default function IdeaPage() {
   const [step, setStep] = useState<Step>(1);
 
   // step 1
-  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const [idea, setIdea] = useState("");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+
+  const toggleCategory = (key: string) =>
+    setCategories((p) => (p.includes(key) ? p.filter((k) => k !== key) : [...p, key]));
 
   // step 2
   const [objectives, setObjectives] = useState<string[]>([]);
@@ -148,7 +151,7 @@ export default function IdeaPage() {
         method: "POST",
         body: JSON.stringify({
           type: "idea_submit",
-          category,
+          category: categories.join(", "),
           idea: idea.trim(),
           objectives: objectives.join(", "),
           departments: departments.join(", "),
@@ -165,7 +168,7 @@ export default function IdeaPage() {
   };
 
   const resetAll = () => {
-    setCategory(""); setIdea(""); setObjectives([]); setDepartments([]); setPm("");
+    setCategories([]); setIdea(""); setObjectives([]); setDepartments([]); setPm("");
     setError(""); setStep(1); setDone(false); setOpenGroup(null);
   };
 
@@ -237,13 +240,13 @@ export default function IdeaPage() {
 
             {/* Category */}
             <div>
-              <p className="text-xs text-gray-500 font-semibold mb-2">ไอเดียนี้เกี่ยวกับด้านไหน?</p>
+              <p className="text-xs text-gray-500 font-semibold mb-2">ไอเดียนี้เกี่ยวกับด้านไหน? <span className="text-gray-400 font-normal">(เลือกได้หลายด้าน)</span></p>
               <div className="flex flex-wrap gap-2">
                 {CATEGORIES.map(({ key, icon }) => (
                   <button
                     key={key}
-                    onClick={() => setCategory((p) => (p === key ? "" : key))}
-                    className={chipCls(category === key)}
+                    onClick={() => toggleCategory(key)}
+                    className={chipCls(categories.includes(key))}
                   >
                     <span>{icon}</span>
                     <span>{key}</span>
@@ -339,7 +342,7 @@ export default function IdeaPage() {
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
               <p className="text-xs text-gray-400 mb-1">ไอเดียของคุณ:</p>
               <p className="text-sm text-gray-700 leading-relaxed">{idea}</p>
-              {category && <p className="text-xs text-purple-500 mt-1">📌 {category}</p>}
+              {categories.length > 0 && <p className="text-xs text-purple-500 mt-1">📌 {categories.join(" · ")}</p>}
             </div>
           </div>
         )}
@@ -385,7 +388,7 @@ export default function IdeaPage() {
             {/* recap */}
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1.5">
               <p className="text-xs text-gray-400">สรุปก่อนส่ง:</p>
-              {category && <p className="text-xs text-purple-500">📌 {category}</p>}
+              {categories.length > 0 && <p className="text-xs text-purple-500">📌 {categories.join(" · ")}</p>}
               <p className="text-sm text-gray-700 leading-relaxed">{idea}</p>
               {objectives.length > 0 && (
                 <p className="text-xs text-indigo-500">🎯 {objectives.join(" · ")}</p>
