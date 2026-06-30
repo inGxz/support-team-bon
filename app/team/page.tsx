@@ -37,6 +37,18 @@ function IconGallery({ className }: { className?: string }) {
   );
 }
 
+function IconClipboard({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 2h6a1 1 0 0 1 1 1v1H8V3a1 1 0 0 1 1-1z"/>
+      <rect x="4" y="4" width="16" height="18" rx="2"/>
+      <line x1="8" y1="10" x2="16" y2="10"/>
+      <line x1="8" y1="14" x2="16" y2="14"/>
+      <line x1="8" y1="18" x2="12" y2="18"/>
+    </svg>
+  );
+}
+
 /* ── Card data ──────────────────────────────────────────────────────────── */
 const CARDS = [
   {
@@ -120,6 +132,25 @@ export default function TeamPortalPage() {
             </svg>
           </Link>
         ))}
+
+        {/* บรีฟงาน — external link */}
+        <a
+          href="https://liff.line.me/2010203041-kgA7NuVs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 active:scale-[0.98] transition-transform"
+        >
+          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <IconClipboard className="w-6 h-6 text-blue-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-blue-600">บรีฟงาน</p>
+            <p className="text-gray-400 text-xs mt-0.5">ส่งบรีฟงานผ่าน LINE</p>
+          </div>
+          <svg className="text-gray-300 flex-shrink-0" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </a>
 
       </div>
 
