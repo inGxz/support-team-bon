@@ -9,7 +9,7 @@ const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || "2010203041-kgA7NuVs";
 
 const TODAY = new Date().toISOString().split("T")[0];
 
-const AGENT_LIST = ["Aeey","Amy","Aut","Beauty","Bew","Bon","Charm","Chom","Claire","Coat","David","Dream","Fifa","Gem","Ice","Jan","Jane","Junior","Kat","Khaw","Ko","Komsan","Lin","Manoon","Maurizio","Mindmint","Mod","Mook","Morgan","Muanfun","Nan","Natthapornchanok","Neung","Oil","Pang","Parn","Piakpoon","Pin","Pure","Rahim","Rit","Seangpleng","Snooker","Tuang","Tum","Waii"];
+const AGENT_LIST = ["Aeey","Amy","Aut","Beauty","Bew","Bon","Charm","Chom","Claire","Coat","David","Dream","Fifa","Gem","Ice","Jan","Jane","Junior","Kat","Khaw","Ko","Komsan","Lin","Manoon","Maurizio","Mindmint","Mod","Mook","Morgan","Muanfun","Nan","Pun","Neung","Oil","Pang","Parn","Piakpoon","Pin","Pure","Rahim","Rit","Seangpleng","Snooker","Tuang","Tum","Waii"];
 
 const AGENT_AVATAR_COLORS = [
   "bg-purple-100 text-purple-600",
