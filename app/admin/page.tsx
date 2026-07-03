@@ -25,17 +25,6 @@ type Job = {
 
 type EditState = { status: string; deliveryLink: string; internalNote: string };
 
-type LeaveRecord = {
-  id: string;
-  name: string;
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  days: number | string;
-  reason: string;
-  status: string;
-  timestamp: string;
-};
 
 // แปลง timestamp → "พ.ค. 2026"
 // รองรับ: "26/5/2569" (DD/MM/BE), "5/26/2569" (MM/DD/BE), "2026-06-02T..." (ISO)
@@ -532,12 +521,6 @@ const WF_STYLE: Record<string, { bg: string; text: string; border: string; icon:
   "อื่นๆ":{ bg: "bg-gray-50",  text: "text-gray-600",   border: "border-gray-200",   icon: "📁" },
 };
 
-const LEAVE_STYLE: Record<string, { badge: string }> = {
-  ING: { badge: "bg-purple-100 text-purple-700 border-purple-200" },
-  NAT: { badge: "bg-blue-100 text-blue-700 border-blue-200" },
-  FEW: { badge: "bg-pink-100 text-pink-700 border-pink-200" },
-  BON: { badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-};
 
 const TL_DAY_NAMES = ["อา","จ","อ","พ","พฤ","ศ","ส"];
 const TL_MONTH_TH  = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
@@ -643,12 +626,9 @@ function TimelineView({ jobs, timelineRef }: { jobs: Job[]; timelineRef: React.R
 
 
 export default function AdminPage() {
-  const ADMIN_NAMES = ["ING", "BON", "FEW", "NAT"];
-
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
-  const [adminName, setAdminName] = useState("");
-  const [nameError, setNameError] = useState(false);
+  const [adminName] = useState("ADMIN");
   const [pwError, setPwError] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
 
@@ -701,8 +681,6 @@ export default function AdminPage() {
   const [cardLogs, setCardLogs] = useState<Record<string, LogEntry[]>>({});
   const [cardLogsLoading, setCardLogsLoading] = useState<Record<string, boolean>>({});
 
-  // Leave system
-  const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
 
   // View mode + quick status
   const [viewMode, setViewMode] = useState<"list" | "board" | "timeline">("list");
@@ -759,25 +737,10 @@ export default function AdminPage() {
     setLogsLoading(false);
   }, []);
 
-  const fetchLeaves = useCallback(async () => {
-    try {
-      const res = await fetch("/api/gas?action=leave_list");
-      const data = await res.json();
-      if (Array.isArray(data.leaves)) setLeaves(data.leaves);
-    } catch {}
-  }, []);
-
   useEffect(() => {
     if (isLoggedIn) fetchJobs();
   }, [isLoggedIn, fetchJobs]);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchLeaves();
-      const interval = setInterval(fetchLeaves, 5 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn, fetchLeaves]);
 
   useEffect(() => {
     if (isLoggedIn && activeTab === "log") fetchLogs();
@@ -829,10 +792,8 @@ export default function AdminPage() {
 
   const handleLogin = async () => {
     if (!password) return;
-    if (!adminName) { setNameError(true); return; }
     setAuthLoading(true);
     setPwError(false);
-    setNameError(false);
     try {
       const res = await fetch("/api/admin/auth", {
         method: "POST",
@@ -1044,15 +1005,6 @@ export default function AdminPage() {
               <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
               <p className="text-gray-400 text-sm mt-1">SUPPORT TEAMBON VT MARKET</p>
             </div>
-            <select
-              className={`w-full p-3 rounded-xl border ${nameError ? "border-red-400 ring-2 ring-red-200" : "border-gray-200"} focus:ring-2 focus:ring-purple-300 outline-none text-center text-gray-800 bg-white`}
-              value={adminName}
-              onChange={(e) => { setAdminName(e.target.value); setNameError(false); }}
-            >
-              <option value="">— คุณคือใคร? —</option>
-              {ADMIN_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-            {nameError && <p className="text-red-400 text-sm">กรุณาเลือกชื่อของคุณ</p>}
             <input
               type="password"
               placeholder="รหัสผ่าน Admin"
@@ -1121,12 +1073,6 @@ export default function AdminPage() {
               <p className="text-purple-300 text-xs">รีเฟรชใน {countdown} วิ</p>
             </div>
           )}
-          <a
-            href="/leave"
-            className="bg-amber-400 hover:bg-amber-300 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-          >
-            🗓️ ขอลางาน
-          </a>
           <button onClick={exportCSV} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
             📥 CSV
           </button>
@@ -1609,73 +1555,6 @@ export default function AdminPage() {
         {activeTab === "jobs" && (
           <div className="space-y-4">
 
-            {/* Leave status widget */}
-            {(() => {
-              const todayStr = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD (local time)
-              const onLeaveToday = leaves.filter((l) => l.startDate <= todayStr && l.endDate >= todayStr);
-              const upcoming = leaves
-                .filter((l) => l.startDate > todayStr)
-                .sort((a, b) => (a.startDate < b.startDate ? -1 : 1))
-                .slice(0, 5);
-
-              if (onLeaveToday.length === 0 && upcoming.length === 0) return null;
-
-              const renderBadge = (name: string) => {
-                const style = LEAVE_STYLE[name] || { badge: "bg-gray-100 text-gray-600 border-gray-200" };
-                return (
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${style.badge}`}>
-                    {name}
-                  </span>
-                );
-              };
-
-              const renderDateRange = (l: LeaveRecord) => {
-                const sameDay = l.startDate === l.endDate;
-                return sameDay
-                  ? formatDateTH(l.startDate)
-                  : `${formatDateTH(l.startDate)} – ${formatDateTH(l.endDate)}`;
-              };
-
-              return (
-                <div className="bg-white rounded-xl border border-gray-100 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">🗓️ การลาของแอดมิน</p>
-                    <a href="/leave" className="text-xs text-purple-500 hover:underline shrink-0">
-                      ดูทั้งหมด →
-                    </a>
-                  </div>
-
-                  {onLeaveToday.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
-                        วันนี้ลา
-                      </span>
-                      {onLeaveToday.map((l) => (
-                        <span key={l.id} className="flex items-center gap-1.5 text-xs text-gray-600">
-                          {renderBadge(l.name)}
-                          <span>{l.leaveType}{l.startDate !== l.endDate ? ` (${renderDateRange(l)})` : ""}</span>
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 mb-2">วันนี้ไม่มีแอดมินลา</p>
-                  )}
-
-                  {upcoming.length > 0 && (
-                    <div className="pt-2 border-t border-gray-50 space-y-1.5">
-                      <p className="text-xs text-gray-400 mb-1">กำลังจะลา</p>
-                      {upcoming.map((l) => (
-                        <div key={l.id} className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
-                          {renderBadge(l.name)}
-                          <span>{l.leaveType}</span>
-                          <span className="text-gray-400">📅 {renderDateRange(l)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
 
             {/* Stats */}
             <div className="grid grid-cols-6 gap-3">
