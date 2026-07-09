@@ -1098,32 +1098,14 @@ export default function Page() {
 
           <div>
             <label className={labelCls}>🧑‍💼 เซลล์ <span className="text-xs text-gray-400">(ผู้ดูแล)</span></label>
-            <button
-              type="button"
-              onClick={() => setShowAgentPicker(true)}
-              className={inputCls(!!errors.agent) + " flex items-center justify-between text-left"}
-            >
-              {agent ? (
-                <span className="flex items-center gap-2">
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${AGENT_AVATAR_COLORS[AGENT_LIST.indexOf(agent) % AGENT_AVATAR_COLORS.length]}`}>
-                    {agent.slice(0, 2).toUpperCase()}
-                  </span>
-                  <span className={dark ? "text-white" : "text-gray-900"}>{agent}</span>
-                </span>
-              ) : (
-                <span className="text-gray-400">— เลือกชื่อเซลล์ —</span>
-              )}
-              <span className="text-gray-400 text-xs">▾</span>
-            </button>
+            <input
+              type="text"
+              className={inputCls(!!errors.agent)}
+              placeholder="กรอกชื่อเซลล์..."
+              value={agent}
+              onChange={(e) => { setAgent(e.target.value); setErrors((p) => ({ ...p, agent: "" })); }}
+            />
             {errors.agent && <p className="text-red-400 text-xs mt-1">⚠️ {errors.agent}</p>}
-            {showAgentPicker && (
-              <AgentPickerModal
-                value={agent}
-                dark={dark}
-                onSelect={(name) => { setAgent(name); setErrors((p) => ({ ...p, agent: "" })); }}
-                onClose={() => setShowAgentPicker(false)}
-              />
-            )}
           </div>
 
           <div>
