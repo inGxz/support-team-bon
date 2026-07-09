@@ -945,6 +945,8 @@ export default function Page() {
               type: "created",
               customerName,
               taskLabel: task,
+              queueCount: data.queueCount ?? 0,
+              deadline,
             }),
           });
         } catch {

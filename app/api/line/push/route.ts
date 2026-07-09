@@ -5,7 +5,7 @@ const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, jobId, type, customerName, taskLabel } = body;
+    const { userId, jobId, type, customerName, taskLabel, queueCount, deadline } = body;
 
     if (!userId || !jobId) {
       return NextResponse.json(
@@ -55,6 +55,24 @@ export async function POST(req: NextRequest) {
                 ...(taskLabel
                   ? [{ type: "text", text: `📦 ประเภทงาน: ${taskLabel}`, size: "sm", color: "#555555", wrap: true }]
                   : []),
+                ...(deadline
+                  ? [{ type: "text", text: `📅 Deadline: ${deadline}`, size: "sm", color: "#555555" }]
+                  : []),
+                ...(typeof queueCount === "number" && queueCount > 0
+                  ? [{
+                      type: "text",
+                      text: `⏳ มีงาน deadline เดียวกันอยู่ก่อนหน้า ${queueCount} งาน`,
+                      size: "sm",
+                      color: "#d97706",
+                      wrap: true,
+                    }]
+                  : [{
+                      type: "text",
+                      text: `✨ งานของคุณเป็นงานแรกใน deadline นี้!`,
+                      size: "sm",
+                      color: "#059669",
+                      wrap: true,
+                    }]),
                 {
                   type: "separator",
                   margin: "md",

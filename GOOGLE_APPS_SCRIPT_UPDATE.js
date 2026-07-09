@@ -260,10 +260,24 @@ function createJob(body) {
     // บังคับ column A เป็น plain text ไม่ให้ Sheets แปลงเป็น Date cell
     sheet.getRange(nextRow, 1).setNumberFormat("@");
 
+    // นับคิวงาน deadline เดียวกันที่ยังไม่เสร็จ (ไม่รวมงานที่เพิ่งสร้าง)
+    var queueCount = 0;
+    var targetDeadline = body.deadline || "";
+    if (targetDeadline) {
+      var allRows = sheet.getDataRange().getValues();
+      for (var r = 1; r < allRows.length - 1; r++) { // -1 เพราะ row ใหม่เพิ่งถูก append
+        var rowDeadline = String(allRows[r][COL.DEADLINE - 1] || "").trim();
+        var rowStatus   = String(allRows[r][COL.STATUS   - 1] || "").trim();
+        if (rowDeadline === targetDeadline && rowStatus !== "Done" && rowStatus !== "Cancelled") {
+          queueCount++;
+        }
+      }
+    }
+
     // แจ้งเตือน admin group
     notifyAdminGroup(jobId, body.customerName, body.task, body.deadline, body.detail, body.agent, body.lineUserId || "");
 
-    return jsonResponse({ success: true, jobId });
+    return jsonResponse({ success: true, jobId, queueCount });
   } catch (err) {
     return jsonResponse({ error: "CREATE_FAILED", message: String(err) });
   }
