@@ -97,6 +97,68 @@ export async function POST(req: NextRequest) {
           },
         },
       ];
+    } else if (type === "contact_request") {
+      const lineMsg = encodeURIComponent(`สวัสดีครับ/ค่ะ ต้องการติดต่อเรื่องงาน ${jobId}`);
+      messages = [
+        {
+          type: "flex",
+          altText: `📞 ทีมงานต้องการติดต่อคุณเรื่องงาน ${jobId}`,
+          contents: {
+            type: "bubble",
+            header: {
+              type: "box",
+              layout: "vertical",
+              backgroundColor: "#7c3aed",
+              contents: [
+                {
+                  type: "text",
+                  text: "📞 ทีมงานต้องการติดต่อคุณ",
+                  weight: "bold",
+                  size: "md",
+                  color: "#ffffff",
+                },
+              ],
+            },
+            body: {
+              type: "box",
+              layout: "vertical",
+              spacing: "md",
+              contents: [
+                {
+                  type: "text",
+                  text: `เรื่องงาน: ${jobId}`,
+                  size: "sm",
+                  color: "#333333",
+                  weight: "bold",
+                },
+                {
+                  type: "text",
+                  text: "กรุณากดปุ่มด้านล่างเพื่อทักกลับหาทีมงาน",
+                  size: "xs",
+                  color: "#888888",
+                  wrap: true,
+                },
+              ],
+            },
+            footer: {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                {
+                  type: "button",
+                  style: "primary",
+                  color: "#7c3aed",
+                  action: {
+                    type: "uri",
+                    label: "💬 ทักเลย",
+                    uri: `https://line.me/R/oaMessage/@teambon/?${lineMsg}`,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ];
     } else {
       messages = [
         {

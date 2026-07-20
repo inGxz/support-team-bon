@@ -266,8 +266,18 @@ function createJob(body) {
     if (targetDeadline) {
       var allRows = sheet.getDataRange().getValues();
       for (var r = 1; r < allRows.length - 1; r++) { // -1 เพราะ row ใหม่เพิ่งถูก append
-        var rowDeadline = String(allRows[r][COL.DEADLINE - 1] || "").trim();
-        var rowStatus   = String(allRows[r][COL.STATUS   - 1] || "").trim();
+        var rawDeadline = allRows[r][COL.DEADLINE - 1];
+        var rowDeadline = "";
+        if (rawDeadline instanceof Date) {
+          // แปลง Date object → "YYYY-MM-DD"
+          var y = rawDeadline.getFullYear();
+          var m = String(rawDeadline.getMonth() + 1).padStart(2, "0");
+          var d = String(rawDeadline.getDate()).padStart(2, "0");
+          rowDeadline = y + "-" + m + "-" + d;
+        } else {
+          rowDeadline = String(rawDeadline || "").trim();
+        }
+        var rowStatus = String(allRows[r][COL.STATUS - 1] || "").trim();
         if (rowDeadline === targetDeadline && rowStatus !== "Done" && rowStatus !== "Cancelled") {
           queueCount++;
         }

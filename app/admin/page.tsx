@@ -638,6 +638,8 @@ export default function AdminPage() {
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
   const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({});
+  const [contactingJob, setContactingJob] = useState<Record<string, boolean>>({});
+  const [contactedJob, setContactedJob] = useState<Record<string, boolean>>({});
 
   const [filter, setFilter] = useState("ทั้งหมด");
   const [workflowFilter, setWorkflowFilter] = useState("ทั้งหมด");
@@ -840,6 +842,27 @@ export default function AdminPage() {
     const edit = editState[jobId];
     if (!job || !edit) return false;
     return edit.status !== (job.status || "Pending") || edit.deliveryLink !== (job.deliveryLink || "") || edit.internalNote !== (job.internalNote || "");
+  };
+
+  const handleContact = async (job: Job) => {
+    if (!job.lineUserId) return;
+    setContactingJob((p) => ({ ...p, [job.jobId]: true }));
+    try {
+      const token = sessionStorage.getItem("adminAuth") || "";
+      await fetch("/api/line/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          userId: job.lineUserId,
+          jobId: job.jobId,
+          type: "contact_request",
+          customerName: job.customerName,
+        }),
+      });
+      setContactedJob((p) => ({ ...p, [job.jobId]: true }));
+      setTimeout(() => setContactedJob((p) => ({ ...p, [job.jobId]: false })), 3000);
+    } catch {}
+    setContactingJob((p) => ({ ...p, [job.jobId]: false }));
   };
 
   const handlePriority = async (jobId: string, current: string) => {
@@ -1857,7 +1880,17 @@ export default function AdminPage() {
                             <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-600 border border-red-300">⚠️ Overdue</span>
                           )}
                           {job.lineUserId && (
-                            <span className="text-xs text-green-500 font-semibold">💬 LINE</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleContact(job); }}
+                              disabled={contactingJob[job.jobId]}
+                              className={`text-xs px-2 py-0.5 rounded-lg border font-semibold transition ${
+                                contactedJob[job.jobId]
+                                  ? "bg-green-100 text-green-600 border-green-300"
+                                  : "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                              }`}
+                            >
+                              {contactingJob[job.jobId] ? "⏳" : contactedJob[job.jobId] ? "✅ ส่งแล้ว" : "💬 ติดต่อลูกค้า"}
+                            </button>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
