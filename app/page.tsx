@@ -621,7 +621,6 @@ export default function Page() {
   const [designStep, setDesignStep] = useState(0);
   const [designType, setDesignType] = useState("");
   const [designColorTheme, setDesignColorTheme] = useState("");
-  const [adsType, setAdsType] = useState("");
   const [contentType, setContentType] = useState("");
   const [filmingType, setFilmingType] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -970,7 +969,7 @@ export default function Page() {
   const resetAll = () => {
     setTaskType(""); setStep(0);
     setPlatform("Platform"); setGoal("Goal"); setMood("Mood"); setMusic("Music"); setVoice("Voice");
-    setDesignType(""); setDesignStep(0); setDesignColorTheme(""); setAdsType(""); setDeadline(""); setDetail(""); setRefLink(""); setErrors({});
+    setDesignType(""); setDesignStep(0); setDesignColorTheme(""); setDeadline(""); setDetail(""); setRefLink(""); setErrors({});
     setImageFiles([]); setImagePreviews([]); setContentType(""); setFilmingType("");
   };
 
@@ -1178,7 +1177,6 @@ export default function Page() {
             <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#7c3aed 0%,#6366f1 50%,#8b5cf6 100%)">✦ กรุณาเลือกงานที่ต้องการสั่ง</GradText></h2>
             <button className={btnPrimary} onClick={() => setTaskType("Video")}>🎬 ตัดต่อวิดีโอ</button>
             <button className={btnPrimary} onClick={() => setTaskType("Design")}>🎨 ทำรูปกราฟฟิค</button>
-            <button className={btnPrimary} onClick={() => setTaskType("Ads")}>📢 ยิงแอด</button>
             <button className={btnPrimary} onClick={() => setTaskType("Content")}>✍️ คอนเท้น / สคริป</button>
             <button className={btnPrimary} onClick={() => setTaskType("Filming")}>🎥 ถ่ายงานนอกสถานที่</button>
           </div>
@@ -1304,17 +1302,6 @@ export default function Page() {
         )}
 
         {/* ADS */}
-        {taskType === "Ads" && (
-          <div className={card + " space-y-4"}>
-            <h2 className="text-xl font-bold"><GradText gradient="linear-gradient(90deg,#f97316 0%,#ef4444 60%,#f43f5e 100%)">📢 ยิงแอด</GradText></h2>
-            <select className={inputCls()} value={adsType} onChange={(e) => setAdsType(e.target.value)}>
-              <option value="">เลือกประเภท Ads</option>
-              <option>Facebook Ads</option><option>Google Ads</option><option>TikTok Ads</option>
-            </select>
-            <button className={btnPrimary} onClick={() => openPreview("Ads", `AdsType:${adsType || "-"} | Detail:${detail || "-"}`)}>📋 ตรวจสอบก่อนส่งงาน</button>
-            <button className={btnBack} onClick={() => handleBackWithConfirm(() => setTaskType(""), !!adsType)}>← กลับเลือก Workflow</button>
-          </div>
-        )}
 
         {/* CONTENT */}
         {taskType === "Content" && (
