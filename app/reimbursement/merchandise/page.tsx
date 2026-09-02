@@ -16,17 +16,39 @@ const TIERS = [
 ];
 
 // ─── PRESET ITEMS ────────────────────────────────────────────────────────────
+// Prices converted from THB → USD at 35 THB/USD
 const PRESET_ITEMS = [
-  { name: "Mouse Pad",       price: 5,   hasSize: false },
-  { name: "Umbrella",        price: 3,   hasSize: false },
-  { name: "T-Shirt",         price: 5,   hasSize: true  },
-  { name: "Notebook",        price: 3,   hasSize: false },
-  { name: "Mug",             price: 3,   hasSize: false },
-  { name: "Pen",             price: 1,   hasSize: false },
-  { name: "Roll Up Banner",  price: 40,  hasSize: false },
-  { name: "Backdrop",        price: 350, hasSize: false },
+  // ── เสื้อ / Apparel ──────────────────────────────────────────────────────
+  { name: "เสื้อ VT logo White",             price: 4.29,  hasSize: true  },
+  { name: "เสื้อ VT logo Blue",              price: 4.29,  hasSize: true  },
+  { name: "เสื้อ VT 10Y Anniversary White",  price: 4.29,  hasSize: true  },
+  { name: "เสื้อ VT 10Y Anniversary Black",  price: 4.29,  hasSize: true  },
+  { name: "เสื้อ Bull Spectrum Polo Shirt",  price: 4.29,  hasSize: true  },
+  { name: "เสื้อ VT เก่า",                  price: 4.29,  hasSize: true  },
+  { name: "เสื้อกั๊ก Jacket CSR",           price: 2.86,  hasSize: true  },
+  { name: "Hoodie VT",                       price: 8.57,  hasSize: true  },
+  { name: "Jacket VT",                       price: 8.57,  hasSize: true  },
+  { name: "เสื้อบอล NUFC",                  price: 28.57, hasSize: true  },
+  { name: "Jacket NUFC (Gala)",             price: 57.14, hasSize: true  },
+  // ── Accessories ──────────────────────────────────────────────────────────
+  { name: "Mouse Pad VT10Y",                price: 4.29,  hasSize: false },
+  { name: "Caps VT Logo",                   price: 2.29,  hasSize: false },
+  { name: "Umbrella VT",                    price: 2.86,  hasSize: false },
+  { name: "NUFC Cups",                      price: 2.86,  hasSize: false },
+  { name: "Fluffy",                         price: 2.86,  hasSize: false },
+  { name: "VT Markets Notebook (New)",      price: 2.29,  hasSize: false },
+  { name: "VT Markets Notebook (Old)",      price: 2.29,  hasSize: false },
+  { name: "Pen",                            price: 0.86,  hasSize: false },
+  // ── Bags & Packaging ─────────────────────────────────────────────────────
+  { name: "VT Tote Bag",                    price: 0,     hasSize: false },
+  { name: "ถุงกระดาษ Paper Bags VT",        price: 0,     hasSize: false },
+  { name: "ถุง Penset 10Y",                 price: 0,     hasSize: false },
+  { name: "Tag Packaging Gala",            price: 1.43,  hasSize: false },
+  // ── Event / Display ───────────────────────────────────────────────────────
+  { name: "Roll Up Banner",                 price: 40,    hasSize: false },
+  { name: "Backdrop",                       price: 350,   hasSize: false },
 ];
-const SIZES = ["S", "M", "L", "XL", "XXL"];
+const SIZES = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 type Tier = typeof TIERS[0];
