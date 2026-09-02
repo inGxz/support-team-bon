@@ -115,24 +115,24 @@ export default function PersonalReimbursementPage() {
 
     const newIBSection = ibTypes.includes("New IB") ? `
   [New IB]
-  แหล่งที่มาของการแนะนำ   : ${referralSource || "-"}
-  จำนวนเครือข่ายลูกค้า    : ${networkSize || "-"}
-  Net Deposit/เดือน       : ${newNetDeposit || "-"}
-  Trading Volume/เดือน    : ${newTradingVol || "-"}
-  ประสบการณ์              : ${experience || "-"}
-  แผนพัฒนาธุรกิจ          : ${bizPlan || "-"}
-  ROI ที่คาดว่าจะได้รับ   : ${expectedROI || "-"}` : "";
+  Referral Source                    : ${referralSource || "-"}
+  Estimated Network Size             : ${networkSize || "-"}
+  Estimated Net Deposit / Month      : ${newNetDeposit || "-"}
+  Estimated Trading Volume / Month   : ${newTradingVol || "-"}
+  Experience                         : ${experience || "-"}
+  Business Development Plan          : ${bizPlan || "-"}
+  Expected ROI                       : ${expectedROI || "-"}` : "";
 
     const existingIBSection = ibTypes.includes("Existing IB") ? `
   [Existing IB]
-  Net Deposit             : ${netDeposit || "-"}
-  Trading Volume          : ${tradingVolume || "-"}
-  รายได้ที่สร้างให้บริษัท : ${companyRevenue || "-"}
-  แนวโน้มการเติบโต        : ${growthTrend || "-"}` : "";
+  Net Deposit                        : ${netDeposit || "-"}
+  Trading Volume                     : ${tradingVolume || "-"}
+  Revenue Generated for Company      : ${companyRevenue || "-"}
+  Business Growth Trend              : ${growthTrend || "-"}` : "";
 
-    return `Dear admin team,
+    return `Dear Admin Team,
 
-I am writing this email to kindly request for your approval for my reimbursement request.
+I am writing this email to kindly request your approval for my reimbursement request.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EMPLOYEE INFORMATION
@@ -152,23 +152,23 @@ Total: ${fmt(total, 2)} THB
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 IB / CLIENT ENTERTAINMENT DETAIL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-วันที่และเวลาประชุม          : ${meetingDateTime || "-"}
-สถานที่ประชุม               : ${meetingPlace || "-"}
-ชื่อ IB / ลูกค้า             : ${ibName || "-"}
-IB UID                      : ${ibUID || "-"}
-ประเทศ / ภูมิภาค             : ${country || "-"}
-วัตถุประสงค์การประชุม        : ${meetingPurpose || "-"}
-งบประมาณโดยประมาณ           : ${budget || "-"}
-ผลลัพธ์ที่คาดว่าจะได้รับ     : ${expectedResult || "-"}
-ประเภท IB                   : ${ibTypes.join(", ") || "-"}
+Meeting Date & Time          : ${meetingDateTime || "-"}
+Meeting Location             : ${meetingPlace || "-"}
+IB / Client Name             : ${ibName || "-"}
+IB UID                       : ${ibUID || "-"}
+Country / Region             : ${country || "-"}
+Meeting Purpose              : ${meetingPurpose || "-"}
+Estimated Budget             : ${budget || "-"}
+Expected Business Outcome    : ${expectedResult || "-"}
+IB Type                      : ${ibTypes.join(", ") || "-"}
 ${newIBSection}${existingIBSection}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EMPLOYEE'S BANK DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Please transfer to bank account below.
-Account name : ${accName || "-"}
-Account no.  : ${accNo || "-"}
+Please transfer to the bank account below.
+Account Name : ${accName || "-"}
+Account No.  : ${accNo || "-"}
 Bank         : ${bank || "-"}
 Branch       : ${branch || "-"}
 
