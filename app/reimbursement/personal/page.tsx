@@ -49,6 +49,16 @@ const TRAVEL_ITEMS = [
   "Food & Beverage Expenses",
 ];
 
+const TRAVEL_ITEMS_EN: Record<string, string> = {
+  "ค่าเดินทางสนามบิน ↔ โรงแรม": "Airport ↔ Hotel Transportation",
+  "ค่าตั๋วเครื่องบิน": "Airfare",
+  "ค่าที่พักโรงแรม": "Hotel Accommodation",
+  "ค่าเดินทางสำหรับการพบกับลูกค้า / IB": "Transportation for Client / IB Meeting",
+  "ค่าเลี้ยงรับรองลูกค้าที่เกี่ยวข้องกับธุรกิจ": "Business Client Entertainment",
+  "Coffee trade": "Coffee Trade",
+  "Food & Beverage Expenses": "Food & Beverage Expenses",
+};
+
 export default function PersonalReimbursementPage() {
   const router = useRouter();
 
@@ -110,8 +120,8 @@ export default function PersonalReimbursementPage() {
   const buildEmail = useCallback(() => {
     const checkedItems = TRAVEL_ITEMS.filter(item => travelChecked[item]);
     const travelLines = checkedItems.length
-      ? checkedItems.map(item => `  • ${item}: ${fmt(parseFloat(travelAmounts[item] || "0") || 0, 2)} THB`).join("\n")
-      : "  (ยังไม่ได้เลือกรายการ)";
+      ? checkedItems.map(item => `  • ${TRAVEL_ITEMS_EN[item] || item}: ${fmt(parseFloat(travelAmounts[item] || "0") || 0, 2)} THB`).join("\n")
+      : "  (No items selected)";
 
     const newIBSection = ibTypes.includes("New IB") ? `
   [New IB]
