@@ -311,6 +311,7 @@ function getLineProfilePic(lineUserId, token) {
 }
 
 // ─── notifyAdminGroup: แจ้งเตือนกลุ่ม admin เมื่อมีงานใหม่ ──────────────────
+// หมายเหตุ: ลบ getLineProfilePic() ออกเพื่อลด latency (ไม่ต้องโทร LINE API เพิ่ม)
 function notifyAdminGroup(jobId, customerName, task, deadline, detail, agent, lineUserId) {
   try {
     const token   = getLineToken();
@@ -319,16 +320,6 @@ function notifyAdminGroup(jobId, customerName, task, deadline, detail, agent, li
 
     const detailText   = detail   ? (detail.length > 80 ? detail.substring(0, 80) + "..." : detail) : "-";
     const deadlineText = deadline || "-";
-    const pictureUrl   = getLineProfilePic(lineUserId, token);
-
-    // hero image (รูปโปรไฟล์) — แสดงถ้ามี
-    var hero = pictureUrl ? {
-      type: "image",
-      url: pictureUrl,
-      size: "full",
-      aspectRatio: "20:9",
-      aspectMode: "cover"
-    } : null;
 
     var bubble = {
       type: "bubble",
@@ -365,8 +356,6 @@ function notifyAdminGroup(jobId, customerName, task, deadline, detail, agent, li
         ]
       }
     };
-
-    if (hero) bubble.hero = hero;
 
     var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",

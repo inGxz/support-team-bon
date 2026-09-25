@@ -905,26 +905,36 @@ export default function Page() {
         }
       }
 
-      const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({
-          type: "create",
-          customerName,
-          agent,
-          taskType,
-          task,
-          detail,
-          reference: refLink,
-          deadline,
-          lineUserId,
-          subType,
-          workflowParams,
-          imageBase64s,
-          imageNames,
-          imageMimes,
-        }),
+      const payload = JSON.stringify({
+        type: "create",
+        customerName,
+        agent,
+        taskType,
+        task,
+        detail,
+        reference: refLink,
+        deadline,
+        lineUserId,
+        subType,
+        workflowParams,
+        imageBase64s,
+        imageNames,
+        imageMimes,
       });
-      if (!res.ok) throw new Error();
+
+      // retry สูงสุด 3 รอบ (กัน timeout / GAS cold start)
+      let res: Response | null = null;
+      let lastErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          res = await fetch(SCRIPT_URL, { method: "POST", body: payload });
+          if (res.ok) break;
+        } catch (e) {
+          lastErr = e;
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+      if (!res || !res.ok) throw lastErr ?? new Error("fetch failed");
       const data = await res.json();
       playDing();
       saveRecentJob(data.jobId);
