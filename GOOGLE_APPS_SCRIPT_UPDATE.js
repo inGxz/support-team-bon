@@ -108,8 +108,8 @@ function doGet(e) {
   if (action === "queueCount") {
     var targetDeadline = e.parameter.deadline || "";
     if (!targetDeadline) return jsonResponse({ count: 0 });
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-    var allRows = sheet.getDataRange().getValues();
+    var qSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    var allRows = qSheet.getDataRange().getValues();
     var count = 0;
     for (var r = 1; r < allRows.length; r++) {
       var rawDl = allRows[r][COL.DEADLINE - 1];
