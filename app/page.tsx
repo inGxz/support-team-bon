@@ -1015,12 +1015,12 @@ export default function Page() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
             <div className="text-4xl mb-3">⚠️</div>
-            <h3 className="text-base font-bold text-gray-800 mb-2">มีงานอยู่ก่อนหน้าแล้ว</h3>
+            <h3 className="text-base font-bold text-gray-800 mb-2">อาจมีความล่าช้า</h3>
             <p className="text-sm text-gray-600 mb-1">
-              Deadline วันนี้มีงานที่ยังไม่เสร็จอยู่
+              ขณะนี้มีงาน deadline วันเดียวกันอยู่แล้ว
             </p>
             <p className="text-2xl font-black text-orange-500 mb-1">{deadlineQueueCount} งาน</p>
-            <p className="text-xs text-gray-400 mb-5">แน่ใจว่าต้องการ deadline วันนี้ใช่ไหม?</p>
+            <p className="text-xs text-gray-400 mb-5">งานของคุณอาจใช้เวลานานกว่าปกติ ขออภัยในความไม่สะดวก</p>
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowDeadlineWarning(false); setDeadline(""); setDeadlineQueueCount(0); }}
