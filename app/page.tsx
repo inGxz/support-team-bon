@@ -598,6 +598,8 @@ export default function Page() {
   const [agent, setAgent] = useState("");
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [deadline, setDeadline] = useState("");
+  const [deadlineQueueCount, setDeadlineQueueCount] = useState(0);
+  const [showDeadlineWarning, setShowDeadlineWarning] = useState(false);
   const [detail, setDetail] = useState("");
   const [refLink, setRefLink] = useState("");
   const [taskType, setTaskType] = useState("");
@@ -1007,6 +1009,35 @@ export default function Page() {
       {showPreview && <PreviewModal data={previewData} onConfirm={handleConfirm} onCancel={() => !submitting && setShowPreview(false)} submitting={submitting} />}
       {jobIdModal && <JobIdModal jobId={jobIdModal} onClose={() => setJobIdModal(null)} />}
       {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
+
+      {/* Deadline queue warning */}
+      {showDeadlineWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
+            <div className="text-4xl mb-3">⚠️</div>
+            <h3 className="text-base font-bold text-gray-800 mb-2">มีงานอยู่ก่อนหน้าแล้ว</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Deadline วันนี้มีงานที่ยังไม่เสร็จอยู่
+            </p>
+            <p className="text-2xl font-black text-orange-500 mb-1">{deadlineQueueCount} งาน</p>
+            <p className="text-xs text-gray-400 mb-5">แน่ใจว่าต้องการ deadline วันนี้ใช่ไหม?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeadlineWarning(false); setDeadline(""); setDeadlineQueueCount(0); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                เลือกวันอื่น
+              </button>
+              <button
+                onClick={() => setShowDeadlineWarning(false)}
+                className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600"
+              >
+                ยืนยัน deadline นี้
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {confirmBack && <ConfirmModal message="ข้อมูลที่กรอกไปจะหายทั้งหมด ต้องการกลับจริงไหม?" onConfirm={() => { confirmBack(); setConfirmBack(null); }} onCancel={() => setConfirmBack(null)} />}
       {showHistory && <JobHistoryPanel jobs={jobHistory} dark={dark} onClose={() => setShowHistory(false)} onTrack={(id) => { setShowHistory(false); window.open(`/revision?jobId=${id}`, "_blank"); }} />}
       {showMyJobs && <MyJobsPanel jobs={myJobsList} dark={dark} onClose={() => setShowMyJobs(false)} onTrack={(id) => { setShowMyJobs(false); window.open(`/revision?jobId=${id}`, "_blank"); }} loading={loadingMyJobs} lineUserId={lineProfile?.userId} />}
@@ -1121,7 +1152,19 @@ export default function Page() {
 
           <div>
             <label className={labelCls}>📅 Deadline <span className="text-xs text-gray-400">(วันครบกำหนดส่งงาน)</span></label>
-            <input type="date" min={TODAY} className={inputCls(!!errors.deadline)} value={deadline} onChange={(e) => { setDeadline(e.target.value); setErrors((p) => ({ ...p, deadline: "" })); }} />
+            <input type="date" min={TODAY} className={inputCls(!!errors.deadline)} value={deadline} onChange={async (e) => {
+              const val = e.target.value;
+              setDeadline(val);
+              setErrors((p) => ({ ...p, deadline: "" }));
+              setDeadlineQueueCount(0);
+              if (!val) return;
+              try {
+                const res = await fetch(`${SCRIPT_URL}?action=queueCount&deadline=${val}`);
+                const data = await res.json();
+                const cnt = data.count || 0;
+                if (cnt > 0) { setDeadlineQueueCount(cnt); setShowDeadlineWarning(true); }
+              } catch {}
+            }} />
             {errors.deadline ? <p className="text-red-400 text-xs mt-1">⚠️ {errors.deadline}</p> : <p className="text-xs text-gray-400 mt-1">⚠️ กรุณาเลือกวันที่ต้องการให้ส่งงานเสร็จ</p>}
           </div>
 

@@ -104,6 +104,32 @@ function doGet(e) {
     return getJobLogForCustomer(jobId, lineUserId, e.parameter.source || "");
   }
 
+  // Public: นับงานที่ยังไม่เสร็จใน deadline ที่กำหนด (ใช้ก่อนลูกค้ากดส่งงาน)
+  if (action === "queueCount") {
+    var targetDeadline = e.parameter.deadline || "";
+    if (!targetDeadline) return jsonResponse({ count: 0 });
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    var allRows = sheet.getDataRange().getValues();
+    var count = 0;
+    for (var r = 1; r < allRows.length; r++) {
+      var rawDl = allRows[r][COL.DEADLINE - 1];
+      var rowDl = "";
+      if (rawDl instanceof Date) {
+        var ry = rawDl.getFullYear();
+        var rm = String(rawDl.getMonth() + 1).padStart(2, "0");
+        var rd = String(rawDl.getDate()).padStart(2, "0");
+        rowDl = ry + "-" + rm + "-" + rd;
+      } else {
+        rowDl = String(rawDl || "").trim();
+      }
+      var rowSt = String(allRows[r][COL.STATUS - 1] || "").trim();
+      if (rowDl === targetDeadline && rowSt !== "Done" && rowSt !== "Cancelled" && rowSt !== "Approved") {
+        count++;
+      }
+    }
+    return jsonResponse({ count: count });
+  }
+
   // ถ้าไม่มี jobId แต่มี lineUserId → ดึงงานทั้งหมดของ user นี้
   if (!jobId && lineUserId) {
     return getMyJobs(lineUserId);
