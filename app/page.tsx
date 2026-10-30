@@ -875,18 +875,34 @@ export default function Page() {
       let imageMimes: string[] = [];
       if (imageFiles.length > 0) {
         setImageUploading(true);
-        for (const file of imageFiles) {
-          const b64 = await new Promise<string>((resolve) => {
+        // Compress each image via canvas before converting to base64
+        const compressImage = (file: File): Promise<string> =>
+          new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (ev) => {
-              const result = ev.target?.result as string;
-              resolve(result.split(",")[1] || "");
+              const img = new Image();
+              img.onload = () => {
+                const MAX = 1200;
+                let { width, height } = img;
+                if (width > MAX || height > MAX) {
+                  if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
+                  else { width = Math.round((width * MAX) / height); height = MAX; }
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = width; canvas.height = height;
+                canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+                resolve(dataUrl.split(",")[1] || "");
+              };
+              img.src = ev.target?.result as string;
             };
             reader.readAsDataURL(file);
           });
+        for (const file of imageFiles) {
+          const b64 = await compressImage(file);
           imageBase64s.push(b64);
           imageNames.push(file.name);
-          imageMimes.push(file.type);
+          imageMimes.push("image/jpeg");
         }
         setImageUploading(false);
       }

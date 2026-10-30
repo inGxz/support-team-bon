@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 const GAS_URL =
   "https://script.google.com/macros/s/AKfycbyQc-fubbnh57WsugTUeXRnp9afLXDAF8HdXXa34pyM6DMpvZOaOJJljPowuH6POdcs/exec";
 
+export const maxDuration = 60;
+
 // Proxy POST → GAS (แก้ปัญหา CORS เวลาเรียกจาก browser โดยตรง)
 export async function POST(req: NextRequest) {
   try {
